@@ -2,9 +2,12 @@ mod auth;
 mod config;
 mod learn;
 mod main;
+mod school;
 mod setup;
 
 use clap::{Parser, Subcommand};
+
+use crate::ace::Ace;
 
 #[derive(Parser)]
 #[command(name = "ace", about = "AI Coding Environment")]
@@ -31,17 +34,23 @@ enum Command {
     },
     /// Print effective configuration
     Config,
+    /// Manage schools
+    School {
+        #[command(subcommand)]
+        command: school::Command,
+    },
 }
 
-pub fn run(cli: Cli) {
+pub async fn run(ace: &Ace, cli: Cli) {
     match cli.command {
         Some(Command::Setup {
             school_name,
             source,
-        }) => setup::run(&school_name, &source),
-        Some(Command::Learn) => learn::run(),
-        Some(Command::Auth { name }) => auth::run(&name),
-        Some(Command::Config) => config::run(),
-        None => main::run(),
+        }) => setup::run(ace, &school_name, &source).await,
+        Some(Command::Learn) => learn::run(ace).await,
+        Some(Command::Auth { name }) => auth::run(ace, &name).await,
+        Some(Command::Config) => config::run(ace).await,
+        Some(Command::School { command }) => school::run(ace, command).await,
+        None => main::run(ace).await,
     }
 }

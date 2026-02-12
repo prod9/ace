@@ -1,3 +1,5 @@
-pub fn run(school_name: &str, source: &str) {
-    println!("setup: school={school_name} source={source}");
+use crate::ace::Ace;
+
+pub async fn run(ace: &Ace, school_name: &str, source: &str) {
+    ace.ui().message(&format!("setup: school={school_name} source={source}")).await;
 }

@@ -1,3 +1,5 @@
-pub fn run(name: &str) {
-    println!("auth: service={name}");
+use crate::ace::Ace;
+
+pub async fn run(ace: &Ace, name: &str) {
+    ace.ui().message(&format!("auth: service={name}")).await;
 }
