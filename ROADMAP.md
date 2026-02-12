@@ -28,3 +28,9 @@
 - [ ] Setup flow — `ace setup` command for first-run and context management
 - [ ] `ace learn` — open Claude Code/OpenCode on the school clone
 - [ ] Backend selection and exec — hand off to Claude Code or OpenCode
+
+## School Skills
+
+- **Rust skill** — first skill to write. Must establish crate selection preferences: prefer
+  small, ergonomic crates over large traditional ones. Optimize for ease of use, ease of
+  reasoning, compilation time, and binary size. Example: smol over tokio for async runtime.
