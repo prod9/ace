@@ -12,28 +12,31 @@ Resolved by merging (later overrides earlier):
 2. **Project-local** `ace.local.toml` (gitignored, per-machine)
 3. **Project-committed** `ace.toml` (checked into git, shared)
 
-## Contexts
+## Schools
 
-Multiple named contexts. A context represents a single organizational scope (e.g. a company
+Multiple named schools. A school represents a single organizational scope (e.g. a company
 or team). Selected per-project or via CLI flag.
 
 ```toml
-[context.acme]
-source = "github.com/acme-corp/ace"
+[acme]
+source = "https://github.com/acme-corp/ace.git"
 
-[context.acme.tokens]
-github = "ghp_..."
-jira = "jira_..."
+[acme.services.github]
+token = "ghp_..."
 
-[context.personal]
-source = "github.com/myuser/ace"
+[acme.services.jira]
+token = "jira_..."
+username = "alice"
 
-[context.personal.tokens]
-github = "ghp_..."
+[personal]
+source = "https://github.com/myuser/ace.git"
+
+[personal.services.github]
+token = "ghp_..."
 ```
 
-- `source` -- Git-cloneable URL for the organization's school (ACE source repository). Contains
+- `source` -- Git-cloneable URL for the school repository. Contains
   application component descriptions, skills, conventions, agent configs, etc.
-- `tokens.github` -- GitHub access token.
-- `tokens.jira` -- JIRA access token.
+- `services.<name>.token` -- Access token for the service.
+- `services.<name>.*` -- Additional service-specific fields (e.g. `username`).
 

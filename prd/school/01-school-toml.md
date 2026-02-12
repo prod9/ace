@@ -16,14 +16,14 @@ PYTHON_VERSION = "3.12"
 LITELLM_BASE_URL = "https://llm.acme.corp/v1"
 DOCKER_REGISTRY = "registry.acme.corp"
 
-[[auth]]
+[[services]]
 name = "github"
 authorize_url = "https://github.com/login/oauth/authorize"
 token_url = "https://github.com/login/oauth/access_token"
 client_id = "Iv1.abc123"
 scopes = ["repo", "read:org"]
 
-[[auth]]
+[[services]]
 name = "jira"
 authorize_url = "https://auth.atlassian.com/authorize"
 token_url = "https://auth.atlassian.com/oauth/token"
@@ -33,7 +33,7 @@ scopes = ["read:jira-work", "write:jira-work"]
 [[mcp]]
 name = "jira"
 image = "ghcr.io/acme-corp/mcp-jira:latest"
-env = { JIRA_URL = "https://acme.atlassian.net", JIRA_TOKEN = "{{ tokens.jira }}" }
+env = { JIRA_URL = "https://acme.atlassian.net", JIRA_TOKEN = "{{ services.jira.token }}" }
 
 [[mcp]]
 name = "db"
@@ -51,7 +51,7 @@ SERVICE_NAME = "backend"
 [[projects.mcp]]
 name = "migrations"
 image = "ghcr.io/acme-corp/mcp-migrations:latest"
-env = { DB_TOKEN = "{{ tokens.db }}" }
+env = { DB_TOKEN = "{{ services.db.token }}" }
 
 [[projects]]
 name = "frontend"
@@ -80,15 +80,15 @@ Key-value pairs of environment variables. Set in the shell before exec-ing Claud
 OpenCode. Use for shared endpoints, API base URLs, feature flags, etc.
 
 These are not secrets. Tokens and credentials belong in the user-level config
-(`~/.config/ace/config.toml` under `context.*.tokens`).
+(`~/.config/ace/config.toml` under `<school>.services.<name>`).
 
-### `[[auth]]`
+### `[[services]]`
 
-Array of OAuth service declarations. Each entry defines a service that developers need to
-authenticate against. See [05-authentication.md](../05-authentication.md) for the full PKCE
+Array of service declarations. Each entry defines an external service that developers need
+credentials for. See [05-authentication.md](../05-authentication.md) for the full PKCE
 flow and token lifecycle.
 
-- `name` — Token identifier. Referenced in templates as `{{ tokens.<name> }}`.
+- `name` — Service identifier. Referenced in templates as `{{ services.<name>.token }}`.
 - `authorize_url` — OAuth authorization endpoint.
 - `token_url` — OAuth token exchange endpoint.
 - `client_id` — OAuth app client ID. Not a secret — safe to commit.
@@ -109,12 +109,12 @@ need to install runtimes, packages, or tools required by individual MCP servers.
 
 ### Template Syntax
 
-Values in `env` fields can reference tokens from the user's local config using
-`{{ tokens.<name> }}`. At runtime, ACE resolves these against `context.*.tokens` in
-`~/.config/ace/config.toml`. The `<name>` matches the `name` field in `[[auth]]`.
+Values in `env` fields can reference service credentials from the user's local config using
+`{{ services.<name>.token }}`. At runtime, ACE resolves these against `<school>.services` in
+`~/.config/ace/config.toml`. The `<name>` matches the `name` field in `[[services]]`.
 
 ```toml
-env = { JIRA_TOKEN = "{{ tokens.jira }}" }
+env = { JIRA_TOKEN = "{{ services.jira.token }}" }
 ```
 
 If a token cannot be resolved (not yet authorized by the user), ACE warns and skips that MCP

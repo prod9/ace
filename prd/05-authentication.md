@@ -1,6 +1,6 @@
 # Authentication
 
-ACE handles OAuth token acquisition for services declared in the school's `[[auth]]` config.
+ACE handles OAuth token acquisition for services declared in the school's `[[services]]` config.
 All flows use PKCE (Proof Key for Code Exchange) exclusively.
 
 ## Why PKCE
@@ -29,7 +29,7 @@ request and the incoming callback. TLS on all endpoints is assumed.
    - `client_id`
    - `code_challenge`
    - `code_challenge_method=S256`
-   - `scope` (from `[[auth]]` config)
+   - `scope` (from `[[services]]` config)
    - `redirect_uri=http://localhost:{port}/callback`
    - `state` (random, to prevent CSRF)
 4. ACE starts a temporary HTTP server on localhost to receive the callback.
@@ -37,25 +37,27 @@ request and the incoming callback. TLS on all endpoints is assumed.
    `authorization_code` and `state`.
 6. ACE verifies `state` matches, then exchanges the `authorization_code` + `code_verifier` at
    the service's `token_url` for an access token.
-7. ACE stores the token in `~/.config/ace/config.toml` under `context.*.tokens.<name>`.
+7. ACE stores the token in `~/.config/ace/config.toml` under `<school>.services.<name>.token`.
 8. Localhost server shuts down.
 
 ## When It Runs
 
-- **First run** — ACE prompts for all services declared in `[[auth]]` that have no stored token.
-- **On template resolution failure** — if `{{ tokens.<name> }}` cannot resolve, ACE offers to
+- **First run** — ACE prompts for all services declared in `[[services]]` that have no stored token.
+- **On template resolution failure** — if `{{ services.<name>.token }}` cannot resolve, ACE offers to
   re-authenticate. If the user declines, ACE warns and skips the MCP server that needed it.
 - **Manual** — `ace auth <name>` to re-authenticate a specific service (e.g. token expired).
 
 ## Token Storage
 
 Tokens are stored in the user-level config (`~/.config/ace/config.toml`) under
-`context.*.tokens.<name>`, where `<name>` matches the `[[auth]]` entry's `name` field.
+`<school>.services.<name>.token`, where `<name>` matches the `[[services]]` entry's `name` field.
 
 ```toml
-[context.acme.tokens]
-github = "gho_..."
-jira = "eyJ..."
+[acme.services.github]
+token = "gho_..."
+
+[acme.services.jira]
+token = "eyJ..."
 ```
 
 Tokens must never appear in git-committed files (`ace.toml`, `school.toml`). ACE will error and

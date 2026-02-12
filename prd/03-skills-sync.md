@@ -22,13 +22,13 @@ the project repo), which tells Claude Code/OpenCode which skills to always load.
 
 ## Symlinks Over Copies
 
-Sync into projects using symlinks, not file copies. Multiple projects sharing the same context
+Sync into projects using symlinks, not file copies. Multiple projects sharing the same school
 (e.g. frontend and backend repos in the same org) all point to the same local clone. This avoids
 redundant data and ensures all projects see the same skill versions immediately after a pull.
 
 ## Cache
 
-- Location: `~/.cache/ace/{context}/`
+- Location: `~/.cache/ace/{school}/`
 - Cache key: remote HEAD SHA
 - On SHA match: no-op
 - On SHA mismatch: pull + sync

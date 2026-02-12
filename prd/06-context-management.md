@@ -1,12 +1,11 @@
-# Context and School Management
+# School Management
 
-Managing contexts, switching between schools, and associating projects with contexts after
-initial setup.
+Managing schools and associating projects with schools after initial setup.
 
 TODO: Define commands and flows for:
-- Listing contexts
-- Switching active context
-- Removing a context
-- Associating/disassociating a project with a context
-- Re-running auth for a context
+- Listing schools
+- Switching active school
+- Removing a school
+- Associating/disassociating a project with a school
+- Re-running auth for a school
 - Updating school source URL

@@ -21,17 +21,16 @@ Get the user into coding as fast as possible. Never block on operations that can
 ## School
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and
-other shared resources for an organization. Each context points to one school. ACE maintains a
-local clone in `~/.cache/ace/{context}/` (or similar).
+other shared resources for an organization. ACE maintains a local clone in `~/.cache/ace/{school}/` (or similar).
 
 ## Lifecycle
 
 1. **Discover config files** — find user-global, project-local, project-committed
 2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [02-setup.md](02-setup.md))
 3. **Parse and merge** — layer configs together
-4. **Select context** — from CLI flag, project config, or prompt
-5. **Authenticate** — validate tokens for the active context
-6. **Fetch school** — `git fetch` the context's school repo (clone on first run)
+4. **Select school** — from CLI flag, project config, or prompt
+5. **Authenticate** — validate tokens for the active school
+6. **Fetch school** — `git fetch` the school's repo (clone on first run)
 7. **Sync skills/conventions** — pull latest and sync all skills from the school into the project
 9. **Check tooling** — required CLI tools, language runtimes, etc.
 10. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
