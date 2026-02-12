@@ -9,10 +9,11 @@
 
 - [x] Core overview (`prd/00-overview.md`)
 - [x] Configuration management (`prd/01-configuration.md`)
-- [ ] Initialization flow (`prd/02-initialization.md`) — stub
+- [x] Setup flow (`prd/02-setup.md`)
 - [x] Skills sync (`prd/03-skills-sync.md`)
 - [x] Authentication (`prd/05-authentication.md`)
 - [ ] `ace learn` (`prd/04-learn.md`) — stub
+- [ ] Context management (`prd/06-context-management.md`) — stub
 - [x] School overview (`prd/school/00-overview.md`)
 - [x] school.toml spec (`prd/school/01-school-toml.md`)
 
@@ -24,6 +25,6 @@
 - [ ] School fetch — git clone/pull for remote sources, local folder support
 - [ ] Skills sync — symlink school skills into project
 - [ ] Cache management — `~/.cache/ace/{context}/`, SHA-based freshness check
-- [ ] Initialization flow — first-run setup when no config found
+- [ ] Setup flow — `ace setup` command for first-run and context management
 - [ ] `ace learn` — open Claude Code/OpenCode on the school clone
 - [ ] Backend selection and exec — hand off to Claude Code or OpenCode

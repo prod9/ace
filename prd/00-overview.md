@@ -27,7 +27,7 @@ local clone in `~/.cache/ace/{context}/` (or similar).
 ## Lifecycle
 
 1. **Discover config files** — find user-global, project-local, project-committed
-2. **First-run check** — if no config found, switch to initialization flow (see [02-initialization.md](02-initialization.md))
+2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [02-setup.md](02-setup.md))
 3. **Parse and merge** — layer configs together
 4. **Select context** — from CLI flag, project config, or prompt
 5. **Authenticate** — validate tokens for the active context
