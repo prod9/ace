@@ -1,3 +1,7 @@
+mod stdout;
+
+pub use stdout::StdoutUI;
+
 use std::future::Future;
 use std::pin::Pin;
 
