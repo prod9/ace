@@ -3,38 +3,63 @@
 `ace setup` is a required first step before using ACE. It must be run explicitly — ACE does not
 auto-detect or auto-initialize.
 
-## Usage
+## Modes
 
-```
-ace setup <owner/repo>
-```
+### `ace setup <owner/repo>` — Install a school
 
-- `owner/repo` — GitHub `owner/repo` shorthand (e.g. `prod9/school`). Maps to
-  `https://github.com/owner/repo`.
-
-Example:
+Clones and configures a school. If run inside a git repo, also links the project.
 
 ```
 ace setup prod9/school
 ```
 
-## What It Does
+Steps:
 
 1. **Clone the school** — `git clone https://github.com/<owner/repo>` into
-   `~/.cache/ace/<owner>/<repo>/`.
+   `~/.cache/ace/<owner>/<repo>/`. If already cached, `git fetch` instead.
 2. **Parse `school.toml`** — read school metadata, service declarations, MCP declarations.
 3. **Authenticate** — run PKCE flow for each `[[services]]` entry declared in the school.
 4. **Write config** — create/update `~/.config/ace/config.toml` with school entry keyed by
    `owner/repo`.
-5. **Write project config** — if run inside a project directory, write `ace.toml` with
+5. **Write project config** — if run inside a git repo, write `ace.toml` with
    `school = "<owner/repo>"`.
+
+### `ace setup` — Link a project to a cached school
+
+Picks from already-cached schools and writes `ace.toml`. No cloning or auth.
+
+```
+ace setup
+```
+
+Requirements:
+
+- Must be inside a git repo. If not, error with suggestion to `git init` or use
+  `ace setup <owner/repo>`.
+- At least one school must be cached locally. If not, error with suggestion to run
+  `ace setup <owner/repo>` first.
+
+Behavior:
+
+- **One cached school** — use it automatically.
+- **Multiple cached schools** — fuzzy search prompt (matches `owner/repo` and display name from
+  `school.toml`).
+- Writes `ace.toml` with `school = "<owner/repo>"`.
+
+## Scenario Matrix
+
+| Scenario | In git repo? | ace.toml? | School cached? | What happens |
+|---|---|---|---|---|
+| A | no | no | no | `ace setup <owner/repo>` — clone, config, auth. No project linking. |
+| B | no | no | yes | No project to link. Suggest `git init`. |
+| C | yes | no | no | `ace setup <owner/repo>` — clone, config, auth, write ace.toml. |
+| D | yes | no | yes | `ace setup` — pick from cached schools, write ace.toml. |
+| E | yes | yes | no | `ace setup <owner/repo>` — ace.toml names school but no cache. Clone it. |
+| F | yes | yes | yes | Already set up. Re-auth or verify only. |
 
 ## When to Run
 
 Once, before first use. ACE refuses to operate without a config.
-
-For adding schools, switching projects, or re-running auth, see
-[06-context-management.md](06-context-management.md).
 
 ## Error Cases
 
@@ -42,3 +67,5 @@ For adding schools, switching projects, or re-running auth, see
 - Invalid school source — fail if URL is not git-cloneable or `school.toml` is missing/invalid.
 - Auth failure — warn per service, continue with remaining services. User can re-auth later
   with `ace auth <name>`.
+- Not in a git repo (no-arg mode) — error, suggest `git init` or `ace setup <owner/repo>`.
+- No cached schools (no-arg mode) — error, suggest `ace setup <owner/repo>`.
