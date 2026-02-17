@@ -1,5 +1,8 @@
+pub mod ace_toml;
 pub mod school;
+pub mod school_toml;
 pub mod service;
+pub mod user_config;
 
 use std::collections::HashMap;
 
