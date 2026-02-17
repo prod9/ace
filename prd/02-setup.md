@@ -6,29 +6,31 @@ auto-detect or auto-initialize.
 ## Usage
 
 ```
-ace setup <school-name> <source>
+ace setup <source>
 ```
 
-- `school-name` — name for this school (e.g. `prodigy9`, `acme`). Used as the key in config.
 - `source` — git-cloneable URL or local path to the school repository.
+
+The school name is read from `[school].name` in the school's `school.toml` after cloning. This
+ensures consistent naming across all developers — the school author defines the canonical name,
+not each individual user.
 
 Example:
 
 ```
-ace setup prodigy9 https://github.com/prod9/school.git
+ace setup https://github.com/prod9/school.git
 ```
-
-Both arguments are required. No interactive prompts for these — explicit is better.
 
 ## What It Does
 
-1. **Clone the school** — `git clone <source>` into `~/.cache/ace/<school-name>/`.
+1. **Clone the school** — `git clone <source>` into a temporary location, read `school.toml` to
+   get the school name, then move to `~/.cache/ace/<name>/`.
 2. **Parse `school.toml`** — read school metadata, service declarations, MCP declarations.
 3. **Authenticate** — run PKCE flow for each `[[services]]` entry declared in the school.
 4. **Write config** — create/update `~/.config/ace/config.toml` with the school, source, and
    tokens.
 5. **Write project config** — if run inside a project directory, write `ace.toml` with
-   `school = "<school-name>"`.
+   `school = "<name>"` (using the name from `school.toml`).
 
 ## When to Run
 

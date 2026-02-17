@@ -14,8 +14,8 @@ Resolved by merging (later overrides earlier):
 
 ## Schools
 
-Multiple named schools. A school represents a single organizational scope (e.g. a company
-or team). Selected per-project or via CLI flag.
+Configuration can have multiple named schools defined. A school represents a single
+organizational scope (e.g. a company or team). Selected per-project or via CLI flag.
 
 ```toml
 [acme]

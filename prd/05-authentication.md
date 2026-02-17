@@ -63,3 +63,10 @@ token = "eyJ..."
 Tokens must never appear in git-committed files (`ace.toml`, `school.toml`). ACE will error and
 refuse to start if it detects token values in committed config. The school declares *which*
 services exist and their OAuth endpoints; the user's machine holds the actual credentials.
+
+## School Repository Authentication
+
+Access to the school repository itself is authenticated naturally through the git provider's
+existing credentials (SSH keys, personal access tokens, credential helpers, etc.). ACE does not
+manage or configure git authentication — it relies on the user's existing git setup. If the user
+can `git clone` the school source URL, they're authenticated.

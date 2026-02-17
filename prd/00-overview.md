@@ -4,6 +4,18 @@ ACE (AI Coding Environment) is a CLI gateway into Claude Code or OpenCode. It en
 development environment is properly configured and up-to-date before handing off to the
 underlying AI coding tool.
 
+## Table of Contents
+
+- [00-overview.md](00-overview.md) — This file. Philosophy, school concept, lifecycle.
+- [01-configuration.md](01-configuration.md) — Config file locations, layering, format.
+- [02-setup.md](02-setup.md) — `ace setup` first-run flow.
+- [03-skills-sync.md](03-skills-sync.md) — Skill installation and sync.
+- [04-learn.md](04-learn.md) — Learning and conventions.
+- [05-authentication.md](05-authentication.md) — OAuth PKCE flow for services.
+- [06-context-management.md](06-context-management.md) — Context and school switching.
+- [school/00-overview.md](school/00-overview.md) — School repository structure.
+- [school/01-school-toml.md](school/01-school-toml.md) — `school.toml` format reference.
+
 ## Philosophy
 
 ACE is strictly a development tool. It optimizes for developer ergonomics over production
