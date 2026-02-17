@@ -6,31 +6,28 @@ auto-detect or auto-initialize.
 ## Usage
 
 ```
-ace setup <source>
+ace setup <owner/repo>
 ```
 
-- `source` — git-cloneable URL or local path to the school repository.
-
-The school name is read from `[school].name` in the school's `school.toml` after cloning. This
-ensures consistent naming across all developers — the school author defines the canonical name,
-not each individual user.
+- `owner/repo` — GitHub `owner/repo` shorthand (e.g. `prod9/school`). Maps to
+  `https://github.com/owner/repo`.
 
 Example:
 
 ```
-ace setup https://github.com/prod9/school.git
+ace setup prod9/school
 ```
 
 ## What It Does
 
-1. **Clone the school** — `git clone <source>` into a temporary location, read `school.toml` to
-   get the school name, then move to `~/.cache/ace/<name>/`.
+1. **Clone the school** — `git clone https://github.com/<owner/repo>` into
+   `~/.cache/ace/<owner>/<repo>/`.
 2. **Parse `school.toml`** — read school metadata, service declarations, MCP declarations.
 3. **Authenticate** — run PKCE flow for each `[[services]]` entry declared in the school.
-4. **Write config** — create/update `~/.config/ace/config.toml` with the school, source, and
-   tokens.
+4. **Write config** — create/update `~/.config/ace/config.toml` with school entry keyed by
+   `owner/repo`.
 5. **Write project config** — if run inside a project directory, write `ace.toml` with
-   `school = "<name>"` (using the name from `school.toml`).
+   `school = "<owner/repo>"`.
 
 ## When to Run
 

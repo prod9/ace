@@ -14,29 +14,25 @@ Resolved by merging (later overrides earlier):
 
 ## Schools
 
-Configuration can have multiple named schools defined. A school represents a single
-organizational scope (e.g. a company or team). Selected per-project or via CLI flag.
+Schools are identified by GitHub `owner/repo` shorthand. This is used as the key in config,
+cache paths, and project references.
 
 ```toml
-[acme]
-source = "https://github.com/acme-corp/ace.git"
+["acme-corp/school"]
 
-[acme.services.github]
+["acme-corp/school".services.github]
 token = "ghp_..."
 
-[acme.services.jira]
+["acme-corp/school".services.jira]
 token = "jira_..."
 username = "alice"
 
-[personal]
-source = "https://github.com/myuser/ace.git"
+["myuser/school"]
 
-[personal.services.github]
+["myuser/school".services.github]
 token = "ghp_..."
 ```
 
-- `source` -- Git-cloneable URL for the school repository. Contains
-  application component descriptions, skills, conventions, agent configs, etc.
 - `services.<name>.token` -- Access token for the service.
 - `services.<name>.*` -- Additional service-specific fields (e.g. `username`).
 

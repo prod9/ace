@@ -12,7 +12,6 @@ underlying AI coding tool.
 - [03-skills-sync.md](03-skills-sync.md) — Skill installation and sync.
 - [04-learn.md](04-learn.md) — Learning and conventions.
 - [05-authentication.md](05-authentication.md) — OAuth PKCE flow for services.
-- [06-context-management.md](06-context-management.md) — Context and school switching.
 - [school/00-overview.md](school/00-overview.md) — School repository structure.
 - [school/01-school-toml.md](school/01-school-toml.md) — `school.toml` format reference.
 
@@ -25,24 +24,24 @@ should ever be managed through ACE.
 Convention over configuration. Do the obvious right thing automatically. Never assume
 non-obvious defaults — ask instead.
 
-Prefer vendor-agnostic approaches. Use plain git over host-specific APIs to support GitHub,
-GitLab, and other hosts equally.
+GitHub is the assumed default host. `owner/repo` shorthand maps to
+`https://github.com/owner/repo`.
 
 Get the user into coding as fast as possible. Never block on operations that can be deferred.
 
 ## School
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and
-other shared resources for an organization. ACE maintains a local clone in `~/.cache/ace/{school}/` (or similar).
+other shared resources for an organization. Schools are identified by their GitHub `owner/repo`
+shorthand (e.g. `prod9/school`). ACE maintains a local clone in `~/.cache/ace/<owner>/<repo>/`.
 
 ## Lifecycle
 
 1. **Discover config files** — find user-global, project-local, project-committed
 2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [02-setup.md](02-setup.md))
 3. **Parse and merge** — layer configs together
-4. **Select school** — from CLI flag, project config, or prompt
-5. **Authenticate** — validate tokens for the active school
-6. **Fetch school** — `git fetch` the school's repo (clone on first run)
+4. **Authenticate** — validate tokens for the active school
+5. **Fetch school** — `git fetch` the school's repo (clone on first run)
 7. **Sync skills/conventions** — pull latest and sync all skills from the school into the project
 9. **Check tooling** — required CLI tools, language runtimes, etc.
 10. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source

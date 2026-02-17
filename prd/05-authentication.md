@@ -37,7 +37,7 @@ request and the incoming callback. TLS on all endpoints is assumed.
    `authorization_code` and `state`.
 6. ACE verifies `state` matches, then exchanges the `authorization_code` + `code_verifier` at
    the service's `token_url` for an access token.
-7. ACE stores the token in `~/.config/ace/config.toml` under `<school>.services.<name>.token`.
+7. ACE stores the token in `~/.config/ace/config.toml` under `<owner/repo>.services.<name>.token`.
 8. Localhost server shuts down.
 
 ## When It Runs
@@ -49,14 +49,14 @@ request and the incoming callback. TLS on all endpoints is assumed.
 
 ## Token Storage
 
-Tokens are stored in the user-level config (`~/.config/ace/config.toml`) under
-`<school>.services.<name>.token`, where `<name>` matches the `[[services]]` entry's `name` field.
+Tokens are stored in the user-level config (`~/.config/ace/config.toml`) under the school's
+`owner/repo` key, where `<name>` matches the `[[services]]` entry's `name` field.
 
 ```toml
-[acme.services.github]
+["acme-corp/school".services.github]
 token = "gho_..."
 
-[acme.services.jira]
+["acme-corp/school".services.jira]
 token = "eyJ..."
 ```
 
