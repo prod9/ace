@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+use super::ConfigError;
+
 /// ~/.config/ace/config.toml
 ///
 /// Top-level keys are school identifiers ("owner/repo").
@@ -30,7 +32,7 @@ pub struct ServiceCredentials {
     pub extra: HashMap<String, String>,
 }
 
-pub fn load(path: &Path) -> Result<UserConfig, Box<dyn std::error::Error>> {
+pub fn load(path: &Path) -> Result<UserConfig, ConfigError> {
     let content = std::fs::read_to_string(path)?;
     let config: UserConfig = toml::from_str(&content)?;
     Ok(config)
