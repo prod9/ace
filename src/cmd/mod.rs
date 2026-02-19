@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod learn;
 mod main;
+mod paths;
 mod school;
 mod setup;
 
@@ -34,6 +35,8 @@ enum Command {
     },
     /// Print effective configuration
     Config,
+    /// Print resolved filesystem paths ACE uses
+    Paths,
     /// Manage schools
     School {
         #[command(subcommand)]
@@ -50,6 +53,7 @@ pub async fn run(ace: &Ace, cli: Cli) {
         Some(Command::Learn) => learn::run(ace).await,
         Some(Command::Auth { name }) => auth::run(ace, &name).await,
         Some(Command::Config) => config::run(ace).await,
+        Some(Command::Paths) => paths::run(ace).await,
         Some(Command::School { command }) => school::run(ace, command).await,
         None => main::run(ace).await,
     }
