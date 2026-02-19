@@ -8,4 +8,4 @@ clap = { version = "4.5.58", features = ["derive"] }
 ratatui = "0.30.0"
 serde = { version = "1", features = ["derive"] }
 smol = "2.0.2"
-toml = "0.8"
+toml = "1.0.3"
