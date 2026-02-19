@@ -14,8 +14,8 @@ Resolved by merging (later overrides earlier):
 
 ## Schools
 
-Schools are identified by GitHub `owner/repo` shorthand. This is used as the key in config,
-cache paths, and project references.
+Schools are identified by a specifier in `ace.toml` (see [school/00-overview.md](school/00-overview.md#specifier)).
+Credentials are keyed by the source portion (`owner/repo` or `.`) in config and cache paths.
 
 ```toml
 ["acme-corp/school"]
