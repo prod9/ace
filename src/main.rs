@@ -13,6 +13,7 @@ use ui::StdoutUI;
 fn main() {
     let cli = Cli::parse();
     let config = config::Config {
+        school_specifier: None,
         schools: HashMap::new(),
     };
     let ui = Box::new(StdoutUI);

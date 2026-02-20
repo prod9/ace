@@ -1,4 +1,5 @@
 pub mod ace_toml;
+pub mod paths;
 pub mod school;
 pub mod school_toml;
 pub mod service;
@@ -15,5 +16,6 @@ pub enum ConfigError {
 }
 
 pub struct Config {
+    pub school_specifier: Option<String>,
     pub schools: HashMap<String, school::School>,
 }

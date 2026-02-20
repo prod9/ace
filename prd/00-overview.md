@@ -32,8 +32,8 @@ Get the user into coding as fast as possible. Never block on operations that can
 ## School
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and
-other shared resources for an organization. Schools are identified by their GitHub `owner/repo`
-shorthand (e.g. `prod9/school`). ACE maintains a local clone in `~/.cache/ace/<owner>/<repo>/`.
+other shared resources for an organization. See [school/00-overview.md](school/00-overview.md) for
+full details on specifiers, structure, and relationship to projects.
 
 ## Lifecycle
 

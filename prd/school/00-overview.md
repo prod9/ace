@@ -4,8 +4,26 @@ A school is a git-cloneable source repository containing skills, conventions, ag
 other shared resources for an organization. ACE maintains a local clone in
 `~/.cache/ace/{school}/` (or similar).
 
-A school source can also be a local folder path. This is useful for development, testing, or
-single-machine setups where git hosting is unnecessary.
+## Specifier
+
+The `school` field in `ace.toml` uses a multi-mode specifier:
+
+```
+<source>:<path>
+```
+
+- **`source`** — GitHub `owner/repo` shorthand, or `.` for embedded (current repo).
+- **`path`** — (optional) subfolder within the repo containing `school.toml`. Separated by `:`.
+
+If `:<path>` is omitted, the repo root is assumed.
+
+| Specifier | Meaning |
+|---|---|
+| `prod9/school` | Remote repo, root |
+| `prod9/mono:school` | Remote repo, `school/` subfolder |
+| `.:/school` | Embedded in current repo at `school/` |
+
+Embedded schools (`.`) skip clone/fetch — they read directly from the working tree.
 
 ## Purpose
 

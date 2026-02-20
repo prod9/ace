@@ -9,4 +9,4 @@ ratatui = "0.30.0"
 serde = { version = "1.0.228", features = ["derive"] }
 smol = "2.0.2"
 thiserror = "2.0.18"
-toml = "1.0.2"
+toml = "1.0.3"

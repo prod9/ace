@@ -8,8 +8,6 @@ use super::ConfigError;
 pub struct AceToml {
     pub school: String,
     #[serde(default)]
-    pub skills: Vec<String>,
-    #[serde(default)]
     pub env: HashMap<String, String>,
 }
 
