@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+use super::ConfigError;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SchoolToml {
     pub school: SchoolMeta,
@@ -52,7 +54,7 @@ pub struct Project {
     pub mcp: Vec<McpDecl>,
 }
 
-pub fn load(path: &Path) -> Result<SchoolToml, Box<dyn std::error::Error>> {
+pub fn load(path: &Path) -> Result<SchoolToml, ConfigError> {
     let content = std::fs::read_to_string(path)?;
     let config: SchoolToml = toml::from_str(&content)?;
     Ok(config)
