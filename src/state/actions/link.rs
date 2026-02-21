@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::config;
 use crate::session::Session;
-use crate::state::setup::SetupError;
+use super::setup::SetupError;
 
 use super::write_config::WriteConfig;
 

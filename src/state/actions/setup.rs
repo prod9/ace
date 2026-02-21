@@ -3,9 +3,8 @@ use std::path::Path;
 use crate::config;
 use crate::session::Session;
 
-use super::actions;
-use super::actions::install::Install;
-use super::actions::link::Link;
+use super::install::Install;
+use super::link::Link;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SetupError {
@@ -32,7 +31,7 @@ pub struct Setup<'a> {
 
 impl Setup<'_> {
     pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
-        if !actions::is_git_repo(self.project_dir) {
+        if !super::is_git_repo(self.project_dir) {
             return Err(SetupError::NotInGitRepo);
         }
 

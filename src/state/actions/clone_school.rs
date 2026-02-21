@@ -1,6 +1,6 @@
 use crate::config::school_paths::SchoolPaths;
 use crate::session::Session;
-use crate::state::setup::SetupError;
+use super::setup::SetupError;
 
 pub struct CloneSchool<'a> {
     pub paths: &'a SchoolPaths,

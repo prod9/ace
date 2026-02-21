@@ -1,6 +1,6 @@
 use crate::config::school_toml::ServiceDecl;
 use crate::session::Session;
-use crate::state::setup::SetupError;
+use super::setup::SetupError;
 
 pub struct Authenticate<'a> {
     pub service: &'a ServiceDecl,

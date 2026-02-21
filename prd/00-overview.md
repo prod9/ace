@@ -11,10 +11,10 @@ underlying AI coding tool.
 - [02-architecture.md](02-architecture.md) — Layers, data flow, dependency direction.
 - [03-setup.md](03-setup.md) — `ace setup` first-run flow.
 - [04-skills-sync.md](04-skills-sync.md) — Skill installation and sync.
-- [05-learn.md](05-learn.md) — Learning and conventions.
 - [06-authentication.md](06-authentication.md) — OAuth PKCE flow for services.
 - [school/00-overview.md](school/00-overview.md) — School repository structure.
 - [school/01-school-toml.md](school/01-school-toml.md) — `school.toml` format reference.
+- [school/02-school-commands.md](school/02-school-commands.md) — `ace school` subcommands.
 
 ## Philosophy
 
@@ -47,4 +47,5 @@ full details on specifiers, structure, and relationship to projects.
 9. **Check tooling** — required CLI tools, language runtimes, etc.
 10. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
 11. **Select backend** — Claude Code or OpenCode
-12. **Exec** — replace process with the chosen tool
+12. **Inject prompt** — prepend system context about skills and `ace school propose` workflow
+13. **Exec** — replace process with the chosen tool

@@ -2,6 +2,8 @@ pub mod authenticate;
 pub mod clone_school;
 pub mod install;
 pub mod link;
+pub mod school_init;
+pub mod setup;
 pub mod write_config;
 
 use std::path::Path;

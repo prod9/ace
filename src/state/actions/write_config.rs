@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::state::setup::SetupError;
+use super::setup::SetupError;
 
 pub struct WriteConfig;
 

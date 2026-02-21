@@ -1,5 +1,5 @@
 use crate::ace::Ace;
-use crate::state::setup::Setup;
+use crate::state::actions::setup::Setup;
 
 pub async fn run(ace: &mut Ace, specifier: Option<&str>) {
     let project_dir = match std::env::current_dir() {

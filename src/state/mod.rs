@@ -1,7 +1,6 @@
 pub mod actions;
 pub mod school;
 pub mod service;
-pub mod setup;
 
 pub use school::School;
 pub use service::Service;

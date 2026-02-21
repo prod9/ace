@@ -1,6 +1,5 @@
 mod auth;
 mod config;
-mod learn;
 mod main;
 mod paths;
 mod school;
@@ -24,8 +23,6 @@ enum Command {
         /// School specifier (owner/repo). Omit to link a cached school.
         specifier: Option<String>,
     },
-    /// Open the school in an AI coding tool for learning
-    Learn,
     /// Re-authenticate a service
     Auth {
         /// Service name to authenticate
@@ -45,7 +42,6 @@ enum Command {
 pub async fn run(ace: &mut Ace, cli: Cli) {
     match cli.command {
         Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
-        Some(Command::Learn) => learn::run(ace).await,
         Some(Command::Auth { name }) => auth::run(ace, &name).await,
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths) => paths::run(ace).await,
