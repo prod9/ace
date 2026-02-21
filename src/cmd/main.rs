@@ -1,8 +1,10 @@
 use crate::ace::Ace;
 use crate::config;
 use crate::state::State;
+use crate::state::actions::download_school::DownloadSchool;
 use crate::state::actions::exec::{self, Exec};
 use crate::state::actions::sync_prompt::SyncPrompt;
+use crate::state::actions::sync_skills::SyncSkills;
 
 pub async fn run(ace: &mut Ace) {
     let project_dir = match std::env::current_dir() {
@@ -20,6 +22,7 @@ pub async fn run(ace: &mut Ace) {
         }
         Err(e) => {
             eprintln!("error: {e}");
+            eprintln!("hint: run `ace setup <owner/repo>` first");
             std::process::exit(1);
         }
     }
@@ -43,6 +46,12 @@ pub async fn run(ace: &mut Ace) {
         }
     };
 
+    // Fetch school (git pull if cached, clone if not)
+    if let Err(e) = (DownloadSchool { paths: &school_paths }).run(&mut session) {
+        eprintln!("warning: school fetch failed: {e}");
+        // Continue — cached state may still work
+    }
+
     // Load school.toml for metadata
     let school_toml_path = school_paths.root.join("school.toml");
     let school_toml = match config::school_toml::load(&school_toml_path) {
@@ -52,6 +61,22 @@ pub async fn run(ace: &mut Ace) {
             std::process::exit(1);
         }
     };
+
+    // Sync skills from school into project
+    match (SyncSkills {
+        school_root: &school_paths.root,
+        project_dir: &project_dir,
+    })
+    .run(&mut session)
+    {
+        Ok(result) if result.synced > 0 => {
+            eprintln!("Synced {} skills", result.synced);
+        }
+        Err(e) => {
+            eprintln!("warning: skill sync failed: {e}");
+        }
+        _ => {}
+    }
 
     // Build system prompt
     let system_prompt = {

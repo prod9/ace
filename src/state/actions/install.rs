@@ -6,6 +6,7 @@ use super::setup::SetupError;
 
 use super::authenticate::Authenticate;
 use super::download_school::DownloadSchool;
+use super::sync_skills::SyncSkills;
 use super::write_config::WriteConfig;
 
 pub struct Install<'a> {
@@ -31,6 +32,16 @@ impl Install<'_> {
         let ace_paths = config::paths::resolve(self.project_dir)?;
         WriteConfig::user(&ace_paths.user, self.specifier)?;
         WriteConfig::project(&ace_paths.project, self.specifier)?;
+
+        let result = SyncSkills {
+            school_root: &school_paths.root,
+            project_dir: self.project_dir,
+        }
+        .run(session)?;
+
+        if result.synced > 0 {
+            println!("Synced {} skills", result.synced);
+        }
 
         session.state.school_specifier = Some(self.specifier.to_string());
 

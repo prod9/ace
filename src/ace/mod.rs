@@ -11,6 +11,10 @@ impl Ace {
         Self { state }
     }
 
+    pub fn with_state(state: State) -> Self {
+        Self { state }
+    }
+
     pub fn state_mut(&mut self) -> &mut State {
         &mut self.state
     }

@@ -1,5 +1,6 @@
 use std::process::Command;
 
+use crate::config::index_toml;
 use crate::config::school_paths::SchoolPaths;
 use crate::session::Session;
 use super::setup::SetupError;
@@ -16,10 +17,13 @@ impl DownloadSchool<'_> {
         };
 
         if cache.join(".git").exists() {
-            self.pull(cache)
+            self.pull(cache)?;
         } else {
-            self.clone(cache)
+            self.clone(cache)?;
         }
+
+        self.update_index()?;
+        Ok(())
     }
 
     fn clone(&self, cache: &std::path::Path) -> Result<(), SetupError> {
@@ -55,6 +59,19 @@ impl DownloadSchool<'_> {
         if !status.success() {
             return Err(SetupError::Clone(format!("git pull exited {status}")));
         }
+        Ok(())
+    }
+
+    fn update_index(&self) -> Result<(), SetupError> {
+        let index_path = index_toml::index_path()
+            .map_err(|e| SetupError::Clone(format!("index path: {e}")))?;
+        let mut index = index_toml::load(&index_path)
+            .map_err(|e| SetupError::Clone(format!("load index: {e}")))?;
+
+        index_toml::upsert(&mut index, &self.paths.source);
+
+        index_toml::save(&index_path, &index)
+            .map_err(|e| SetupError::Clone(format!("save index: {e}")))?;
         Ok(())
     }
 }
