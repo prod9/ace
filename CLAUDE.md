@@ -39,6 +39,13 @@ Core functions:
 - In tests, use `.expect("reason")` instead of `.unwrap()` so failures always have context.
 - Be strict with error handling everywhere. No lazy shortcuts, no swallowing errors.
 
+## Action Pattern
+
+- Actions are structs with params as fields, single method: `run(&self, session: &mut Session)`
+- No extra parameters in `run()` — everything goes on the struct
+- All actions live in `state/actions/`
+- Session bundles `&mut State` + `&dyn UI` — passed to every action
+
 ## PRD Compliance
 
 - During coding tasks, flag any deviation from PRDs or missing PRD coverage
