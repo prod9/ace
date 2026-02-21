@@ -11,6 +11,10 @@ impl Ace {
         Self { state }
     }
 
+    pub fn state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+
     pub fn session(&mut self) -> Session<'_> {
         Session {
             state: &mut self.state,
