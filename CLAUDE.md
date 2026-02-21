@@ -44,7 +44,7 @@ Core functions:
 - Actions are structs with params as fields, single method: `run(&self, session: &mut Session)`
 - No extra parameters in `run()` — everything goes on the struct
 - All actions live in `state/actions/`
-- Session bundles `&mut State` + `&dyn UI` — passed to every action
+- Session bundles `&mut State` — passed to every action
 
 ## PRD Compliance
 
@@ -78,6 +78,14 @@ Core functions:
 - Always restore terminal before returning (even on error)
 - `web_ui` will be a separate module later with its own screen types
 - Session has no UI field — interactive input is handled entirely by term_ui/web_ui
+
+## Cache Layout
+
+- Git clones: `~/.cache/ace/repos/{owner/repo}/`
+- Index: `~/.cache/ace/index.toml` — tracks downloaded schools (specifier, repo, path)
+- `DownloadSchool` action clones/pulls repos, writes index entries
+- `list_cached_schools` reads index.toml, never scans filesystem
+- Git operations use `std::process::Command`, no sqlite or git crate
 
 ## Pending Work
 
