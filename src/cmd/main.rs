@@ -1,5 +1,5 @@
 use crate::ace::Ace;
 
-pub async fn run(ace: &Ace) {
-    ace.ui().message("run: main lifecycle").await;
+pub async fn run(ace: &mut Ace) {
+    ace.session().ui.message("ace").await;
 }

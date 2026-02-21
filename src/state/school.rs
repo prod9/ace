@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::service::Service;
+use super::Service;
 
 pub struct School {
     pub source: String,

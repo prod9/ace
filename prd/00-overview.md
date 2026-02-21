@@ -8,10 +8,11 @@ underlying AI coding tool.
 
 - [00-overview.md](00-overview.md) — This file. Philosophy, school concept, lifecycle.
 - [01-configuration.md](01-configuration.md) — Config file locations, layering, format.
-- [02-setup.md](02-setup.md) — `ace setup` first-run flow.
-- [03-skills-sync.md](03-skills-sync.md) — Skill installation and sync.
-- [04-learn.md](04-learn.md) — Learning and conventions.
-- [05-authentication.md](05-authentication.md) — OAuth PKCE flow for services.
+- [02-architecture.md](02-architecture.md) — Layers, data flow, dependency direction.
+- [03-setup.md](03-setup.md) — `ace setup` first-run flow.
+- [04-skills-sync.md](04-skills-sync.md) — Skill installation and sync.
+- [05-learn.md](05-learn.md) — Learning and conventions.
+- [06-authentication.md](06-authentication.md) — OAuth PKCE flow for services.
 - [school/00-overview.md](school/00-overview.md) — School repository structure.
 - [school/01-school-toml.md](school/01-school-toml.md) — `school.toml` format reference.
 
@@ -38,7 +39,7 @@ full details on specifiers, structure, and relationship to projects.
 ## Lifecycle
 
 1. **Discover config files** — find user-global, project-local, project-committed
-2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [02-setup.md](02-setup.md))
+2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [03-setup.md](03-setup.md))
 3. **Parse and merge** — layer configs together
 4. **Authenticate** — validate tokens for the active school
 5. **Fetch school** — `git fetch` the school's repo (clone on first run)

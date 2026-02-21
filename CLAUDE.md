@@ -35,6 +35,9 @@ Core functions:
 - Clarity over compression — prefer named variables for each branch over long chained expressions
 - When there are multiple possible sources for a value, compute each into a named variable first, then combine (e.g. `xdg.or_else(|| home)`)
 - Prefer per-module error enums (e.g. `ParseError`) over `Box<dyn Error>`
+- **NEVER use `.unwrap()`** — always propagate errors with `?` or handle explicitly. No exceptions.
+- In tests, use `.expect("reason")` instead of `.unwrap()` so failures always have context.
+- Be strict with error handling everywhere. No lazy shortcuts, no swallowing errors.
 
 ## PRD Compliance
 
@@ -63,4 +66,3 @@ Core functions:
 ## Pending Work
 
 - Setup modes discussion: see `prd/` notes
-- Remove 06-context-management.md (school switching unlikely needed)

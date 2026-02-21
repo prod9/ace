@@ -1,5 +1,5 @@
 use crate::ace::Ace;
 
-pub async fn run(ace: &Ace, name: &str) {
-    ace.ui().message(&format!("auth: service={name}")).await;
+pub async fn run(ace: &mut Ace, name: &str) {
+    ace.session().ui.message(&format!("auth: service={name}")).await;
 }

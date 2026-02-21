@@ -8,8 +8,8 @@ pub enum Command {
     Init,
 }
 
-pub async fn run(ace: &Ace, command: Command) {
+pub async fn run(ace: &mut Ace, command: Command) {
     match command {
-        Command::Init => ace.ui().message("school init").await,
+        Command::Init => ace.session().ui.message("school init").await,
     }
 }

@@ -48,14 +48,14 @@ Behavior:
 
 ## Scenario Matrix
 
-| Scenario | In git repo? | ace.toml? | School cached? | What happens |
-|---|---|---|---|---|
-| A | no | no | no | `ace setup <owner/repo>` — clone, config, auth. No project linking. |
-| B | no | no | yes | No project to link. Suggest `git init`. |
-| C | yes | no | no | `ace setup <owner/repo>` — clone, config, auth, write ace.toml. |
-| D | yes | no | yes | `ace setup` — pick from cached schools, write ace.toml. |
-| E | yes | yes | no | `ace setup <owner/repo>` — ace.toml names school but no cache. Clone it. |
-| F | yes | yes | yes | Already set up. Re-auth or verify only. |
+| Scenario | In git repo? | ace.toml? | School cached? | What happens                                                          |
+|----------|--------------|-----------|----------------|-----------------------------------------------------------------------|
+| A        | no           | no        | no             | `ace setup <owner/repo>` — clone, config, auth. No project linking.   |
+| B        | no           | no        | yes            | No project to link. Suggest `git init`.                               |
+| C        | yes          | no        | no             | `ace setup <owner/repo>` — clone, config, auth, write ace.toml.       |
+| D        | yes          | no        | yes            | `ace setup` — pick from cached schools, write ace.toml.               |
+| E        | yes          | yes       | no             | `ace setup <owner/repo>` — ace.toml names school but no cache. Clone. |
+| F        | yes          | yes       | yes            | Already set up. Re-auth or verify only.                               |
 
 ## When to Run
 

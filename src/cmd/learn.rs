@@ -1,5 +1,5 @@
 use crate::ace::Ace;
 
-pub async fn run(ace: &Ace) {
-    ace.ui().message("learn").await;
+pub async fn run(ace: &mut Ace) {
+    ace.session().ui.message("learn").await;
 }
