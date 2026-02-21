@@ -88,6 +88,13 @@ impl<'a> Tui<'a> {
 fn draw_school_init(frame: &mut Frame, input: &str) {
     let area = frame.area();
 
+    let center = Layout::horizontal([
+        Constraint::Fill(1),
+        Constraint::Max(50),
+        Constraint::Fill(1),
+    ])
+    .split(area)[1];
+
     let layout = Layout::vertical([
         Constraint::Fill(1),
         Constraint::Length(5),  // logo
@@ -99,7 +106,7 @@ fn draw_school_init(frame: &mut Frame, input: &str) {
         Constraint::Length(1),  // help
         Constraint::Fill(1),
     ])
-    .split(area);
+    .split(center);
 
     let logo = Paragraph::new(LOGO).centered();
     frame.render_widget(logo, layout[1]);
