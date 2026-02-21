@@ -17,9 +17,8 @@ impl Link<'_> {
             return Err(SetupError::NoCachedSchools);
         }
 
-        let options: Vec<&str> = schools.iter().map(|s| s.as_str()).collect();
-        let idx = session.ui.select("Select school:", &options).await;
-        let specifier = schools.get(idx).ok_or(SetupError::NoCachedSchools)?.clone();
+        // TODO: move to TUI screen for interactive selection
+        let specifier = schools.first().ok_or(SetupError::NoCachedSchools)?.clone();
 
         let ace_paths = config::paths::resolve(self.project_dir)?;
         WriteConfig::project(&ace_paths.project, &specifier)?;

@@ -70,6 +70,15 @@ Core functions:
 
 - `user_config.rs` has duplicate `dirs_or_home`/`config_dir` — refactor to use `config::paths` versions
 
+## TUI Pattern
+
+- `term_ui` module: `Tui::new(&mut Ace)` + `tui.show(Screen::...)` — no trait, no dynamic dispatch
+- `Screen` is a dumb enum (no data). Tui drives rendering, input, and action execution.
+- Each screen method: `ratatui::init()` → render loop → `ratatui::restore()` → run action
+- Always restore terminal before returning (even on error)
+- `web_ui` will be a separate module later with its own screen types
+- Session has no UI field — interactive input is handled entirely by term_ui/web_ui
+
 ## Pending Work
 
 - Setup modes discussion: see `prd/` notes

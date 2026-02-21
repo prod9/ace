@@ -17,7 +17,7 @@ pub async fn run(ace: &mut Ace, specifier: Option<&str>) {
 
     let mut session = ace.session();
     match setup.run(&mut session).await {
-        Ok(()) => session.ui.message("Setup complete.").await,
+        Ok(()) => println!("Setup complete."),
         Err(e) => {
             eprintln!("error: {e}");
             std::process::exit(1);

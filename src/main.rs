@@ -3,7 +3,7 @@ mod cmd;
 mod config;
 mod session;
 mod state;
-mod ui;
+mod term_ui;
 
 use clap::Parser;
 use cmd::Cli;

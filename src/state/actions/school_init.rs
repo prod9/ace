@@ -13,12 +13,12 @@ pub enum SchoolInitError {
 }
 
 pub struct SchoolInit<'a> {
-    pub name: Option<&'a str>,
+    pub name: &'a str,
     pub project_dir: &'a Path,
 }
 
 impl SchoolInit<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SchoolInitError> {
+    pub fn run(&self, _session: &mut Session<'_>) -> Result<(), SchoolInitError> {
         if !super::is_git_repo(self.project_dir) {
             return Err(SchoolInitError::NotInGitRepo);
         }
@@ -28,15 +28,8 @@ impl SchoolInit<'_> {
             return Err(SchoolInitError::AlreadyExists);
         }
 
-        let name = match self.name {
-            Some(n) => n.to_string(),
-            None => session.ui.ask("School name:").await,
-        };
-
-        let content = format!("[school]\nname = \"{name}\"\n");
+        let content = format!("[school]\nname = \"{}\"\n", self.name);
         std::fs::write(&toml_path, content)?;
-
-        session.ui.message(&format!("Created {}", toml_path.display())).await;
 
         Ok(())
     }

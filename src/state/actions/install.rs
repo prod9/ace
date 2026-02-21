@@ -22,7 +22,7 @@ impl Install<'_> {
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
 
-        session.ui.message(&format!("School: {}", school_toml.school.name)).await;
+        println!("School: {}", school_toml.school.name);
 
         for service in &school_toml.services {
             Authenticate { service }.run(session).await?;
