@@ -28,8 +28,29 @@ redundant data and ensures all projects see the same skill versions immediately 
 
 ## Cache
 
-- Location: `~/.cache/ace/{school}/`
+- Git clones: `~/.cache/ace/repos/{owner/repo}/`
+- Index: `~/.cache/ace/index.toml` — tracks downloaded schools
 - Cache key: remote HEAD SHA
 - On SHA match: no-op
 - On SHA mismatch: pull + sync
-- First run: full clone
+- First run: full clone + index entry
+
+### index.toml
+
+```toml
+[[school]]
+specifier = "prod9/school"
+repo = "prod9/school"
+path = ""
+
+[[school]]
+specifier = "prod9/mono:school"
+repo = "prod9/mono"
+path = "school"
+```
+
+- `specifier` — full specifier as written in `ace.toml`
+- `repo` — `owner/repo` portion (git clone target)
+- `path` — subfolder within the repo containing `school.toml` (empty string if root)
+
+`list_cached_schools` reads index.toml, not the filesystem.

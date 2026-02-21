@@ -15,8 +15,9 @@ ace setup prod9/school
 
 Steps:
 
-1. **Clone the school** — `git clone https://github.com/<owner/repo>` into
-   `~/.cache/ace/<owner>/<repo>/`. If already cached, `git fetch` instead.
+1. **Download the school** — `git clone https://github.com/<owner/repo>` into
+   `~/.cache/ace/repos/<owner>/<repo>/`. If already cached, `git pull` instead.
+   Writes an entry to `~/.cache/ace/index.toml` after successful clone.
 2. **Parse `school.toml`** — read school metadata, service declarations, MCP declarations.
 3. **Authenticate** — run PKCE flow for each `[[services]]` entry declared in the school.
 4. **Write config** — create/update `~/.config/ace/config.toml` with school entry keyed by
@@ -36,8 +37,8 @@ Requirements:
 
 - Must be inside a git repo. If not, error with suggestion to `git init` or use
   `ace setup <owner/repo>`.
-- At least one school must be cached locally. If not, error with suggestion to run
-  `ace setup <owner/repo>` first.
+- At least one school must be listed in `~/.cache/ace/index.toml`. If not, error with
+  suggestion to run `ace setup <owner/repo>` first.
 
 Behavior:
 

@@ -1,5 +1,5 @@
 pub mod authenticate;
-pub mod clone_school;
+pub mod download_school;
 pub mod install;
 pub mod link;
 pub mod school_init;

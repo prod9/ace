@@ -2,7 +2,7 @@
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and
 other shared resources for an organization. ACE maintains a local clone in
-`~/.cache/ace/{school}/` (or similar).
+`~/.cache/ace/repos/{owner/repo}/`.
 
 ## Specifier
 

@@ -5,7 +5,7 @@ use crate::session::Session;
 use super::setup::SetupError;
 
 use super::authenticate::Authenticate;
-use super::clone_school::CloneSchool;
+use super::download_school::DownloadSchool;
 use super::write_config::WriteConfig;
 
 pub struct Install<'a> {
@@ -17,7 +17,7 @@ impl Install<'_> {
     pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
-        CloneSchool { paths: &school_paths }.run(session).await?;
+        DownloadSchool { paths: &school_paths }.run(session)?;
 
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
