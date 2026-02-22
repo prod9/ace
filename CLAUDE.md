@@ -21,6 +21,8 @@ Core functions:
 - Code comments: essential only
 - Do not offer help or assume user needs one at the end unless a suggestion is explicitly requested
 - Never propose grand plans; always a few small steps at a time
+- Always parallelize independent tasks — use parallel tool calls, concurrent agents, etc. whenever work items don't depend on each other
+- Before any refactoring or code changes, run `cloc` on affected files to capture a baseline. After finishing, report `git diff --stat` to show lines changed.
 
 ## Dependencies
 

@@ -1,9 +1,9 @@
 use clap::Subcommand;
 
 use crate::ace::Ace;
-use crate::state::actions::school_propose::SchoolPropose;
-use crate::state::actions::school_init::SchoolInit;
-use crate::term_ui::{Screen, Tui};
+use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
+use crate::state::actions::school_propose::{SchoolPropose, SchoolProposeError};
+use crate::term_ui::{Screen, TermError, Tui};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -18,92 +18,78 @@ pub enum Command {
     Propose,
 }
 
+#[derive(Debug, thiserror::Error)]
+enum RunError {
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Load(#[from] crate::ace::LoadError),
+    #[error("{0}")]
+    Init(#[from] SchoolInitError),
+    #[error("{0}")]
+    Propose(#[from] SchoolProposeError),
+    #[error("{0}")]
+    Tui(#[from] TermError),
+    #[error("no school linked, run ace setup first")]
+    NoSchool,
+    #[error("{0}")]
+    Token(String),
+}
+
 pub async fn run(ace: &mut Ace, command: Command) {
     match command {
-        Command::Init { name } => run_init(ace, name),
-        Command::Propose => run_propose(ace),
+        Command::Init { name } => {
+            if let Err(e) = run_init(ace, name) {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        }
+        Command::Propose => {
+            if let Err(e) = run_propose() {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        }
     }
 }
 
-fn run_init(ace: &mut Ace, name: Option<String>) {
+fn run_init(ace: &mut Ace, name: Option<String>) -> Result<(), RunError> {
     match name {
         Some(name) => {
-            let project_dir = match std::env::current_dir() {
-                Ok(d) => d,
-                Err(e) => {
-                    eprintln!("error: {e}");
-                    std::process::exit(1);
-                }
-            };
-
-            let init = SchoolInit {
+            let project_dir = std::env::current_dir()?;
+            let mut session = ace.session();
+            SchoolInit {
                 name: &name,
                 project_dir: &project_dir,
-            };
-
-            let mut session = ace.session();
-            if let Err(e) = init.run(&mut session) {
-                eprintln!("error: {e}");
-                std::process::exit(1);
             }
+            .run(&mut session)?;
         }
         None => {
-            if let Err(e) = Tui::new(ace).show(Screen::SchoolInit) {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            }
+            Tui::new(ace).show(Screen::SchoolInit)?;
         }
     }
+    Ok(())
 }
 
-fn run_propose(_ace: &mut Ace) {
-    let project_dir = match std::env::current_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
-    };
+fn run_propose() -> Result<(), RunError> {
+    let project_dir = std::env::current_dir()?;
+    let mut ace = crate::ace::Ace::load(&project_dir)?;
 
-    let mut ace = match crate::ace::Ace::load(&project_dir) {
-        Ok(a) => a,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
-    };
-
-    let specifier = match &ace.state().school_specifier {
-        Some(s) => s.clone(),
-        None => {
-            eprintln!("error: no school linked, run ace setup first");
-            std::process::exit(1);
-        }
-    };
+    let specifier = ace.state().school_specifier.clone()
+        .ok_or(RunError::NoSchool)?;
 
     let repo_key = specifier.split_once(':').map_or(specifier.as_str(), |(repo, _)| repo);
-    let token = match load_github_token(repo_key) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
-    };
+    let token = load_github_token(repo_key).map_err(RunError::Token)?;
 
     let mut session = ace.session();
-
-    let propose = SchoolPropose {
+    let url = SchoolPropose {
         project_dir: &project_dir,
         token: &token,
-    };
-
-    match propose.run(&mut session) {
-        Ok(url) => println!("PR created: {url}"),
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
     }
+    .run(&mut session)?;
+
+    println!("PR created: {url}");
+    Ok(())
 }
 
 fn load_github_token(repo_key: &str) -> Result<String, String> {

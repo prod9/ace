@@ -1,40 +1,42 @@
 use crate::ace::Ace;
 use crate::config::index_toml;
-use crate::state::actions::setup::Setup;
+use crate::state::actions::setup::{Setup, SetupError};
+
+#[derive(Debug, thiserror::Error)]
+enum RunError {
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Setup(#[from] SetupError),
+    #[error("{0}")]
+    Cache(String),
+}
 
 pub async fn run(ace: &mut Ace, specifier: Option<&str>) {
-    let project_dir = match std::env::current_dir() {
-        Ok(d) => d,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
-    };
+    if let Err(e) = run_inner(ace, specifier).await {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    }
+}
+
+async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), RunError> {
+    let project_dir = std::env::current_dir()?;
 
     let resolved = match specifier {
         Some(s) => s.to_string(),
-        None => match resolve_from_cache() {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            }
-        },
-    };
-
-    let setup = Setup {
-        specifier: &resolved,
-        project_dir: &project_dir,
+        None => resolve_from_cache().map_err(RunError::Cache)?,
     };
 
     let mut session = ace.session();
-    match setup.run(&mut session).await {
-        Ok(()) => println!("Setup complete."),
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
+    Setup {
+        specifier: &resolved,
+        project_dir: &project_dir,
     }
+    .run(&mut session)
+    .await?;
+
+    println!("Setup complete.");
+    Ok(())
 }
 
 fn resolve_from_cache() -> Result<String, String> {
