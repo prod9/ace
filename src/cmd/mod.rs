@@ -19,8 +19,8 @@ pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
-    /// Extra arguments passed through to the backend (claude/opencode)
-    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    /// Extra arguments passed through to the backend (claude/opencode), after --
+    #[arg(last = true)]
     backend_args: Vec<String>,
 }
 
