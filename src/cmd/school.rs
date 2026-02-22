@@ -65,15 +65,15 @@ fn run_propose(_ace: &mut Ace) {
         }
     };
 
-    let state = match crate::state::State::load(&project_dir) {
-        Ok(s) => s,
+    let mut ace = match crate::ace::Ace::load(&project_dir) {
+        Ok(a) => a,
         Err(e) => {
             eprintln!("error: {e}");
             std::process::exit(1);
         }
     };
 
-    let specifier = match &state.school_specifier {
+    let specifier = match &ace.state().school_specifier {
         Some(s) => s.clone(),
         None => {
             eprintln!("error: no school linked, run ace setup first");
@@ -90,8 +90,7 @@ fn run_propose(_ace: &mut Ace) {
         }
     };
 
-    let mut ace_with_state = crate::ace::Ace::with_state(state);
-    let mut session = ace_with_state.session();
+    let mut session = ace.session();
 
     let propose = SchoolPropose {
         project_dir: &project_dir,

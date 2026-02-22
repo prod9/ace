@@ -1,6 +1,5 @@
 use crate::ace::Ace;
 use crate::config;
-use crate::state::State;
 use crate::state::actions::exec::Exec;
 use crate::state::actions::prepare::Prepare;
 use crate::state::prompt::build_session_prompt;
@@ -14,9 +13,9 @@ pub async fn run(ace: &mut Ace) {
         }
     };
 
-    match State::load(&project_dir) {
-        Ok(state) => {
-            *ace.state_mut() = state;
+    match Ace::load(&project_dir) {
+        Ok(loaded) => {
+            *ace = loaded;
         }
         Err(e) => {
             eprintln!("error: {e}");

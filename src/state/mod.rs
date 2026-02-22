@@ -7,23 +7,10 @@ pub use school::School;
 pub use service::Service;
 
 use std::collections::HashMap;
-use std::path::Path;
 
-use crate::config;
 use crate::config::ace_toml::AceToml;
 use crate::config::backend::Backend;
-use crate::config::paths::AcePaths;
-use crate::config::ConfigError;
-
-#[derive(Debug, thiserror::Error)]
-pub enum StateError {
-    #[error("no config found, ace setup?")]
-    NoConfig,
-    #[error("{0}")]
-    Config(#[from] ConfigError),
-    #[error("{0}")]
-    Path(#[from] crate::config::paths::PathError),
-}
+use crate::config::tree::Tree;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationError {
@@ -31,16 +18,9 @@ pub enum ValidationError {
     NoSchool,
 }
 
-/// Raw config layers, preserved for write-back and inspection.
-pub struct ConfigTree {
-    pub user: AceToml,
-    pub project: AceToml,
-    pub local: AceToml,
-}
-
-/// Resolved effective state, computed from ConfigTree.
+/// Resolved effective state, computed from config::Tree.
 pub struct State {
-    pub config: ConfigTree,
+    pub config: Tree,
 
     // --- resolved fields ---
     pub school_specifier: Option<String>,
@@ -50,22 +30,21 @@ pub struct State {
 }
 
 impl State {
-    pub fn load(project_dir: &Path) -> Result<Self, StateError> {
-        let paths = config::paths::resolve(project_dir)?;
-        let tree = load_config_tree(&paths)?;
-        let resolved = resolve(&tree);
-        Ok(Self {
+    /// Pure computation: resolve effective values from config layers.
+    pub fn resolve(tree: Tree) -> Self {
+        let resolved = resolve_layers(&tree);
+        Self {
             config: tree,
             school_specifier: resolved.school_specifier,
             backend: resolved.backend,
             session_prompt: resolved.session_prompt,
             env: resolved.env,
-        })
+        }
     }
 
     pub fn empty() -> Self {
         Self {
-            config: ConfigTree {
+            config: Tree {
                 user: AceToml::default(),
                 project: AceToml::default(),
                 local: AceToml::default(),
@@ -93,34 +72,8 @@ struct Resolved {
     env: HashMap<String, String>,
 }
 
-fn load_config_tree(paths: &AcePaths) -> Result<ConfigTree, StateError> {
-    let user = load_or_default(&paths.user)?;
-    let project = load_or_default(&paths.project)?;
-    let local = load_or_default(&paths.local)?;
-
-    // At least one config must exist on disk
-    let any_found = [&paths.user, &paths.project, &paths.local]
-        .iter()
-        .any(|p| p.exists());
-    if !any_found {
-        return Err(StateError::NoConfig);
-    }
-
-    Ok(ConfigTree { user, project, local })
-}
-
-fn load_or_default(path: &Path) -> Result<AceToml, StateError> {
-    match config::ace_toml::load(path) {
-        Ok(config) => Ok(config),
-        Err(ConfigError::Io(ref e)) if e.kind() == std::io::ErrorKind::NotFound => {
-            Ok(AceToml::default())
-        }
-        Err(e) => Err(e.into()),
-    }
-}
-
 /// Resolve effective values from layers. Order: user → project → local (last wins).
-fn resolve(tree: &ConfigTree) -> Resolved {
+fn resolve_layers(tree: &Tree) -> Resolved {
     let layers = [&tree.user, &tree.project, &tree.local];
 
     // school: last non-empty wins
@@ -174,8 +127,8 @@ mod tests {
         }
     }
 
-    fn tree(user: AceToml, project: AceToml, local: AceToml) -> ConfigTree {
-        ConfigTree { user, project, local }
+    fn tree(user: AceToml, project: AceToml, local: AceToml) -> Tree {
+        Tree { user, project, local }
     }
 
     #[test]
@@ -185,7 +138,7 @@ mod tests {
             ace("project-school", &[]),
             ace("", &[]),
         );
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.school_specifier.as_deref(), Some("project-school"));
     }
 
@@ -196,14 +149,14 @@ mod tests {
             ace("project-school", &[]),
             ace("local-school", &[]),
         );
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.school_specifier.as_deref(), Some("local-school"));
     }
 
     #[test]
     fn resolve_school_none_when_all_empty() {
         let t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert!(r.school_specifier.is_none());
     }
 
@@ -215,14 +168,14 @@ mod tests {
         project.backend = Some(Backend::Claude);
 
         let t = tree(user, project, ace("", &[]));
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.backend, Backend::Claude);
     }
 
     #[test]
     fn resolve_backend_fallback_claude() {
         let t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.backend, Backend::Claude);
     }
 
@@ -233,7 +186,7 @@ mod tests {
             ace("s", &[("B", "2")]),
             ace("s", &[]),
         );
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.env["A"], "1");
         assert_eq!(r.env["B"], "2");
     }
@@ -245,7 +198,7 @@ mod tests {
             ace("s", &[("KEY", "new")]),
             ace("s", &[]),
         );
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.env["KEY"], "new");
         assert_eq!(r.env["KEEP"], "yes");
     }
@@ -258,7 +211,7 @@ mod tests {
         project.session_prompt = "project prompt".to_string();
 
         let t = tree(user, project, ace("", &[]));
-        let r = resolve(&t);
+        let r = resolve_layers(&t);
         assert_eq!(r.session_prompt, "project prompt");
     }
 
