@@ -163,3 +163,4 @@ structure should communicate intent before the reader parses any syntax.
 - Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
 - Split CLAUDE.md notes into school skills: `general-coding` (language-agnostic rules) then
   `rust-coding` (Rust-specific conventions)
+- Add some magic? For example, auto --continue ?
