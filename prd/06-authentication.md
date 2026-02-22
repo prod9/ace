@@ -42,10 +42,14 @@ request and the incoming callback. TLS on all endpoints is assumed.
 
 ## When It Runs
 
-- **First run** — ACE prompts for all services declared in `[[services]]` that have no stored token.
+Authentication is part of the setup flow, not a standalone command.
+
+- **During setup** — after Install/Update/Link, ACE checks for services declared in `[[services]]`
+  that have no stored token and prompts for each.
+- **Re-setup** — running `ace setup` again re-runs the full flow including auth. This is how users
+  re-authenticate expired tokens.
 - **On template resolution failure** — if `{{ services.<name>.token }}` cannot resolve, ACE offers to
   re-authenticate. If the user declines, ACE warns and skips the MCP server that needed it.
-- **Manual** — `ace auth <name>` to re-authenticate a specific service (e.g. token expired).
 
 ## Token Storage
 
