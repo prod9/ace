@@ -106,12 +106,11 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         .or(tree.user.backend)
         .unwrap_or_default();
 
-    // session_prompt: last non-empty wins
+    // session_prompt: last Some wins (Some("") is a valid override to empty)
     let session_prompt = layers
         .iter()
         .rev()
-        .find(|l| !l.session_prompt.is_empty())
-        .map(|l| l.session_prompt.clone())
+        .find_map(|l| l.session_prompt.clone())
         .unwrap_or_default();
 
     // env: additive merge, later keys override
@@ -138,7 +137,7 @@ mod tests {
         AceToml {
             school: school.to_string(),
             backend: None,
-            session_prompt: String::new(),
+            session_prompt: None,
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
         }
     }
@@ -222,9 +221,9 @@ mod tests {
     #[test]
     fn resolve_session_prompt_last_wins() {
         let mut user = ace("", &[]);
-        user.session_prompt = "user prompt".to_string();
+        user.session_prompt = Some("user prompt".to_string());
         let mut project = ace("", &[]);
-        project.session_prompt = "project prompt".to_string();
+        project.session_prompt = Some("project prompt".to_string());
 
         let t = tree(user, project, ace("", &[]));
         let r = resolve_layers(&t);

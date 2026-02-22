@@ -22,10 +22,12 @@ pub struct IndexToml {
     pub school: Vec<SchoolEntry>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[serde(default)]
 pub struct SchoolEntry {
     pub specifier: String,
     pub repo: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub path: String,
 }
 

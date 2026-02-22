@@ -12,7 +12,7 @@ pub struct AceToml {
     pub backend: Option<Backend>,
     // TODO: add `role` and `description` fields so non-dev roles (e.g. PM) can
     // configure ace for requirements-only repos, prd/ workflows, Jira/Trello sync, etc.
-    pub session_prompt: String,
+    pub session_prompt: Option<String>,
     pub env: HashMap<String, String>,
 }
 
