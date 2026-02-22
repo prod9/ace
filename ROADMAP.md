@@ -34,6 +34,11 @@
 - [ ] Authentication — PKCE OAuth (folded into setup flow, not separate command)
 - [ ] TUI school picker — multi-school selection in setup
 
+## Future Ideas
+
+- **Skill diff tool** — compare code changes between different versions of skills (e.g. after
+  `ace setup` pulls a newer school). Show what changed so users can review before accepting updates.
+
 ## School Skills
 
 - **Rust skill** — first skill to write. Must establish crate selection preferences: prefer
