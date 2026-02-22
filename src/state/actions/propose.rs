@@ -58,6 +58,10 @@ impl Propose<'_> {
         push_branch(cache, &branch)?;
 
         let pr_url = create_pr(owner, repo, &branch, self.token)?;
+
+        // Reset cache back to origin/main so future updates work cleanly
+        reset_to_main(cache)?;
+
         Ok(pr_url)
     }
 }
@@ -164,6 +168,30 @@ fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<Strin
         .map_err(|e| ProposeError::Api(format!("parse response: {e}")))?;
 
     Ok(response.html_url)
+}
+
+fn reset_to_main(repo: &Path) -> Result<(), ProposeError> {
+    let status = Command::new("git")
+        .args(["checkout", "main"])
+        .current_dir(repo)
+        .status()
+        .map_err(|e| ProposeError::Git(format!("git checkout main: {e}")))?;
+
+    if !status.success() {
+        return Err(ProposeError::Git(format!("git checkout main exited {status}")));
+    }
+
+    let status = Command::new("git")
+        .args(["reset", "--hard", "origin/main"])
+        .current_dir(repo)
+        .status()
+        .map_err(|e| ProposeError::Git(format!("git reset: {e}")))?;
+
+    if !status.success() {
+        return Err(ProposeError::Git(format!("git reset exited {status}")));
+    }
+
+    Ok(())
 }
 
 fn timestamp() -> String {

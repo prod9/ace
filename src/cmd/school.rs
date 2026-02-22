@@ -14,6 +14,7 @@ pub enum Command {
         name: Option<String>,
     },
     /// Propose local school changes back to upstream
+    #[clap(alias = "pr")]
     Propose,
 }
 

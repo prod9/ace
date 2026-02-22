@@ -5,7 +5,8 @@ use crate::config;
 use crate::session::Session;
 use super::setup::SetupError;
 
-/// Git pull the school cache to get latest content.
+/// Git fetch + reset school cache to latest origin/main.
+/// Aborts if cache has uncommitted changes (user should `school propose` or discard first).
 pub struct Update<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
@@ -26,16 +27,51 @@ impl Update<'_> {
             )));
         }
 
-        let status = Command::new("git")
-            .args(["pull", "--ff-only"])
-            .current_dir(cache)
-            .status()
-            .map_err(|e| SetupError::Clone(format!("git pull: {e}")))?;
-
-        if !status.success() {
-            return Err(SetupError::Clone(format!("git pull exited {status}")));
+        if is_dirty(cache)? {
+            return Err(SetupError::Clone(
+                "school cache has uncommitted changes, run `ace school propose` or discard first".to_string()
+            ));
         }
+
+        git_fetch(cache)?;
+        git_reset_to_origin_main(cache)?;
 
         Ok(())
     }
+}
+
+fn is_dirty(repo: &Path) -> Result<bool, SetupError> {
+    let output = Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(repo)
+        .output()
+        .map_err(|e| SetupError::Clone(format!("git status: {e}")))?;
+
+    Ok(!output.stdout.is_empty())
+}
+
+fn git_fetch(repo: &Path) -> Result<(), SetupError> {
+    let status = Command::new("git")
+        .args(["fetch", "origin"])
+        .current_dir(repo)
+        .status()
+        .map_err(|e| SetupError::Clone(format!("git fetch: {e}")))?;
+
+    if !status.success() {
+        return Err(SetupError::Clone(format!("git fetch exited {status}")));
+    }
+    Ok(())
+}
+
+fn git_reset_to_origin_main(repo: &Path) -> Result<(), SetupError> {
+    let status = Command::new("git")
+        .args(["reset", "--hard", "origin/main"])
+        .current_dir(repo)
+        .status()
+        .map_err(|e| SetupError::Clone(format!("git reset: {e}")))?;
+
+    if !status.success() {
+        return Err(SetupError::Clone(format!("git reset exited {status}")));
+    }
+    Ok(())
 }

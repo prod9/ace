@@ -30,21 +30,41 @@ Prerequisites: create and clone a git repo first (e.g. `gh repo create org/schoo
 
 ## `ace school propose`
 
-Propose local school changes back to the upstream school repo. Replaces the former
-`ace learn` concept.
+Propose local school changes back to the upstream school repo. Users edit skill files
+in-place (through symlinks into the cache) during their coding session, then call
+`school propose` when ready to submit.
 
-Flow:
+### Flow
 
-1. Detect context (school repo or app repo with linked school).
-2. In app repo context, resolve the school's local clone path.
-3. Create a branch from the current school state.
-4. Commit local changes to the branch.
-5. Push branch and open a PR to the school repo.
+1. Resolve school cache path from `ace.toml` specifier.
+2. Check for uncommitted changes in cache (`git status --porcelain`). If clean, error:
+   `no changes to propose`.
+3. Create branch: `git checkout -b ace/propose-<timestamp>`.
+4. Stage and commit: `git add -A && git commit`.
+5. Push: `git push -u origin <branch>`.
+6. Create PR via GitHub API against `main`.
+7. Reset cache back to main: `git checkout main && git reset --hard origin/main`.
+8. Return PR URL to user.
 
-This allows developers to modify skills/conventions locally and propose them back to the
-shared school without direct pushes to main.
+### Important
 
-TODO: Define conflict handling, branch naming, and PR template.
+- Edits happen through symlinks — modifying a linked skill file modifies the cache directly.
+- The PR is based on wherever `main` was at clone/last-update time. GitHub shows conflicts
+  if upstream has diverged. User resolves in GitHub.
+- After propose, the cache is reset to `origin/main` so subsequent updates work cleanly.
+
+## Update and Edit Safety
+
+The school cache is a live working copy. Users may have uncommitted edits (skills modified
+through symlinks). The **Update** action must check for dirty state before resetting:
+
+1. `git status --porcelain` — if dirty, warn and abort. Tell user to `school propose` or
+   discard changes first.
+2. `git fetch origin`
+3. `git reset --hard origin/main`
+
+This ensures updates always track latest `main` and handle force pushes, but never
+silently discard user edits.
 
 ## Skill Modification Prompt
 

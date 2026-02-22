@@ -1,65 +1,72 @@
 # Setup Flow
 
-`ace setup` is a required first step before using ACE. It must be run explicitly — ACE does not
-auto-detect or auto-initialize.
+`ace setup <owner/repo>` is a required first step before using ACE in a project. It must be run
+explicitly — ACE does not auto-detect or auto-initialize.
+
+## Guards
+
+Setup fails immediately if:
+
+- **Not in a git repo** — error: `not in git repo, git init?`
+- **`ace.toml` already exists** — error: `already set up, use 'ace' to run`
 
 ## Specifier Resolution
 
-Before any action, the CLI layer resolves which school to use:
+Before calling the Setup action, the CLI layer resolves which school to use:
 
 - **`ace setup <owner/repo>`** — specifier is the argument.
 - **`ace setup`** (no argument) — resolve from cache:
   - **One cached school** — use it automatically.
-  - **Multiple cached schools** — TUI picker (fuzzy search by `owner/repo` and display name).
-  - **No cached schools** — error: `ace setup <owner/repo>?`
+  - **Multiple cached schools** — TUI picker (TODO).
+  - **No cached schools** — error: `no schools cached, ace setup <owner/repo>?`
 
-This logic lives in the cmd/TUI layer, not in the Setup action. Setup always receives a resolved
-specifier.
+This logic lives in the cmd/TUI layer. The Setup action always receives a resolved specifier.
 
-## Steps
+## Setup Steps
 
-Once a specifier is resolved, Setup runs two sequential checks:
+1. Write `ace.toml` with `school = "<owner/repo>"`.
+2. Call **Prepare** (see below).
 
-1. **Install** (if school not in cache) — download school to local cache:
-   - `git clone https://github.com/<owner/repo>` into `~/.cache/ace/repos/<owner>/<repo>/`.
-     If already cached, skip.
-   - Write entry to `~/.cache/ace/index.toml`.
-   - Parse `school.toml` — read school metadata, service declarations.
-   - Authenticate — run PKCE flow for each `[[services]]` entry.
-   - Write user config — create/update `~/.config/ace/config.toml` with school entry keyed by
-     `owner/repo`.
+That's it. Setup's only unique responsibility is writing `ace.toml`. Everything else is delegated
+to Prepare, which is shared with the normal `ace` run.
 
-2. **Link** (if in git repo) — connect project to the cached school:
-   - Write `ace.toml` with `school = "<owner/repo>"`.
-   - Sync skills from school cache into the project (symlinks).
+## Prepare
 
-Both steps run in a single `ace setup` invocation when needed. Install is skipped if the school
-is already cached. Link is skipped if not in a git repo (install-only scenario).
+Prepare ensures the school is ready to use. It is called by both `ace setup` and normal `ace`
+runs.
 
-## Scenario Matrix
+1. **Is school cached?** (check `index.toml` for matching specifier)
+   - **No** → **Install**: `git clone --depth 1` into `~/.cache/ace/repos/<owner>/<repo>/`, write
+     `index.toml` entry, parse `school.toml`, authenticate services, write user config.
+   - **Yes** → **Update**: `git pull` on the cached repo.
+2. **Link**: symlink each skill directory from `<cache>/skills/<name>/` into
+   `<project>/.ace/skills/<name>/`. Skips matching symlinks, replaces stale symlinks, never
+   clobbers real directories.
 
-| Scenario | In git repo? | School cached? | What happens                                |
-|----------|--------------|----------------|---------------------------------------------|
-| A        | no           | no             | Install only. No project linking.            |
-| B        | no           | yes            | Nothing to do. Suggest `git init`.           |
-| C        | yes          | no             | Install, then Link.                          |
-| D        | yes          | yes            | Link only (skip install).                    |
+## Normal `ace` Run
 
-## Requirements
+When the user runs `ace` (no subcommand) in a project that already has `ace.toml`:
 
-- Must be inside a git repo for linking. If not in a git repo and no specifier given, error
-  with suggestion to `git init` or use `ace setup <owner/repo>`.
-- Specifier required if no schools are cached.
+1. Load state from `ace.toml`.
+2. Call **Prepare** (install-if-needed / update-if-cached, then link).
+3. Build system prompt from school config.
+4. Detect and exec backend (Claude Code / OpenCode).
 
-## When to Run
+## Actions Summary
 
-Once, before first use. ACE refuses to operate without a config.
+| Action    | Responsibility                                          | When                     |
+|-----------|---------------------------------------------------------|--------------------------|
+| Setup     | Guard checks, write `ace.toml`, call Prepare            | `ace setup <spec>`       |
+| Prepare   | Orchestrate Install/Update + Link                       | Setup and normal `ace`   |
+| Install   | `git clone`, index, auth, user config                   | School not in cache      |
+| Update    | `git pull --ff-only` on cached repo                     | School already cached    |
+| Link      | Symlink skills from cache into project                  | Always (after install/update) |
 
 ## Error Cases
 
-- No network access — fail with clear message, setup requires cloning.
-- Invalid school source — fail if URL is not git-cloneable or `school.toml` is missing/invalid.
-- Auth failure — warn per service, continue with remaining services. User can re-auth later
-  with `ace auth <name>`.
-- Not in a git repo (no-arg mode) — error, suggest `git init` or `ace setup <owner/repo>`.
-- No cached schools (no-arg mode) — error, suggest `ace setup <owner/repo>`.
+- **Not in git repo** — hard error.
+- **Already set up** — hard error, use `ace` to run.
+- **No network** — Install/Update fail with clear message.
+- **Invalid school** — fail if not git-cloneable or `school.toml` missing/invalid.
+- **Auth failure** — warn per service, continue. User can re-auth with `ace auth <name>`.
+- **No cached schools (no-arg setup)** — error, suggest `ace setup <owner/repo>`.
