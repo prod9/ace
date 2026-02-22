@@ -115,6 +115,11 @@ structure should communicate intent before the reader parses any syntax.
 
 - Unit tests are inline `#[cfg(test)] mod tests` in the same file
 - Longer integration tests will go in an external `tests/` crate later
+- **No tautological tests** — don't test trivial getters/accessors that just return a value
+  (e.g. `assert_eq!(Backend::Claude.binary(), "claude")`). These restate the implementation
+  and catch nothing. Similarly, don't test that serde serializes/deserializes correctly —
+  that's testing the crate, not our code. Test behavior that involves logic, branching, or
+  composition.
 
 ## CLI Conventions
 
