@@ -13,7 +13,6 @@
 - [x] Skills sync (`prd/03-skills-sync.md`)
 - [x] Authentication (`prd/05-authentication.md`)
 - [ ] `ace learn` (`prd/04-learn.md`) — stub
-- [ ] Context management (`prd/06-context-management.md`) — stub
 - [x] School overview (`prd/school/00-overview.md`)
 - [x] school.toml spec (`prd/school/01-school-toml.md`)
 

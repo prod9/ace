@@ -1,6 +1,5 @@
 mod auth;
 mod config;
-mod learn;
 mod main;
 mod paths;
 mod school;
@@ -19,15 +18,11 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Set up a new school
+    /// Set up a school (clone + auth + config)
     Setup {
-        /// Name for this school (e.g. prodigy9, acme)
-        school_name: String,
-        /// Git-cloneable URL or local path to the school repository
-        source: String,
+        /// School specifier (owner/repo). Omit to link a cached school.
+        specifier: Option<String>,
     },
-    /// Open the school in an AI coding tool for learning
-    Learn,
     /// Re-authenticate a service
     Auth {
         /// Service name to authenticate
@@ -44,13 +39,9 @@ enum Command {
     },
 }
 
-pub async fn run(ace: &Ace, cli: Cli) {
+pub async fn run(ace: &mut Ace, cli: Cli) {
     match cli.command {
-        Some(Command::Setup {
-            school_name,
-            source,
-        }) => setup::run(ace, &school_name, &source).await,
-        Some(Command::Learn) => learn::run(ace).await,
+        Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
         Some(Command::Auth { name }) => auth::run(ace, &name).await,
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths) => paths::run(ace).await,

@@ -1,7 +1,5 @@
-use crate::config::Config;
-use crate::config::school::School;
+use crate::state::State;
 
 pub struct Session<'a> {
-    pub config: &'a Config,
-    pub school: &'a School,
+    pub state: &'a mut State,
 }

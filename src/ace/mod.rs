@@ -1,0 +1,27 @@
+use crate::session::Session;
+use crate::state::State;
+
+pub struct Ace {
+    state: State,
+}
+
+impl Ace {
+    pub fn new() -> Self {
+        let state = State::empty();
+        Self { state }
+    }
+
+    pub fn with_state(state: State) -> Self {
+        Self { state }
+    }
+
+    pub fn state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+
+    pub fn session(&mut self) -> Session<'_> {
+        Session {
+            state: &mut self.state,
+        }
+    }
+}

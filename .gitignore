@@ -10,6 +10,8 @@ wheels/
 .venv
 
 
-# Added by cargo
+# Claude Code
+.claude/
 
+# Added by cargo
 /target
