@@ -155,3 +155,10 @@ structure should communicate intent before the reader parses any syntax.
 ## Pending Work
 
 - Setup modes discussion: see `prd/` notes
+- Embed git commit hash or tag into the binary (build script / env var) for version identification
+- Investigate using inquire for consistent log/status output (not just prompts) — keep
+  formatting consistent between prompts and progress messages
+- If inquire supports progress bars/spinners, use them for git operations and other
+  long-running tasks so the user never sees a blank screen
+- Pass-through flags to backend: `ace --continue` → `claude --continue`, `ace --resume` →
+  `claude --resume`, etc. Need a way to forward arbitrary flags to claude/opencode
