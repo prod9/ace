@@ -97,6 +97,7 @@ fn load_github_token(repo_key: &str) -> Result<String, String> {
         .ok_or("cannot determine config dir")?;
     let config = crate::config::user_config::load(&path)
         .map_err(|e| format!("load config: {e}"))?;
+
     let school = config
         .get(repo_key)
         .ok_or(format!("no config for school {repo_key}, run ace setup"))?;
@@ -104,6 +105,7 @@ fn load_github_token(repo_key: &str) -> Result<String, String> {
         .services
         .get("github")
         .ok_or(format!("no github token for {repo_key}, run ace auth"))?;
+
     github
         .token
         .clone()

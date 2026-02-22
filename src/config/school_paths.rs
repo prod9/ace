@@ -82,6 +82,7 @@ fn parse_specifier(spec: &str) -> Result<(String, Option<&str>), ParseError> {
     if source != "." && has_traversal(source) {
         return Err(ParseError::TraversalInSource(source.to_string()));
     }
+
     if let Some(p) = path {
         if has_traversal(p) {
             return Err(ParseError::TraversalInPath(p.to_string()));

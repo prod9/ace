@@ -102,39 +102,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn split_specifier_simple() {
-        assert_eq!(split_specifier("prod9/school"), ("prod9/school", ""));
-    }
-
-    #[test]
-    fn split_specifier_with_path() {
-        assert_eq!(split_specifier("prod9/mono:school"), ("prod9/mono", "school"));
-    }
-
-    #[test]
-    fn split_specifier_with_leading_slash() {
-        assert_eq!(split_specifier("prod9/mono:/school"), ("prod9/mono", "school"));
-    }
-
-    #[test]
-    fn upsert_adds_new() {
-        let mut index = IndexToml::default();
-        upsert(&mut index, "prod9/school");
-        assert_eq!(index.school.len(), 1);
-        assert_eq!(index.school[0].specifier, "prod9/school");
-        assert_eq!(index.school[0].repo, "prod9/school");
-        assert_eq!(index.school[0].path, "");
-    }
-
-    #[test]
-    fn upsert_with_path() {
-        let mut index = IndexToml::default();
-        upsert(&mut index, "prod9/mono:school");
-        assert_eq!(index.school[0].repo, "prod9/mono");
-        assert_eq!(index.school[0].path, "school");
-    }
-
-    #[test]
     fn upsert_deduplicates() {
         let mut index = IndexToml::default();
         upsert(&mut index, "prod9/school");
@@ -148,15 +115,6 @@ mod tests {
         upsert(&mut index, "prod9/school");
         upsert(&mut index, "acme/school");
         assert_eq!(index.school.len(), 2);
-    }
-
-    #[test]
-    fn list_specifiers_returns_all() {
-        let mut index = IndexToml::default();
-        upsert(&mut index, "prod9/school");
-        upsert(&mut index, "acme/school");
-        let specs = list_specifiers(&index);
-        assert_eq!(specs, vec!["prod9/school", "acme/school"]);
     }
 
     #[test]

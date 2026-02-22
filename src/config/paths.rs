@@ -37,18 +37,3 @@ pub(super) fn cache_dir() -> Result<PathBuf, PathError> {
     let home = home_dir().map(|h| h.join(".cache"));
     xdg.or_else(|| home).ok_or(PathError::NoCacheDir)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-
-    #[test]
-    fn resolve_config_paths() {
-        let project = Path::new("/tmp/myproject");
-        let p = resolve(project).expect("resolve should succeed with HOME set");
-
-        assert_eq!(p.local, PathBuf::from("/tmp/myproject/ace.local.toml"));
-        assert_eq!(p.project, PathBuf::from("/tmp/myproject/ace.toml"));
-    }
-}

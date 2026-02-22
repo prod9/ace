@@ -26,8 +26,10 @@ Workflow:
   whenever work items don't depend on each other
 
 Metrics:
-- Before any refactoring or code changes, run `cloc` on affected files to capture a baseline.
-  After finishing, report `git diff --stat` to show lines changed.
+- After finishing code changes, report `git diff --stat` and share your read on the delta with
+  the user. Net deletions? Celebrate briefly. Small addition for new behavior? Normal. Large
+  net addition? Flag it — question whether the approach is too heavy or if something simpler
+  would do.
 
 ## Dependencies
 

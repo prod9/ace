@@ -18,7 +18,6 @@ pub struct Install<'a> {
 impl Install<'_> {
     pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
-
         let cache = match &school_paths.cache {
             Some(c) => c,
             None => return Ok(()), // embedded school
@@ -28,27 +27,24 @@ impl Install<'_> {
             std::fs::create_dir_all(parent)
                 .map_err(|e| SetupError::Clone(format!("mkdir: {e}")))?;
         }
-
         let repo = self.specifier.split_once(':').map_or(
             self.specifier,
             |(owner_repo, _)| owner_repo,
         );
         let url = format!("https://github.com/{repo}.git");
+
         let status = Command::new("git")
             .args(["clone", "--depth", "1", &url])
             .arg(cache)
             .status()
             .map_err(|e| SetupError::Clone(format!("git clone: {e}")))?;
-
         if !status.success() {
             return Err(SetupError::Clone(format!("git clone exited {status}")));
         }
 
         update_index(&school_paths.source)?;
-
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
-
         println!("School: {}", school_toml.school.name);
 
         for service in &school_toml.services {

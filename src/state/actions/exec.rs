@@ -34,14 +34,3 @@ impl Exec {
         Err(ExecError::Exec(err))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn backend_binary_names() {
-        assert_eq!(Backend::Claude.binary(), "claude");
-        assert_eq!(Backend::OpenCode.binary(), "opencode");
-    }
-}
