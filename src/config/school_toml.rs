@@ -22,6 +22,8 @@ pub struct SchoolMeta {
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,
+    #[serde(default)]
+    pub session_prompt: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

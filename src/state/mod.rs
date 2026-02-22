@@ -1,4 +1,5 @@
 pub mod actions;
+pub mod prompt;
 pub mod school;
 pub mod service;
 
@@ -81,6 +82,7 @@ mod tests {
     fn toml(school: &str, env: &[(&str, &str)]) -> AceToml {
         AceToml {
             school: school.to_string(),
+            session_prompt: String::new(),
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
         }
     }

@@ -1,7 +1,7 @@
 use clap::Subcommand;
 
 use crate::ace::Ace;
-use crate::state::actions::propose::Propose;
+use crate::state::actions::school_propose::SchoolPropose;
 use crate::state::actions::school_init::SchoolInit;
 use crate::term_ui::{Screen, Tui};
 
@@ -93,7 +93,7 @@ fn run_propose(_ace: &mut Ace) {
     let mut ace_with_state = crate::ace::Ace::with_state(state);
     let mut session = ace_with_state.session();
 
-    let propose = Propose {
+    let propose = SchoolPropose {
         project_dir: &project_dir,
         token: &token,
     };

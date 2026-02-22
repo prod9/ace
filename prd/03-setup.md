@@ -40,7 +40,7 @@ runs.
      `index.toml` entry, parse `school.toml`, authenticate services, write user config.
    - **Yes** → **Update**: `git pull` on the cached repo.
 2. **Link**: symlink each skill directory from `<cache>/skills/<name>/` into
-   `<project>/.ace/skills/<name>/`. Skips matching symlinks, replaces stale symlinks, never
+   `<project>/.claude/skills/<name>/`. Skips matching symlinks, replaces stale symlinks, never
    clobbers real directories.
 
 ## Normal `ace` Run

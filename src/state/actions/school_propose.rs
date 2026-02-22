@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::session::Session;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ProposeError {
+pub enum SchoolProposeError {
     #[error("no school linked, run ace setup first")]
     NoSchool,
     #[error("school cache not found at {0}")]
@@ -23,31 +23,31 @@ pub enum ProposeError {
     Config(#[from] crate::config::school_paths::ResolveError),
 }
 
-pub struct Propose<'a> {
+pub struct SchoolPropose<'a> {
     pub project_dir: &'a Path,
     pub token: &'a str,
 }
 
-impl Propose<'_> {
-    pub fn run(&self, session: &mut Session<'_>) -> Result<String, ProposeError> {
+impl SchoolPropose<'_> {
+    pub fn run(&self, session: &mut Session<'_>) -> Result<String, SchoolProposeError> {
         let specifier = session
             .state
             .school_specifier
             .as_deref()
-            .ok_or(ProposeError::NoSchool)?;
+            .ok_or(SchoolProposeError::NoSchool)?;
 
         let school_paths = crate::config::school_paths::resolve(self.project_dir, specifier)?;
         let cache = school_paths
             .cache
             .as_deref()
-            .ok_or_else(|| ProposeError::NoCacheDir("embedded school".to_string()))?;
+            .ok_or_else(|| SchoolProposeError::NoCacheDir("embedded school".to_string()))?;
 
         if !cache.join(".git").exists() {
-            return Err(ProposeError::NoCacheDir(cache.display().to_string()));
+            return Err(SchoolProposeError::NoCacheDir(cache.display().to_string()));
         }
 
         if !has_changes(cache)? {
-            return Err(ProposeError::NoChanges);
+            return Err(SchoolProposeError::NoChanges);
         }
 
         let (owner, repo) = parse_owner_repo(specifier)?;
@@ -66,70 +66,70 @@ impl Propose<'_> {
     }
 }
 
-fn parse_owner_repo(specifier: &str) -> Result<(&str, &str), ProposeError> {
+fn parse_owner_repo(specifier: &str) -> Result<(&str, &str), SchoolProposeError> {
     let repo_part = specifier.split_once(':').map_or(specifier, |(repo, _)| repo);
     repo_part
         .split_once('/')
-        .ok_or_else(|| ProposeError::Git(format!("invalid specifier: {specifier}")))
+        .ok_or_else(|| SchoolProposeError::Git(format!("invalid specifier: {specifier}")))
 }
 
-fn has_changes(repo: &Path) -> Result<bool, ProposeError> {
+fn has_changes(repo: &Path) -> Result<bool, SchoolProposeError> {
     let output = Command::new("git")
         .args(["status", "--porcelain"])
         .current_dir(repo)
         .output()
-        .map_err(|e| ProposeError::Git(format!("git status: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git status: {e}")))?;
 
     Ok(!output.stdout.is_empty())
 }
 
-fn create_branch(repo: &Path, branch: &str) -> Result<(), ProposeError> {
+fn create_branch(repo: &Path, branch: &str) -> Result<(), SchoolProposeError> {
     let status = Command::new("git")
         .args(["checkout", "-b", branch])
         .current_dir(repo)
         .status()
-        .map_err(|e| ProposeError::Git(format!("git checkout: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git checkout: {e}")))?;
 
     if !status.success() {
-        return Err(ProposeError::Git(format!(
+        return Err(SchoolProposeError::Git(format!(
             "git checkout -b {branch} exited {status}"
         )));
     }
     Ok(())
 }
 
-fn stage_and_commit(repo: &Path) -> Result<(), ProposeError> {
+fn stage_and_commit(repo: &Path) -> Result<(), SchoolProposeError> {
     let status = Command::new("git")
         .args(["add", "-A"])
         .current_dir(repo)
         .status()
-        .map_err(|e| ProposeError::Git(format!("git add: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git add: {e}")))?;
 
     if !status.success() {
-        return Err(ProposeError::Git(format!("git add exited {status}")));
+        return Err(SchoolProposeError::Git(format!("git add exited {status}")));
     }
 
     let status = Command::new("git")
         .args(["commit", "-m", "Propose school changes from ace"])
         .current_dir(repo)
         .status()
-        .map_err(|e| ProposeError::Git(format!("git commit: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git commit: {e}")))?;
 
     if !status.success() {
-        return Err(ProposeError::Git(format!("git commit exited {status}")));
+        return Err(SchoolProposeError::Git(format!("git commit exited {status}")));
     }
     Ok(())
 }
 
-fn push_branch(repo: &Path, branch: &str) -> Result<(), ProposeError> {
+fn push_branch(repo: &Path, branch: &str) -> Result<(), SchoolProposeError> {
     let status = Command::new("git")
         .args(["push", "-u", "origin", branch])
         .current_dir(repo)
         .status()
-        .map_err(|e| ProposeError::Git(format!("git push: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git push: {e}")))?;
 
     if !status.success() {
-        return Err(ProposeError::Git(format!("git push exited {status}")));
+        return Err(SchoolProposeError::Git(format!("git push exited {status}")));
     }
     Ok(())
 }
@@ -147,7 +147,7 @@ struct CreatePrResponse {
     html_url: String,
 }
 
-fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<String, ProposeError> {
+fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<String, SchoolProposeError> {
     let url = format!("https://api.github.com/repos/{owner}/{repo}/pulls");
 
     let request_body = CreatePrRequest {
@@ -162,33 +162,33 @@ fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<Strin
         .header("Accept", "application/vnd.github+json")
         .header("User-Agent", "ace")
         .send_json(&request_body)
-        .map_err(|e| ProposeError::Api(e.to_string()))?
+        .map_err(|e| SchoolProposeError::Api(e.to_string()))?
         .body_mut()
         .read_json()
-        .map_err(|e| ProposeError::Api(format!("parse response: {e}")))?;
+        .map_err(|e| SchoolProposeError::Api(format!("parse response: {e}")))?;
 
     Ok(response.html_url)
 }
 
-fn reset_to_main(repo: &Path) -> Result<(), ProposeError> {
+fn reset_to_main(repo: &Path) -> Result<(), SchoolProposeError> {
     let status = Command::new("git")
         .args(["checkout", "main"])
         .current_dir(repo)
         .status()
-        .map_err(|e| ProposeError::Git(format!("git checkout main: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git checkout main: {e}")))?;
 
     if !status.success() {
-        return Err(ProposeError::Git(format!("git checkout main exited {status}")));
+        return Err(SchoolProposeError::Git(format!("git checkout main exited {status}")));
     }
 
     let status = Command::new("git")
         .args(["reset", "--hard", "origin/main"])
         .current_dir(repo)
         .status()
-        .map_err(|e| ProposeError::Git(format!("git reset: {e}")))?;
+        .map_err(|e| SchoolProposeError::Git(format!("git reset: {e}")))?;
 
     if !status.success() {
-        return Err(ProposeError::Git(format!("git reset exited {status}")));
+        return Err(SchoolProposeError::Git(format!("git reset exited {status}")));
     }
 
     Ok(())

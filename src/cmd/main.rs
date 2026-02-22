@@ -3,7 +3,7 @@ use crate::config;
 use crate::state::State;
 use crate::state::actions::exec::{self, Exec};
 use crate::state::actions::prepare::Prepare;
-use crate::state::actions::sync_prompt::SyncPrompt;
+use crate::state::prompt::build_session_prompt;
 
 pub async fn run(ace: &mut Ace) {
     let project_dir = match std::env::current_dir() {
@@ -63,20 +63,21 @@ pub async fn run(ace: &mut Ace) {
         }
     };
 
-    let system_prompt = {
-        let sync = SyncPrompt {
-            school_root: &school_paths.root,
-            school_name: &school_toml.school.name,
-            school_description: school_toml.school.description.as_deref(),
-        };
-        match sync.run(&mut session) {
-            Ok(p) => p,
-            Err(e) => {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            }
+    let ace_toml_path = project_dir.join("ace.toml");
+    let ace_toml = match config::ace_toml::load(&ace_toml_path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("error: ace.toml: {e}");
+            std::process::exit(1);
         }
     };
+
+    let session_prompt = build_session_prompt(
+        &school_toml.school.name,
+        school_toml.school.description.as_deref(),
+        &school_toml.school.session_prompt,
+        &ace_toml.session_prompt,
+    );
 
     let backend = match exec::detect_backend() {
         Ok(b) => b,
@@ -89,7 +90,7 @@ pub async fn run(ace: &mut Ace) {
     let env = session.state.env.clone();
     let action = Exec {
         backend,
-        system_prompt,
+        session_prompt,
         project_dir: project_dir.clone(),
         env,
     };

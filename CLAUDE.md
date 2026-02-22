@@ -47,6 +47,9 @@ Core functions:
 
 ## Action Pattern
 
+- **Actions are for mutations only** — disk writes, git commands, process exec, network calls.
+  Pure computation (building strings, merging data, validation) belongs on `State` or in
+  helper modules under `state/`, not as actions.
 - Actions are structs with params as fields, single method: `run(&self, session: &mut Session)`
 - No extra parameters in `run()` — everything goes on the struct
 - All actions live in `state/actions/`
@@ -54,6 +57,8 @@ Core functions:
 
 ## PRD Compliance
 
+- **Read `prd/02-architecture.md` before starting any coding task** — it defines the
+  Config/State/Ace layer boundaries and data flow
 - During coding tasks, flag any deviation from PRDs or missing PRD coverage
 - Ask for directions before proceeding when implementation would differ from PRD
 

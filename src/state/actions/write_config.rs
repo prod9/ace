@@ -52,6 +52,7 @@ impl WriteConfig {
                 ))?,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => AceToml {
                 school: String::new(),
+                session_prompt: String::new(),
                 env: std::collections::HashMap::new(),
             },
             Err(e) => return Err(SetupError::WriteConfig(e)),

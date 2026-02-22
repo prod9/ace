@@ -19,7 +19,7 @@ impl Link<'_> {
         }
 
         // TODO: target dir depends on backend (e.g. .claude/commands/)
-        let project_skills = self.project_dir.join(".ace").join("skills");
+        let project_skills = self.project_dir.join(".claude").join("skills");
         std::fs::create_dir_all(&project_skills)
             .map_err(SetupError::WriteConfig)?;
 
@@ -111,7 +111,7 @@ mod tests {
         let result = link_skills(&school, &project).expect("should create symlinks");
         assert_eq!(result.linked, 2);
 
-        let link = project.join(".ace").join("skills").join("git-commit");
+        let link = project.join(".claude").join("skills").join("git-commit");
         assert!(link.symlink_metadata().expect("link should exist").file_type().is_symlink());
 
         let content = std::fs::read_to_string(link.join("SKILL.md")).expect("read through symlink");
@@ -131,7 +131,7 @@ mod tests {
 
         std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
 
-        let project_skills = project.join(".ace").join("skills");
+        let project_skills = project.join(".claude").join("skills");
         std::fs::create_dir_all(&project_skills).expect("mkdir");
         std::os::unix::fs::symlink(skills.join("my-skill"), project_skills.join("my-skill"))
             .expect("create symlink");
@@ -154,7 +154,7 @@ mod tests {
         std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
         std::fs::create_dir_all(&project).expect("create project dir");
 
-        let project_skills = project.join(".ace").join("skills");
+        let project_skills = project.join(".claude").join("skills");
         std::fs::create_dir_all(&project_skills).expect("mkdir");
         std::os::unix::fs::symlink(dir.join("nonexistent"), project_skills.join("my-skill"))
             .expect("create stale symlink");
@@ -179,7 +179,7 @@ mod tests {
 
         std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
 
-        let project_skills = project.join(".ace").join("skills");
+        let project_skills = project.join(".claude").join("skills");
         std::fs::create_dir_all(project_skills.join("my-skill")).expect("create real dir");
         std::fs::write(project_skills.join("my-skill").join("local.md"), "local override")
             .expect("write local file");
@@ -201,7 +201,7 @@ mod tests {
             return Ok(LinkResult { linked: 0 });
         }
 
-        let project_skills = project_dir.join(".ace").join("skills");
+        let project_skills = project_dir.join(".claude").join("skills");
         std::fs::create_dir_all(&project_skills).map_err(SetupError::WriteConfig)?;
 
         let mut linked = 0;

@@ -29,7 +29,7 @@ impl Backend {
 
 pub struct Exec {
     pub backend: Backend,
-    pub system_prompt: String,
+    pub session_prompt: String,
     pub project_dir: PathBuf,
     pub env: HashMap<String, String>,
 }
@@ -45,10 +45,10 @@ impl Exec {
 
         match self.backend {
             Backend::ClaudeCode => {
-                cmd.arg("--system-prompt").arg(&self.system_prompt);
+                cmd.arg("--system-prompt").arg(&self.session_prompt);
             }
             Backend::OpenCode => {
-                cmd.env("ACE_SYSTEM_PROMPT", &self.system_prompt);
+                cmd.env("ACE_SYSTEM_PROMPT", &self.session_prompt);
             }
         }
 
