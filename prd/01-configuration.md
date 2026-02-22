@@ -36,3 +36,42 @@ token = "ghp_..."
 - `services.<name>.token` -- Access token for the service.
 - `services.<name>.*` -- Additional service-specific fields (e.g. `username`).
 
+## Loading vs Validation
+
+Config loading and config validation are separate concerns.
+
+### Loading
+
+Serde handles deserialization only. All config structs use `#[derive(Default)]` and
+`#[serde(default)]` at the struct level. Every field parses successfully regardless of what's
+present in the TOML — missing keys get their type's `Default` value (empty string, empty vec,
+`None`, etc.).
+
+This means the TOML `[school]` with no `name` key produces `SchoolMeta { name: "".into(), .. }`
+rather than a serde error. Partial or empty files always parse.
+
+### Validation
+
+After loading, a separate validation pass checks invariants and produces clear, actionable errors.
+Validation runs on the merged config (after all three layers are combined), not on individual files.
+
+Rules are expressed in code, not via serde attributes. Examples:
+
+- `school.name` must be non-empty.
+- `services[].authorize_url` and `services[].token_url` must be valid URLs.
+- `services[].client_id` must be non-empty.
+- No duplicate `services[].name` entries.
+- No duplicate `mcp[].name` entries.
+- `projects[].repo` must be a valid specifier.
+
+Validation errors reference the offending key path: e.g. `school.name: must not be empty`,
+`services[0].authorize_url: not a valid URL`.
+
+### Why
+
+- Serde's "missing field" errors are opaque and unhelpful to users.
+- Required-vs-optional is a validation concern, not a parsing concern.
+- Validation on the merged config catches cross-layer issues (e.g. a layer overrides a field to
+  an invalid value).
+- Richer checks (URL format, uniqueness, non-empty) cannot be expressed through serde alone.
+

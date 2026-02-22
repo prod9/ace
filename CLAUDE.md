@@ -39,6 +39,12 @@ Core functions:
 - In tests, use `.expect("reason")` instead of `.unwrap()` so failures always have context.
 - Be strict with error handling everywhere. No lazy shortcuts, no swallowing errors.
 
+## Config and Data Structs
+
+- **Loading vs validation**: Serde handles parsing only. Validation is a separate pass in code after loading. See `prd/01-configuration.md` for details.
+- All config/DTO structs use `#[derive(Default)]` + `#[serde(default)]` at the struct level. No per-field `#[serde(default)]`.
+- **Prefer default**: Prefer `String` (defaults to `""`) over `Option<String>` when there is no meaningful distinction between absent and empty. Same for `Vec<T>` (empty vec) vs `Option<Vec<T>>`. Reserve `Option<T>` for cases where absence carries distinct semantics from the zero value.
+
 ## Action Pattern
 
 - Actions are structs with params as fields, single method: `run(&self, session: &mut Session)`
