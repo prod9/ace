@@ -54,8 +54,6 @@ impl<'a> Tui<'a> {
             None
         };
 
-        println!("{LOGO}\n");
-
         let mut prompt = inquire::Text::new("School name:");
         if let Some(ref name) = existing_name {
             prompt = prompt.with_initial_value(name);

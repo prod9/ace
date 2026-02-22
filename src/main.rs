@@ -11,7 +11,10 @@ use cmd::Cli;
 
 fn main() {
     let cli = Cli::parse();
-    let mut ace = ace::Ace::new();
 
+    eprintln!("{}", term_ui::LOGO);
+    eprintln!("  {}\n", env!("ACE_GIT_HASH"));
+
+    let mut ace = ace::Ace::new();
     smol::block_on(cmd::run(&mut ace, cli));
 }
