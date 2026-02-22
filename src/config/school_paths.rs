@@ -13,28 +13,18 @@ pub fn resolve(
     specifier: &str,
 ) -> Result<SchoolPaths, ResolveError> {
     let (source, path) = parse_specifier(specifier)?;
-    if source == "." {
-        let root = match path {
-            Some(p) => project_dir.join(p),
-            None => project_dir.to_path_buf(),
-        };
-        Ok(SchoolPaths {
-            source: specifier.to_string(),
-            cache: None,
-            root,
-        })
+    let (base, cache) = if source == "." {
+        (project_dir.to_path_buf(), None)
     } else {
         let cache = cache_dir()?.join("ace").join(&source);
-        let root = match path {
-            Some(p) => cache.join(p),
-            None => cache.clone(),
-        };
-        Ok(SchoolPaths {
-            source: specifier.to_string(),
-            cache: Some(cache),
-            root,
-        })
-    }
+        (cache.clone(), Some(cache))
+    };
+    let root = path.map(|p| base.join(p)).unwrap_or(base.clone());
+    Ok(SchoolPaths {
+        source: specifier.to_string(),
+        cache,
+        root,
+    })
 }
 
 #[derive(Debug)]

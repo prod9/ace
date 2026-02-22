@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use crate::config::ace_toml::AceToml;
 use crate::config::user_config::{SchoolCredentials, UserConfig};
 use super::setup::SetupError;
@@ -11,14 +13,7 @@ impl WriteConfig {
     /// Preserves existing entries and credentials — only adds the school key
     /// if it doesn't already exist.
     pub fn user(path: &Path, specifier: &str) -> Result<(), SetupError> {
-        let mut config = match std::fs::read_to_string(path) {
-            Ok(content) => toml::from_str::<UserConfig>(&content)
-                .map_err(|e| SetupError::WriteConfig(
-                    std::io::Error::new(std::io::ErrorKind::InvalidData, e),
-                ))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => UserConfig::new(),
-            Err(e) => return Err(SetupError::WriteConfig(e)),
-        };
+        let mut config: UserConfig = load_or_default(path)?;
 
         let repo_key = specifier
             .split_once(':')
@@ -34,35 +29,35 @@ impl WriteConfig {
             std::fs::create_dir_all(parent).map_err(SetupError::WriteConfig)?;
         }
 
-        let content = toml::to_string(&config)
-            .map_err(|e| SetupError::WriteConfig(
-                std::io::Error::new(std::io::ErrorKind::InvalidData, e),
-            ))?;
-        std::fs::write(path, content).map_err(SetupError::WriteConfig)?;
-        Ok(())
+        write_toml(path, &config)
     }
 
     /// Write ace.toml with school = "<specifier>".
     /// Preserves existing env entries if the file already exists.
     pub fn project(path: &Path, specifier: &str) -> Result<(), SetupError> {
-        let mut config = match std::fs::read_to_string(path) {
-            Ok(content) => toml::from_str::<AceToml>(&content)
-                .map_err(|e| SetupError::WriteConfig(
-                    std::io::Error::new(std::io::ErrorKind::InvalidData, e),
-                ))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => AceToml::default(),
-            Err(e) => return Err(SetupError::WriteConfig(e)),
-        };
-
+        let mut config: AceToml = load_or_default(path)?;
         config.school = specifier.to_string();
+        write_toml(path, &config)
+    }
+}
 
-        let content = toml::to_string(&config)
+fn load_or_default<T: DeserializeOwned + Default>(path: &Path) -> Result<T, SetupError> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => toml::from_str::<T>(&content)
             .map_err(|e| SetupError::WriteConfig(
                 std::io::Error::new(std::io::ErrorKind::InvalidData, e),
-            ))?;
-        std::fs::write(path, content).map_err(SetupError::WriteConfig)?;
-        Ok(())
+            )),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(T::default()),
+        Err(e) => Err(SetupError::WriteConfig(e)),
     }
+}
+
+fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), SetupError> {
+    let content = toml::to_string(value)
+        .map_err(|e| SetupError::WriteConfig(
+            std::io::Error::new(std::io::ErrorKind::InvalidData, e),
+        ))?;
+    std::fs::write(path, content).map_err(SetupError::WriteConfig)
 }
 
 #[cfg(test)]

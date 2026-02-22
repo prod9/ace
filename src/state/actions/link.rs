@@ -38,22 +38,13 @@ impl Link<'_> {
             let link_path = project_skills.join(&skill_name);
             let target = entry.path();
 
-            if link_path.exists() || link_path.symlink_metadata().is_ok() {
-                if link_path.symlink_metadata()
-                    .map(|m| m.file_type().is_symlink())
-                    .unwrap_or(false)
-                {
-                    // Already a symlink — check if it points to the right place
-                    let current = std::fs::read_link(&link_path)
-                        .map_err(SetupError::WriteConfig)?;
-                    if current == target {
-                        continue;
-                    }
+            match link_status(&link_path) {
+                LinkStatus::Absent => {}
+                LinkStatus::RealDir => continue,
+                LinkStatus::Symlink(current) if current == target => continue,
+                LinkStatus::Symlink(_) => {
                     std::fs::remove_file(&link_path)
                         .map_err(SetupError::WriteConfig)?;
-                } else {
-                    // Real dir — don't clobber user files
-                    continue;
                 }
             }
 
@@ -68,6 +59,27 @@ impl Link<'_> {
 
 pub struct LinkResult {
     pub linked: usize,
+}
+
+enum LinkStatus {
+    Absent,
+    Symlink(std::path::PathBuf),
+    RealDir,
+}
+
+fn link_status(path: &Path) -> LinkStatus {
+    let is_symlink = path.symlink_metadata()
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false);
+
+    if is_symlink {
+        let target = std::fs::read_link(path).unwrap_or_default();
+        LinkStatus::Symlink(target)
+    } else if path.exists() {
+        LinkStatus::RealDir
+    } else {
+        LinkStatus::Absent
+    }
 }
 
 #[cfg(test)]

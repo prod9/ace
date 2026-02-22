@@ -40,6 +40,8 @@ Core functions:
 - **NEVER use `.unwrap()`** — always propagate errors with `?` or handle explicitly. No exceptions.
 - In tests, use `.expect("reason")` instead of `.unwrap()` so failures always have context.
 - Be strict with error handling everywhere. No lazy shortcuts, no swallowing errors.
+- Keep indentation shallow — fail fast with `?` or early return instead of nesting. When branching is unavoidable, keep branch arms short: delegate to named functions rather than inlining logic inside match/if blocks.
+- Use monadic combinators (`map`, `and_then`, `unwrap_or`, etc.) on `Option`/`Result` where they simplify over match/if chains.
 
 ## Config and Data Structs
 
