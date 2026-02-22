@@ -15,6 +15,7 @@ pub enum SchoolInitError {
 pub struct SchoolInit<'a> {
     pub name: &'a str,
     pub project_dir: &'a Path,
+    pub force: bool,
 }
 
 impl SchoolInit<'_> {
@@ -24,7 +25,7 @@ impl SchoolInit<'_> {
         }
 
         let toml_path = self.project_dir.join("school.toml");
-        if toml_path.exists() {
+        if !self.force && toml_path.exists() {
             return Err(SchoolInitError::AlreadyExists);
         }
 

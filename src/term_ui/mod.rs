@@ -17,7 +17,7 @@ pub enum TermError {
 }
 
 pub enum Workflow {
-    SchoolInit,
+    SchoolInit { force: bool },
 }
 
 pub struct Tui<'a> {
@@ -31,30 +31,41 @@ impl<'a> Tui<'a> {
 
     pub fn run(&mut self, workflow: Workflow) -> Result<(), TermError> {
         match workflow {
-            Workflow::SchoolInit => self.school_init(),
+            Workflow::SchoolInit { force } => self.school_init(force),
         }
     }
 
-    fn school_init(&mut self) -> Result<(), TermError> {
+    fn school_init(&mut self, force: bool) -> Result<(), TermError> {
         let project_dir = std::env::current_dir()?;
+        let toml_path = project_dir.join("school.toml");
 
         if !crate::state::actions::is_git_repo(&project_dir) {
             return Err(SchoolInitError::NotInGitRepo.into());
         }
-        if project_dir.join("school.toml").exists() {
+        if !force && toml_path.exists() {
             return Err(SchoolInitError::AlreadyExists.into());
         }
 
+        let existing_name = if force && toml_path.exists() {
+            crate::config::school_toml::load(&toml_path).ok()
+                .map(|s| s.school.name)
+                .filter(|n| !n.is_empty())
+        } else {
+            None
+        };
+
         println!("{LOGO}\n");
 
-        let name = inquire::Text::new("School name:")
-            .prompt()
-            .map_err(map_inquire_err)?;
+        let mut prompt = inquire::Text::new("School name:");
+        if let Some(ref name) = existing_name {
+            prompt = prompt.with_initial_value(name);
+        }
+        let name = prompt.prompt().map_err(map_inquire_err)?;
 
         let mut session = self.ace.session();
-        SchoolInit { name: &name, project_dir: &project_dir }.run(&mut session)?;
+        SchoolInit { name: &name, project_dir: &project_dir, force }.run(&mut session)?;
 
-        println!("Created {}", project_dir.join("school.toml").display());
+        println!("Created {}", toml_path.display());
         Ok(())
     }
 }

@@ -12,6 +12,9 @@ pub enum Command {
         /// School display name
         #[arg(long)]
         name: Option<String>,
+        /// Overwrite existing school.toml
+        #[arg(long)]
+        force: bool,
     },
     /// Propose local school changes back to upstream
     #[clap(alias = "pr")]
@@ -38,8 +41,8 @@ enum RunError {
 
 pub async fn run(ace: &mut Ace, command: Command) {
     match command {
-        Command::Init { name } => {
-            if let Err(e) = run_init(ace, name) {
+        Command::Init { name, force } => {
+            if let Err(e) = run_init(ace, name, force) {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }
@@ -53,7 +56,7 @@ pub async fn run(ace: &mut Ace, command: Command) {
     }
 }
 
-fn run_init(ace: &mut Ace, name: Option<String>) -> Result<(), RunError> {
+fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), RunError> {
     match name {
         Some(name) => {
             let project_dir = std::env::current_dir()?;
@@ -61,11 +64,12 @@ fn run_init(ace: &mut Ace, name: Option<String>) -> Result<(), RunError> {
             SchoolInit {
                 name: &name,
                 project_dir: &project_dir,
+                force,
             }
             .run(&mut session)?;
         }
         None => {
-            Tui::new(ace).run(Workflow::SchoolInit)?;
+            Tui::new(ace).run(Workflow::SchoolInit { force })?;
         }
     }
     Ok(())
