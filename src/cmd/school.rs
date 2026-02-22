@@ -3,7 +3,7 @@ use clap::Subcommand;
 use crate::ace::Ace;
 use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
 use crate::state::actions::school_propose::{SchoolPropose, SchoolProposeError};
-use crate::term_ui::{Screen, TermError, Tui};
+use crate::term_ui::{TermError, Tui, Workflow};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -65,7 +65,7 @@ fn run_init(ace: &mut Ace, name: Option<String>) -> Result<(), RunError> {
             .run(&mut session)?;
         }
         None => {
-            Tui::new(ace).show(Screen::SchoolInit)?;
+            Tui::new(ace).run(Workflow::SchoolInit)?;
         }
     }
     Ok(())

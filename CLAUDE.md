@@ -132,10 +132,9 @@ structure should communicate intent before the reader parses any syntax.
 
 ## TUI Pattern
 
-- `term_ui` module: `Tui::new(&mut Ace)` + `tui.show(Screen::...)` — no trait, no dynamic dispatch
-- `Screen` is a dumb enum (no data). Tui drives rendering, input, and action execution.
-- Each screen method: `ratatui::init()` → render loop → `ratatui::restore()` → run action
-- Always restore terminal before returning (even on error)
+- `term_ui` module: `Tui::new(&mut Ace)` + `tui.run(Workflow::...)` — no trait, no dynamic dispatch
+- `Workflow` enum dispatches to methods that use `inquire` for inline prompts (Text, Select)
+- Standalone `term_ui::select()` for cases where the caller runs the action (e.g. async actions)
 - Session has no UI field — interactive input is handled entirely by term_ui
 
 ## Cache Layout
