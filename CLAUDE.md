@@ -21,6 +21,9 @@ Tone:
 Workflow:
 - Ask permission before editing files (group related files)
 - Run commands/tests only after asking
+- **Never discard uncommitted changes** — do not run `git checkout`, `git restore`, or any
+  command that overwrites working tree files without asking the user first. Uncommitted changes
+  may be intentional work-in-progress.
 - Never propose grand plans; always a few small steps at a time
 - Always parallelize independent tasks — use parallel tool calls, concurrent agents, etc.
   whenever work items don't depend on each other
@@ -115,6 +118,8 @@ structure should communicate intent before the reader parses any syntax.
 
 ## Testing
 
+- **TDD flow**: If a change warrants tests (per the rules below), write the failing test first,
+  run it to confirm failure, then implement. Do not write tests and implementation together.
 - Unit tests are inline `#[cfg(test)] mod tests` in the same file
 - Longer integration tests will go in an external `tests/` crate later
 - **No tautological tests** — don't test trivial getters/accessors that just return a value
