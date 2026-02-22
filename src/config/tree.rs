@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::ace_toml::{self, AceToml};
+use super::backend::Backend;
 use super::paths::AcePaths;
 use super::ConfigError;
 
@@ -9,6 +10,8 @@ pub struct Tree {
     pub user: AceToml,
     pub project: AceToml,
     pub local: AceToml,
+    /// Backend from school.toml, applied after load when school is known.
+    pub school_backend: Option<Backend>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -32,7 +35,7 @@ impl Tree {
             return Err(LoadError::NoConfig);
         }
 
-        Ok(Tree { user, project, local })
+        Ok(Tree { user, project, local, school_backend: None })
     }
 }
 

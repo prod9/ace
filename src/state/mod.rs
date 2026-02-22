@@ -30,7 +30,22 @@ pub struct State {
 }
 
 impl State {
-    /// Pure computation: resolve effective values from config layers.
+    /// First pass: resolve school specifier from ace.toml layers only.
+    /// Call this before loading school.toml to know which school to load.
+    pub fn resolve_specifier(tree: &Tree) -> Option<String> {
+        if !tree.local.school.is_empty() {
+            Some(tree.local.school.clone())
+        } else if !tree.project.school.is_empty() {
+            Some(tree.project.school.clone())
+        } else if !tree.user.school.is_empty() {
+            Some(tree.user.school.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Full resolution: resolve all effective values from config layers.
+    /// Set tree.school_backend before calling if school.toml is available.
     pub fn resolve(tree: Tree) -> Self {
         let resolved = resolve_layers(&tree);
         Self {
@@ -48,9 +63,10 @@ impl State {
                 user: AceToml::default(),
                 project: AceToml::default(),
                 local: AceToml::default(),
+                school_backend: None,
             },
             school_specifier: None,
-            backend: Backend::Claude,
+            backend: Backend::default(),
             session_prompt: String::new(),
             env: HashMap::new(),
         }
@@ -83,12 +99,12 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         .find(|l| !l.school.is_empty())
         .map(|l| l.school.clone());
 
-    // backend: last Some wins, fallback Claude
-    let backend = layers
-        .iter()
-        .rev()
-        .find_map(|l| l.backend)
-        .unwrap_or(Backend::Claude);
+    // backend: local > project > school > user > fallback Claude
+    let backend = tree.local.backend
+        .or(tree.project.backend)
+        .or(tree.school_backend)
+        .or(tree.user.backend)
+        .unwrap_or_default();
 
     // session_prompt: last non-empty wins
     let session_prompt = layers
@@ -128,7 +144,7 @@ mod tests {
     }
 
     fn tree(user: AceToml, project: AceToml, local: AceToml) -> Tree {
-        Tree { user, project, local }
+        Tree { user, project, local, school_backend: None }
     }
 
     #[test]
@@ -213,6 +229,51 @@ mod tests {
         let t = tree(user, project, ace("", &[]));
         let r = resolve_layers(&t);
         assert_eq!(r.session_prompt, "project prompt");
+    }
+
+    #[test]
+    fn resolve_backend_school_toml_used() {
+        let mut t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
+        t.school_backend = Some(Backend::OpenCode);
+
+        let r = resolve_layers(&t);
+        assert_eq!(r.backend, Backend::OpenCode);
+    }
+
+    #[test]
+    fn resolve_backend_project_overrides_school() {
+        let mut project = ace("", &[]);
+        project.backend = Some(Backend::Claude);
+
+        let mut t = tree(ace("", &[]), project, ace("", &[]));
+        t.school_backend = Some(Backend::OpenCode);
+
+        let r = resolve_layers(&t);
+        assert_eq!(r.backend, Backend::Claude);
+    }
+
+    #[test]
+    fn resolve_backend_local_overrides_school() {
+        let mut local = ace("", &[]);
+        local.backend = Some(Backend::Claude);
+
+        let mut t = tree(ace("", &[]), ace("", &[]), local);
+        t.school_backend = Some(Backend::OpenCode);
+
+        let r = resolve_layers(&t);
+        assert_eq!(r.backend, Backend::Claude);
+    }
+
+    #[test]
+    fn resolve_backend_school_overrides_user() {
+        let mut user = ace("", &[]);
+        user.backend = Some(Backend::Claude);
+
+        let mut t = tree(user, ace("", &[]), ace("", &[]));
+        t.school_backend = Some(Backend::OpenCode);
+
+        let r = resolve_layers(&t);
+        assert_eq!(r.backend, Backend::OpenCode);
     }
 
     #[test]

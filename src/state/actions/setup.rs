@@ -46,7 +46,7 @@ impl Setup<'_> {
         Prepare {
             specifier: self.specifier,
             project_dir: self.project_dir,
-            skills_dir: Backend::Claude.skills_dir(),
+            skills_dir: Backend::default().skills_dir(),
         }
         .run(session)
         .await?;
