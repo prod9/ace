@@ -1,1 +1,3 @@
-school = ".:/school"
+school = "prod9/school"
+
+[env]
