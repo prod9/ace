@@ -5,6 +5,8 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.59", features = ["derive"] }
+console = "0.16.2"
+indicatif = "0.18.4"
 inquire = { version = "0.9.3", default-features = false, features = ["console", "one-liners"] }
 serde = { version = "1.0.228", features = ["derive"] }
 smol = "2.0.2"

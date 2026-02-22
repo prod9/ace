@@ -26,14 +26,14 @@ enum RunError {
     Exec(#[from] ExecError),
 }
 
-pub async fn run(ace: &mut Ace) {
-    if let Err(e) = run_inner(ace).await {
+pub async fn run(ace: &mut Ace, backend_args: Vec<String>) {
+    if let Err(e) = run_inner(ace, backend_args).await {
         eprintln!("error: {e}");
         std::process::exit(1);
     }
 }
 
-async fn run_inner(ace: &mut Ace) -> Result<(), RunError> {
+async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), RunError> {
     let project_dir = std::env::current_dir()?;
     let paths = config::paths::resolve(&project_dir)?;
     let mut tree = config::tree::Tree::load(&paths)?;
@@ -81,6 +81,7 @@ async fn run_inner(ace: &mut Ace) -> Result<(), RunError> {
         session_prompt,
         project_dir: project_dir.clone(),
         env: session.state.env.clone(),
+        backend_args,
     }
     .run(&mut session)?;
 

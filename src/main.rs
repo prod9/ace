@@ -3,6 +3,7 @@ mod cmd;
 mod config;
 mod session;
 mod state;
+mod status;
 mod term_ui;
 
 use clap::Parser;

@@ -10,10 +10,18 @@ use clap::{Parser, Subcommand};
 use crate::ace::Ace;
 
 #[derive(Parser)]
-#[command(name = "ace", about = "AI Coding Environment")]
+#[command(
+    name = "ace",
+    about = "AI Coding Environment",
+    version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("ACE_GIT_HASH"), ")"),
+)]
 pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
+
+    /// Extra arguments passed through to the backend (claude/opencode)
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    backend_args: Vec<String>,
 }
 
 #[derive(Subcommand)]
@@ -46,6 +54,6 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths) => paths::run(ace).await,
         Some(Command::School { command }) => school::run(ace, command).await,
-        None => main::run(ace).await,
+        None => main::run(ace, cli.backend_args).await,
     }
 }

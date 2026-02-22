@@ -16,6 +16,7 @@ pub struct Exec {
     pub session_prompt: String,
     pub project_dir: PathBuf,
     pub env: HashMap<String, String>,
+    pub backend_args: Vec<String>,
 }
 
 impl Exec {
@@ -28,6 +29,7 @@ impl Exec {
         }
 
         cmd.arg("--system-prompt").arg(&self.session_prompt);
+        cmd.args(&self.backend_args);
 
         use std::os::unix::process::CommandExt;
         let err = cmd.exec();

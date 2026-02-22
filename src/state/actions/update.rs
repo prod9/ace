@@ -33,7 +33,7 @@ impl Update<'_> {
             ));
         }
 
-        git_fetch(cache)?;
+        git_fetch(cache, self.specifier)?;
         git_reset_to_origin_main(cache)?;
 
         Ok(())
@@ -50,16 +50,21 @@ fn is_dirty(repo: &Path) -> Result<bool, SetupError> {
     Ok(!output.stdout.is_empty())
 }
 
-fn git_fetch(repo: &Path) -> Result<(), SetupError> {
+fn git_fetch(repo: &Path, specifier: &str) -> Result<(), SetupError> {
+    let sp = crate::status::spinner(&format!("Fetching {specifier} from origin"));
     let status = Command::new("git")
-        .args(["fetch", "origin"])
+        .args(["fetch", "--depth", "1", "--no-tags", "origin", "main"])
         .current_dir(repo)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .status()
         .map_err(|e| SetupError::Clone(format!("git fetch: {e}")))?;
+    sp.finish_and_clear();
 
     if !status.success() {
         return Err(SetupError::Clone(format!("git fetch exited {status}")));
     }
+    crate::status::done(&format!("Fetched {specifier}"));
     Ok(())
 }
 
@@ -67,6 +72,8 @@ fn git_reset_to_origin_main(repo: &Path) -> Result<(), SetupError> {
     let status = Command::new("git")
         .args(["reset", "--hard", "origin/main"])
         .current_dir(repo)
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .status()
         .map_err(|e| SetupError::Clone(format!("git reset: {e}")))?;
 

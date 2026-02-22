@@ -33,14 +33,19 @@ impl Install<'_> {
         );
         let url = format!("https://github.com/{repo}.git");
 
+        let sp = crate::status::spinner(&format!("Cloning {repo}"));
         let status = Command::new("git")
-            .args(["clone", "--depth", "1", &url])
+            .args(["clone", "--depth", "1", "--single-branch", "--no-tags", &url])
             .arg(cache)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .status()
             .map_err(|e| SetupError::Clone(format!("git clone: {e}")))?;
+        sp.finish_and_clear();
         if !status.success() {
             return Err(SetupError::Clone(format!("git clone exited {status}")));
         }
+        crate::status::done(&format!("Cloned {repo}"));
 
         update_index(&school_paths.source)?;
         let school_toml_path = school_paths.root.join("school.toml");
