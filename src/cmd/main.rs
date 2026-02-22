@@ -20,8 +20,8 @@ enum RunError {
     Prepare(#[from] SetupError),
     #[error("{0}")]
     SchoolPath(#[from] config::school_paths::ResolveError),
-    #[error("school.toml: {0}")]
-    SchoolToml(#[from] config::ConfigError),
+    #[error("{0}")]
+    SchoolToml(String),
     #[error("{0}")]
     Exec(#[from] ExecError),
 }
@@ -61,7 +61,8 @@ async fn run_inner(ace: &mut Ace) -> Result<(), RunError> {
     // Pass 2: load school.toml, feed backend into tree, full resolve.
     let school_paths = config::school_paths::resolve(&project_dir, &specifier)?;
     let school_toml_path = school_paths.root.join("school.toml");
-    let school_toml = config::school_toml::load(&school_toml_path)?;
+    let school_toml = config::school_toml::load(&school_toml_path)
+        .map_err(|e| RunError::SchoolToml(format!("{}: {e}", school_toml_path.display())))?;
     tree.school_backend = school_toml.school.backend;
 
     let state = State::resolve(tree);
