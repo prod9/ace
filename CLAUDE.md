@@ -160,3 +160,6 @@ structure should communicate intent before the reader parses any syntax.
 - ~~Pass-through flags to backend~~ — done: `ace --continue` forwards to `claude --continue`
 - Consider `ace school adopt` for repos that already have claude skills (`.claude/` dir) —
   merge existing conventions/skills into a school instead of overwriting
+- Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
+- Split CLAUDE.md notes into school skills: `general-coding` (language-agnostic rules) then
+  `rust-coding` (Rust-specific conventions)
