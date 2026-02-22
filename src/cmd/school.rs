@@ -64,9 +64,25 @@ fn run_propose(_ace: &mut Ace) {
         }
     };
 
-    // Need to load state to know which school is linked
     let state = match crate::state::State::load(&project_dir) {
         Ok(s) => s,
+        Err(e) => {
+            eprintln!("error: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    let specifier = match &state.school_specifier {
+        Some(s) => s.clone(),
+        None => {
+            eprintln!("error: no school linked, run ace setup first");
+            std::process::exit(1);
+        }
+    };
+
+    let repo_key = specifier.split_once(':').map_or(specifier.as_str(), |(repo, _)| repo);
+    let token = match load_github_token(repo_key) {
+        Ok(t) => t,
         Err(e) => {
             eprintln!("error: {e}");
             std::process::exit(1);
@@ -78,6 +94,7 @@ fn run_propose(_ace: &mut Ace) {
 
     let propose = Propose {
         project_dir: &project_dir,
+        token: &token,
     };
 
     match propose.run(&mut session) {
@@ -87,4 +104,22 @@ fn run_propose(_ace: &mut Ace) {
             std::process::exit(1);
         }
     }
+}
+
+fn load_github_token(repo_key: &str) -> Result<String, String> {
+    let path = crate::config::user_config::default_path()
+        .ok_or("cannot determine config dir")?;
+    let config = crate::config::user_config::load(&path)
+        .map_err(|e| format!("load config: {e}"))?;
+    let school = config
+        .get(repo_key)
+        .ok_or(format!("no config for school {repo_key}, run ace setup"))?;
+    let github = school
+        .services
+        .get("github")
+        .ok_or(format!("no github token for {repo_key}, run ace auth"))?;
+    github
+        .token
+        .clone()
+        .ok_or(format!("github token empty for {repo_key}"))
 }

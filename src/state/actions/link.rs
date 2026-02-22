@@ -1,44 +1,242 @@
 use std::path::Path;
 
 use crate::config;
-use crate::config::index_toml;
 use crate::session::Session;
 use super::setup::SetupError;
 
-use super::write_config::WriteConfig;
-
+/// Symlink school skills from cache into the project.
 pub struct Link<'a> {
+    pub specifier: &'a str,
     pub project_dir: &'a Path,
 }
 
 impl Link<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
-        let schools = list_cached_schools()?;
-        if schools.is_empty() {
-            return Err(SetupError::NoCachedSchools);
+    pub fn run(&self, _session: &mut Session<'_>) -> Result<LinkResult, SetupError> {
+        let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
+        let school_skills = school_paths.root.join("skills");
+        if !school_skills.exists() {
+            return Ok(LinkResult { linked: 0 });
         }
 
-        // Convention: one school → use it. Multiple → use first (TUI selection later).
-        let specifier = schools.first().ok_or(SetupError::NoCachedSchools)?.clone();
+        // TODO: target dir depends on backend (e.g. .claude/commands/)
+        let project_skills = self.project_dir.join(".ace").join("skills");
+        std::fs::create_dir_all(&project_skills)
+            .map_err(SetupError::WriteConfig)?;
 
-        if schools.len() > 1 {
-            eprintln!("Multiple schools cached, using: {specifier}");
-            eprintln!("(TUI school picker coming soon)");
+        let mut linked = 0;
+        let entries = std::fs::read_dir(&school_skills)
+            .map_err(SetupError::WriteConfig)?;
+
+        for entry in entries {
+            let entry = entry.map_err(SetupError::WriteConfig)?;
+            let file_type = entry.file_type().map_err(SetupError::WriteConfig)?;
+            if !file_type.is_dir() {
+                continue;
+            }
+
+            let skill_name = entry.file_name();
+            let link_path = project_skills.join(&skill_name);
+            let target = entry.path();
+
+            if link_path.exists() || link_path.symlink_metadata().is_ok() {
+                if link_path.symlink_metadata()
+                    .map(|m| m.file_type().is_symlink())
+                    .unwrap_or(false)
+                {
+                    // Already a symlink — check if it points to the right place
+                    let current = std::fs::read_link(&link_path)
+                        .map_err(SetupError::WriteConfig)?;
+                    if current == target {
+                        continue;
+                    }
+                    std::fs::remove_file(&link_path)
+                        .map_err(SetupError::WriteConfig)?;
+                } else {
+                    // Real dir — don't clobber user files
+                    continue;
+                }
+            }
+
+            std::os::unix::fs::symlink(&target, &link_path)
+                .map_err(SetupError::WriteConfig)?;
+            linked += 1;
         }
 
-        let ace_paths = config::paths::resolve(self.project_dir)?;
-        WriteConfig::project(&ace_paths.project, &specifier)?;
-
-        session.state.school_specifier = Some(specifier);
-
-        Ok(())
+        Ok(LinkResult { linked })
     }
 }
 
-fn list_cached_schools() -> Result<Vec<String>, SetupError> {
-    let index_path = index_toml::index_path()
-        .map_err(|e| SetupError::Clone(format!("index path: {e}")))?;
-    let index = index_toml::load(&index_path)
-        .map_err(|e| SetupError::Clone(format!("load index: {e}")))?;
-    Ok(index_toml::list_specifiers(&index))
+pub struct LinkResult {
+    pub linked: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn link_no_skills_dir() {
+        let dir = std::env::temp_dir().join("ace-test-link-no-skills");
+        let _ = std::fs::remove_dir_all(&dir);
+        let school = dir.join("school");
+        let project = dir.join("project");
+        std::fs::create_dir_all(&school).expect("create school dir");
+        std::fs::create_dir_all(&project).expect("create project dir");
+
+        let result = link_skills(&school, &project).expect("should succeed");
+        assert_eq!(result.linked, 0);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn link_creates_symlinks() {
+        let dir = std::env::temp_dir().join("ace-test-link-symlinks");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let school = dir.join("school");
+        let project = dir.join("project");
+        let skills = school.join("skills");
+
+        std::fs::create_dir_all(skills.join("git-commit")).expect("create skill dir");
+        std::fs::write(skills.join("git-commit").join("SKILL.md"), "# Git Commit")
+            .expect("write skill");
+
+        std::fs::create_dir_all(skills.join("code-review")).expect("create skill dir");
+        std::fs::write(skills.join("code-review").join("SKILL.md"), "# Code Review")
+            .expect("write skill");
+
+        std::fs::create_dir_all(&project).expect("create project dir");
+
+        let result = link_skills(&school, &project).expect("should create symlinks");
+        assert_eq!(result.linked, 2);
+
+        let link = project.join(".ace").join("skills").join("git-commit");
+        assert!(link.symlink_metadata().expect("link should exist").file_type().is_symlink());
+
+        let content = std::fs::read_to_string(link.join("SKILL.md")).expect("read through symlink");
+        assert_eq!(content, "# Git Commit");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn link_skips_matching_symlinks() {
+        let dir = std::env::temp_dir().join("ace-test-link-skip-matching");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let school = dir.join("school");
+        let project = dir.join("project");
+        let skills = school.join("skills");
+
+        std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
+
+        let project_skills = project.join(".ace").join("skills");
+        std::fs::create_dir_all(&project_skills).expect("mkdir");
+        std::os::unix::fs::symlink(skills.join("my-skill"), project_skills.join("my-skill"))
+            .expect("create symlink");
+
+        let result = link_skills(&school, &project).expect("should skip existing");
+        assert_eq!(result.linked, 0);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn link_replaces_stale_symlinks() {
+        let dir = std::env::temp_dir().join("ace-test-link-replace");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let school = dir.join("school");
+        let project = dir.join("project");
+        let skills = school.join("skills");
+
+        std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
+        std::fs::create_dir_all(&project).expect("create project dir");
+
+        let project_skills = project.join(".ace").join("skills");
+        std::fs::create_dir_all(&project_skills).expect("mkdir");
+        std::os::unix::fs::symlink(dir.join("nonexistent"), project_skills.join("my-skill"))
+            .expect("create stale symlink");
+
+        let result = link_skills(&school, &project).expect("should replace stale");
+        assert_eq!(result.linked, 1);
+
+        let target = std::fs::read_link(project_skills.join("my-skill")).expect("read link");
+        assert_eq!(target, skills.join("my-skill"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn link_skips_real_dirs() {
+        let dir = std::env::temp_dir().join("ace-test-link-skip-real");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let school = dir.join("school");
+        let project = dir.join("project");
+        let skills = school.join("skills");
+
+        std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
+
+        let project_skills = project.join(".ace").join("skills");
+        std::fs::create_dir_all(project_skills.join("my-skill")).expect("create real dir");
+        std::fs::write(project_skills.join("my-skill").join("local.md"), "local override")
+            .expect("write local file");
+
+        let result = link_skills(&school, &project).expect("should skip real dirs");
+        assert_eq!(result.linked, 0);
+
+        let content = std::fs::read_to_string(project_skills.join("my-skill").join("local.md"))
+            .expect("local file should still exist");
+        assert_eq!(content, "local override");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Helper to test symlink logic without needing full specifier resolution.
+    fn link_skills(school_root: &Path, project_dir: &Path) -> Result<LinkResult, SetupError> {
+        let school_skills = school_root.join("skills");
+        if !school_skills.exists() {
+            return Ok(LinkResult { linked: 0 });
+        }
+
+        let project_skills = project_dir.join(".ace").join("skills");
+        std::fs::create_dir_all(&project_skills).map_err(SetupError::WriteConfig)?;
+
+        let mut linked = 0;
+        let entries = std::fs::read_dir(&school_skills).map_err(SetupError::WriteConfig)?;
+
+        for entry in entries {
+            let entry = entry.map_err(SetupError::WriteConfig)?;
+            let file_type = entry.file_type().map_err(SetupError::WriteConfig)?;
+            if !file_type.is_dir() {
+                continue;
+            }
+
+            let skill_name = entry.file_name();
+            let link_path = project_skills.join(&skill_name);
+            let target = entry.path();
+
+            if link_path.exists() || link_path.symlink_metadata().is_ok() {
+                if link_path.symlink_metadata()
+                    .map(|m| m.file_type().is_symlink())
+                    .unwrap_or(false)
+                {
+                    let current = std::fs::read_link(&link_path).map_err(SetupError::WriteConfig)?;
+                    if current == target {
+                        continue;
+                    }
+                    std::fs::remove_file(&link_path).map_err(SetupError::WriteConfig)?;
+                } else {
+                    continue;
+                }
+            }
+
+            std::os::unix::fs::symlink(&target, &link_path).map_err(SetupError::WriteConfig)?;
+            linked += 1;
+        }
+
+        Ok(LinkResult { linked })
+    }
 }

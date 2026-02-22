@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::process::Command;
 
+use serde::{Deserialize, Serialize};
+
 use crate::session::Session;
 
 #[derive(Debug, thiserror::Error)]
@@ -13,18 +15,17 @@ pub enum ProposeError {
     NoChanges,
     #[error("git: {0}")]
     Git(String),
+    #[error("github api: {0}")]
+    Api(String),
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
     Config(#[from] crate::config::school_paths::ResolveError),
 }
 
-/// Propose local school modifications back to the upstream school repo.
-///
-/// Creates a branch in the school's local clone, commits any changes to
-/// skills/conventions, pushes the branch, and opens a PR via `gh`.
 pub struct Propose<'a> {
     pub project_dir: &'a Path,
+    pub token: &'a str,
 }
 
 impl Propose<'_> {
@@ -45,19 +46,27 @@ impl Propose<'_> {
             return Err(ProposeError::NoCacheDir(cache.display().to_string()));
         }
 
-        // Check for uncommitted changes
         if !has_changes(cache)? {
             return Err(ProposeError::NoChanges);
         }
+
+        let (owner, repo) = parse_owner_repo(specifier)?;
 
         let branch = format!("ace/propose-{}", timestamp());
         create_branch(cache, &branch)?;
         stage_and_commit(cache)?;
         push_branch(cache, &branch)?;
 
-        let pr_url = open_pr(cache, &branch)?;
+        let pr_url = create_pr(owner, repo, &branch, self.token)?;
         Ok(pr_url)
     }
+}
+
+fn parse_owner_repo(specifier: &str) -> Result<(&str, &str), ProposeError> {
+    let repo_part = specifier.split_once(':').map_or(specifier, |(repo, _)| repo);
+    repo_part
+        .split_once('/')
+        .ok_or_else(|| ProposeError::Git(format!("invalid specifier: {specifier}")))
 }
 
 fn has_changes(repo: &Path) -> Result<bool, ProposeError> {
@@ -121,29 +130,40 @@ fn push_branch(repo: &Path, branch: &str) -> Result<(), ProposeError> {
     Ok(())
 }
 
-fn open_pr(repo: &Path, branch: &str) -> Result<String, ProposeError> {
-    let output = Command::new("gh")
-        .args([
-            "pr",
-            "create",
-            "--title",
-            "Propose school changes",
-            "--body",
-            "Changes proposed via `ace school propose`.",
-            "--head",
-            branch,
-        ])
-        .current_dir(repo)
-        .output()
-        .map_err(|e| ProposeError::Git(format!("gh pr create: {e}")))?;
+#[derive(Serialize)]
+struct CreatePrRequest<'a> {
+    title: &'a str,
+    head: &'a str,
+    base: &'a str,
+    body: &'a str,
+}
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(ProposeError::Git(format!("gh pr create failed: {stderr}")));
-    }
+#[derive(Deserialize)]
+struct CreatePrResponse {
+    html_url: String,
+}
 
-    let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    Ok(url)
+fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<String, ProposeError> {
+    let url = format!("https://api.github.com/repos/{owner}/{repo}/pulls");
+
+    let request_body = CreatePrRequest {
+        title: "Propose school changes",
+        head: branch,
+        base: "main",
+        body: "Changes proposed via `ace school propose`.",
+    };
+
+    let response: CreatePrResponse = ureq::post(&url)
+        .header("Authorization", &format!("Bearer {token}"))
+        .header("Accept", "application/vnd.github+json")
+        .header("User-Agent", "ace")
+        .send_json(&request_body)
+        .map_err(|e| ProposeError::Api(e.to_string()))?
+        .body_mut()
+        .read_json()
+        .map_err(|e| ProposeError::Api(format!("parse response: {e}")))?;
+
+    Ok(response.html_url)
 }
 
 fn timestamp() -> String {
@@ -151,4 +171,28 @@ fn timestamp() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
     format!("{}", d.as_secs())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_owner_repo_simple() {
+        let (owner, repo) = parse_owner_repo("prod9/school").expect("should parse");
+        assert_eq!(owner, "prod9");
+        assert_eq!(repo, "school");
+    }
+
+    #[test]
+    fn parse_owner_repo_with_path() {
+        let (owner, repo) = parse_owner_repo("prod9/mono:school").expect("should parse");
+        assert_eq!(owner, "prod9");
+        assert_eq!(repo, "mono");
+    }
+
+    #[test]
+    fn parse_owner_repo_invalid() {
+        assert!(parse_owner_repo("noslash").is_err());
+    }
 }

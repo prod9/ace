@@ -3,60 +3,53 @@
 `ace setup` is a required first step before using ACE. It must be run explicitly — ACE does not
 auto-detect or auto-initialize.
 
-## Modes
+## Specifier Resolution
 
-### `ace setup <owner/repo>` — Install a school
+Before any action, the CLI layer resolves which school to use:
 
-Clones and configures a school. If run inside a git repo, also links the project.
+- **`ace setup <owner/repo>`** — specifier is the argument.
+- **`ace setup`** (no argument) — resolve from cache:
+  - **One cached school** — use it automatically.
+  - **Multiple cached schools** — TUI picker (fuzzy search by `owner/repo` and display name).
+  - **No cached schools** — error: `ace setup <owner/repo>?`
 
-```
-ace setup prod9/school
-```
+This logic lives in the cmd/TUI layer, not in the Setup action. Setup always receives a resolved
+specifier.
 
-Steps:
+## Steps
 
-1. **Download the school** — `git clone https://github.com/<owner/repo>` into
-   `~/.cache/ace/repos/<owner>/<repo>/`. If already cached, `git pull` instead.
-   Writes an entry to `~/.cache/ace/index.toml` after successful clone.
-2. **Parse `school.toml`** — read school metadata, service declarations, MCP declarations.
-3. **Authenticate** — run PKCE flow for each `[[services]]` entry declared in the school.
-4. **Write config** — create/update `~/.config/ace/config.toml` with school entry keyed by
-   `owner/repo`.
-5. **Write project config** — if run inside a git repo, write `ace.toml` with
-   `school = "<owner/repo>"`.
+Once a specifier is resolved, Setup runs two sequential checks:
 
-### `ace setup` — Link a project to a cached school
+1. **Install** (if school not in cache) — download school to local cache:
+   - `git clone https://github.com/<owner/repo>` into `~/.cache/ace/repos/<owner>/<repo>/`.
+     If already cached, skip.
+   - Write entry to `~/.cache/ace/index.toml`.
+   - Parse `school.toml` — read school metadata, service declarations.
+   - Authenticate — run PKCE flow for each `[[services]]` entry.
+   - Write user config — create/update `~/.config/ace/config.toml` with school entry keyed by
+     `owner/repo`.
 
-Picks from already-cached schools and writes `ace.toml`. No cloning or auth.
+2. **Link** (if in git repo) — connect project to the cached school:
+   - Write `ace.toml` with `school = "<owner/repo>"`.
+   - Sync skills from school cache into the project (symlinks).
 
-```
-ace setup
-```
-
-Requirements:
-
-- Must be inside a git repo. If not, error with suggestion to `git init` or use
-  `ace setup <owner/repo>`.
-- At least one school must be listed in `~/.cache/ace/index.toml`. If not, error with
-  suggestion to run `ace setup <owner/repo>` first.
-
-Behavior:
-
-- **One cached school** — use it automatically.
-- **Multiple cached schools** — fuzzy search prompt (matches `owner/repo` and display name from
-  `school.toml`).
-- Writes `ace.toml` with `school = "<owner/repo>"`.
+Both steps run in a single `ace setup` invocation when needed. Install is skipped if the school
+is already cached. Link is skipped if not in a git repo (install-only scenario).
 
 ## Scenario Matrix
 
-| Scenario | In git repo? | ace.toml? | School cached? | What happens                                                          |
-|----------|--------------|-----------|----------------|-----------------------------------------------------------------------|
-| A        | no           | no        | no             | `ace setup <owner/repo>` — clone, config, auth. No project linking.   |
-| B        | no           | no        | yes            | No project to link. Suggest `git init`.                               |
-| C        | yes          | no        | no             | `ace setup <owner/repo>` — clone, config, auth, write ace.toml.       |
-| D        | yes          | no        | yes            | `ace setup` — pick from cached schools, write ace.toml.               |
-| E        | yes          | yes       | no             | `ace setup <owner/repo>` — ace.toml names school but no cache. Clone. |
-| F        | yes          | yes       | yes            | Already set up. Re-auth or verify only.                               |
+| Scenario | In git repo? | School cached? | What happens                                |
+|----------|--------------|----------------|---------------------------------------------|
+| A        | no           | no             | Install only. No project linking.            |
+| B        | no           | yes            | Nothing to do. Suggest `git init`.           |
+| C        | yes          | no             | Install, then Link.                          |
+| D        | yes          | yes            | Link only (skip install).                    |
+
+## Requirements
+
+- Must be inside a git repo for linking. If not in a git repo and no specifier given, error
+  with suggestion to `git init` or use `ace setup <owner/repo>`.
+- Specifier required if no schools are cached.
 
 ## When to Run
 

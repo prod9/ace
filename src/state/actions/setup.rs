@@ -3,8 +3,8 @@ use std::path::Path;
 use crate::config;
 use crate::session::Session;
 
-use super::install::Install;
-use super::link::Link;
+use super::prepare::Prepare;
+use super::write_config::WriteConfig;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SetupError {
@@ -16,8 +16,8 @@ pub enum SetupError {
     Path(#[from] config::paths::PathError),
     #[error("not in git repo, git init?")]
     NotInGitRepo,
-    #[error("no cached schools, ace setup <owner/repo>?")]
-    NoCachedSchools,
+    #[error("already set up, use `ace` to run")]
+    AlreadySetUp,
     #[error("clone failed: {0}")]
     Clone(String),
     #[error("write failed: {0}")]
@@ -25,7 +25,7 @@ pub enum SetupError {
 }
 
 pub struct Setup<'a> {
-    pub specifier: Option<&'a str>,
+    pub specifier: &'a str,
     pub project_dir: &'a Path,
 }
 
@@ -35,13 +35,20 @@ impl Setup<'_> {
             return Err(SetupError::NotInGitRepo);
         }
 
-        match self.specifier {
-            Some(specifier) => {
-                Install { project_dir: self.project_dir, specifier }.run(session).await
-            }
-            None => {
-                Link { project_dir: self.project_dir }.run(session).await
-            }
+        let ace_paths = config::paths::resolve(self.project_dir)?;
+        if ace_paths.project.exists() {
+            return Err(SetupError::AlreadySetUp);
         }
+
+        WriteConfig::project(&ace_paths.project, self.specifier)?;
+
+        Prepare {
+            specifier: self.specifier,
+            project_dir: self.project_dir,
+        }
+        .run(session)
+        .await?;
+
+        Ok(())
     }
 }
