@@ -4,14 +4,13 @@ use std::path::Path;
 
 use super::ConfigError;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct AceToml {
     pub school: String,
     // TODO: add `role` and `description` fields so non-dev roles (e.g. PM) can
     // configure ace for requirements-only repos, prd/ workflows, Jira/Trello sync, etc.
-    #[serde(default)]
     pub session_prompt: String,
-    #[serde(default)]
     pub env: HashMap<String, String>,
 }
 

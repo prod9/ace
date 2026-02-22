@@ -16,9 +16,9 @@ use super::paths::cache_dir;
 /// repo = "prod9/mono"
 /// path = "school"
 /// ```
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct IndexToml {
-    #[serde(default)]
     pub school: Vec<SchoolEntry>,
 }
 

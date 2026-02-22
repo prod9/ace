@@ -19,9 +19,9 @@ use super::ConfigError;
 /// ```
 pub type UserConfig = HashMap<String, SchoolCredentials>;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct SchoolCredentials {
-    #[serde(default)]
     pub services: HashMap<String, ServiceCredentials>,
 }
 

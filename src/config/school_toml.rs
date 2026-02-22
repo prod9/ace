@@ -4,55 +4,49 @@ use std::path::Path;
 
 use super::ConfigError;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct SchoolToml {
     pub school: SchoolMeta,
-    #[serde(default)]
     pub env: HashMap<String, String>,
-    #[serde(default)]
     pub services: Vec<ServiceDecl>,
-    #[serde(default)]
     pub mcp: Vec<McpDecl>,
-    #[serde(default)]
     pub projects: Vec<Project>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct SchoolMeta {
     pub name: String,
-    #[serde(default)]
     pub description: Option<String>,
-    #[serde(default)]
     pub session_prompt: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct ServiceDecl {
     pub name: String,
     pub authorize_url: String,
     pub token_url: String,
     pub client_id: String,
-    #[serde(default)]
     pub scopes: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct McpDecl {
     pub name: String,
     pub image: String,
-    #[serde(default)]
     pub env: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
 pub struct Project {
     pub name: String,
     pub repo: String,
-    #[serde(default)]
     pub description: Option<String>,
-    #[serde(default)]
     pub env: HashMap<String, String>,
-    #[serde(default)]
     pub mcp: Vec<McpDecl>,
 }
 
