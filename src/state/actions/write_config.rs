@@ -50,11 +50,7 @@ impl WriteConfig {
                 .map_err(|e| SetupError::WriteConfig(
                     std::io::Error::new(std::io::ErrorKind::InvalidData, e),
                 ))?,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => AceToml {
-                school: String::new(),
-                session_prompt: String::new(),
-                env: std::collections::HashMap::new(),
-            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => AceToml::default(),
             Err(e) => return Err(SetupError::WriteConfig(e)),
         };
 

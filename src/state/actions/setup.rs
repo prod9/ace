@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::config;
+use crate::config::backend::Backend;
 use crate::session::Session;
 
 use super::prepare::Prepare;
@@ -45,6 +46,7 @@ impl Setup<'_> {
         Prepare {
             specifier: self.specifier,
             project_dir: self.project_dir,
+            skills_dir: Backend::Claude.skills_dir(),
         }
         .run(session)
         .await?;

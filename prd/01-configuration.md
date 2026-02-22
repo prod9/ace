@@ -9,8 +9,17 @@ TOML.
 Resolved by merging (later overrides earlier):
 
 1. **User-global** `~/.config/ace/config.toml`
-2. **Project-local** `ace.local.toml` (gitignored, per-machine)
-3. **Project-committed** `ace.toml` (checked into git, shared)
+2. **Project-committed** `ace.toml` (checked into git, shared)
+3. **Project-local** `ace.local.toml` (gitignored, per-machine)
+
+### Fields
+
+Each layer can set:
+
+- `school` — school specifier (last non-empty wins)
+- `backend` — `"claude"` or `"opencode"` (last `Some` wins, fallback `claude`). See [07-backend.md](07-backend.md).
+- `session_prompt` — additional prompt text (last non-empty wins)
+- `env` — environment variables (additive merge, later keys override)
 
 ## Schools
 

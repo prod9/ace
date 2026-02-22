@@ -12,6 +12,7 @@ use super::update::Update;
 pub struct Prepare<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
+    pub skills_dir: &'a str,
 }
 
 impl Prepare<'_> {
@@ -34,6 +35,7 @@ impl Prepare<'_> {
         let result = Link {
             specifier: self.specifier,
             project_dir: self.project_dir,
+            skills_dir: self.skills_dir,
         }
         .run(session)?;
 

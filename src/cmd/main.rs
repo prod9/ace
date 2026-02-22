@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config;
 use crate::state::State;
-use crate::state::actions::exec::{self, Exec};
+use crate::state::actions::exec::Exec;
 use crate::state::actions::prepare::Prepare;
 use crate::state::prompt::build_session_prompt;
 
@@ -35,9 +35,12 @@ pub async fn run(ace: &mut Ace) {
         }
     };
 
+    let backend = session.state.backend;
+
     if let Err(e) = (Prepare {
         specifier: &specifier,
         project_dir: &project_dir,
+        skills_dir: backend.skills_dir(),
     })
     .run(&mut session)
     .await
@@ -63,29 +66,12 @@ pub async fn run(ace: &mut Ace) {
         }
     };
 
-    let ace_toml_path = project_dir.join("ace.toml");
-    let ace_toml = match config::ace_toml::load(&ace_toml_path) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("error: ace.toml: {e}");
-            std::process::exit(1);
-        }
-    };
-
     let session_prompt = build_session_prompt(
         &school_toml.school.name,
         school_toml.school.description.as_deref(),
         &school_toml.school.session_prompt,
-        &ace_toml.session_prompt,
+        &session.state.session_prompt,
     );
-
-    let backend = match exec::detect_backend() {
-        Ok(b) => b,
-        Err(e) => {
-            eprintln!("error: {e}");
-            std::process::exit(1);
-        }
-    };
 
     let env = session.state.env.clone();
     let action = Exec {

@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+use super::backend::Backend;
 use super::ConfigError;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -19,6 +20,7 @@ pub struct SchoolToml {
 pub struct SchoolMeta {
     pub name: String,
     pub description: Option<String>,
+    pub backend: Option<Backend>,
     pub session_prompt: String,
 }
 

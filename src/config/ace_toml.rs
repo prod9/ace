@@ -2,12 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
+use super::backend::Backend;
 use super::ConfigError;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AceToml {
     pub school: String,
+    pub backend: Option<Backend>,
     // TODO: add `role` and `description` fields so non-dev roles (e.g. PM) can
     // configure ace for requirements-only repos, prd/ workflows, Jira/Trello sync, etc.
     pub session_prompt: String,

@@ -8,6 +8,7 @@ use super::setup::SetupError;
 pub struct Link<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
+    pub skills_dir: &'a str,
 }
 
 impl Link<'_> {
@@ -18,8 +19,7 @@ impl Link<'_> {
             return Ok(LinkResult { linked: 0 });
         }
 
-        // TODO: target dir depends on backend (e.g. .claude/commands/)
-        let project_skills = self.project_dir.join(".claude").join("skills");
+        let project_skills = self.project_dir.join(self.skills_dir).join("skills");
         std::fs::create_dir_all(&project_skills)
             .map_err(SetupError::WriteConfig)?;
 

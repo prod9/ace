@@ -1,4 +1,5 @@
 pub mod ace_toml;
+pub mod backend;
 pub mod index_toml;
 pub mod paths;
 pub mod school_paths;
