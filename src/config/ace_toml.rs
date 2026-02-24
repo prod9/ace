@@ -25,3 +25,9 @@ pub fn load(path: &Path) -> Result<AceToml, ConfigError> {
     let config: AceToml = toml::from_str(&content)?;
     Ok(config)
 }
+
+pub fn save(path: &Path, toml: &AceToml) -> Result<(), ConfigError> {
+    let content = toml::to_string_pretty(toml)?;
+    std::fs::write(path, content)?;
+    Ok(())
+}
