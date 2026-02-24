@@ -102,4 +102,4 @@ Backlog:
 - Setup modes discussion: see `prd/` notes
 - Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
 - Add some magic? For example, auto --continue ?
-- Cross-build script — produce binaries for linux/mac × arm64/amd64 targets
+- Cross-build script — see `scripts/cross-build.md` for findings and next steps
