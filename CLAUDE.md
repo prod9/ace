@@ -157,12 +157,9 @@ structure should communicate intent before the reader parses any syntax.
 ## Pending Work
 
 Priority:
-- **Dynamic system prompt** — detect school skill changes during Update (diff HEAD vs
-  FETCH_HEAD before reset), inject change summary into `--system-prompt`. Change detection
-  only (no inventory — backend already sees skills). Skip on first install.
+- **PKCE auth flow** — blocker for multi-user rollout. `authenticate.rs` is still a stub.
 
 Backlog:
-- **PKCE auth flow** — blocker for multi-user rollout. `authenticate.rs` is still a stub.
 - Setup modes discussion: see `prd/` notes
 - Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
 - Split CLAUDE.md notes into school skills: `general-coding` (language-agnostic rules) then
