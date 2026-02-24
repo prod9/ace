@@ -39,6 +39,14 @@ impl Prepare<'_> {
         }
         .run(session)?;
 
+        if !result.moved.is_empty() {
+            eprintln!(
+                "Moved {} previous skill(s) to previous-skills/: {}",
+                result.moved.len(),
+                result.moved.join(", ")
+            );
+        }
+
         if result.linked > 0 {
             eprintln!("Linked {} skills", result.linked);
         }

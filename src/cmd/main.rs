@@ -69,11 +69,13 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), RunEr
     *ace = Ace::with_state(state);
     let mut session = ace.session();
 
+    let skills_dir = project_dir.join(session.state.backend.skills_dir());
     let session_prompt = build_session_prompt(
         &school_toml.school.name,
         school_toml.school.description.as_deref(),
         &school_toml.school.session_prompt,
         &session.state.session_prompt,
+        &skills_dir,
     );
 
     Exec {
