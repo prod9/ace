@@ -26,6 +26,24 @@ Sync into projects using symlinks, not file copies. Multiple projects sharing th
 (e.g. frontend and backend repos in the same org) all point to the same local clone. This avoids
 redundant data and ensures all projects see the same skill versions immediately after a pull.
 
+**One folder-level symlink**, not per-skill symlinks. The project's `skills/` directory is a
+single symlink pointing to the school cache's `skills/` directory:
+
+```
+project/.claude/skills/ → ~/.cache/ace/repos/{school}/skills/
+```
+
+No per-skill linking, no local overrides. Everyone on the same school works against the same
+set of skills. To change a skill, change it in the school repo and `ace school propose`.
+
+### First-time adoption
+
+When a project has existing real skill directories (pre-ACE or hand-written), ACE moves them
+to `previous-skills/` before creating the folder symlink. This is a one-time migration to
+allow bringing existing skills into the school via `ace school propose`. After adoption, the symlink takes over and `previous-skills/` remains as a prompt for the
+user to consolidate them into the school. The session prompt nudges the LLM to help merge
+`previous-skills/` into the school's skills folder via `ace school propose`.
+
 ## Cache
 
 - Git clones: `~/.cache/ace/repos/{owner/repo}/`

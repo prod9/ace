@@ -47,6 +47,18 @@ coding tools. When you run `ace`, it:
 3. Symlinks skills into your project
 4. Launches the configured backend with the school's session prompt
 
+## Skills workflow
+
+Schools contain a shared `skills/` folder. When you run `ace`, the entire folder is symlinked
+into your project — everyone on the same school works against the same skills.
+
+**First-time setup with existing skills:** If your project already has hand-written skills in
+`.claude/skills/`, ACE moves them to `previous-skills/` on first run. The LLM will then help
+you merge them into the school's skills folder via `ace school propose`.
+
+**Changing skills:** Edit skills in the school repo, not in your project. Use `ace school propose`
+to push changes back to the shared school.
+
 ## Configuration
 
 - `ace.toml` — project-level config (school specifier, backend, env)
