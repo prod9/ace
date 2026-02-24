@@ -31,6 +31,9 @@ Workflow:
 - Never propose grand plans; always a few small steps at a time
 - Always parallelize independent tasks — use parallel tool calls, concurrent agents, etc.
   whenever work items don't depend on each other
+- **One logical change per commit** — each commit should contain exactly one sensible grouping
+  of related changes. Don't lump unrelated work into a single commit, and don't split a
+  coherent change across multiple commits unnecessarily.
 
 Metrics:
 - After finishing code changes, report `git diff --stat` and share your read on the delta with
