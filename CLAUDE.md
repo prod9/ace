@@ -1,24 +1,24 @@
-# ACE Project
+  # ACE Project
 
-**ACE** (AI Coding Environment) - Automation tooling for setting up and keeping AI coding
-environments setup and up-to-date. Acts as entrypoint to Claude Code or OpenCode CLI.
+  **ACE** (AI Coding Environment) - Automation tooling for setting up and keeping AI coding
+  environments setup and up-to-date. Acts as entrypoint to Claude Code or OpenCode CLI.
 
-Core functions:
-- Check environment readiness
-- Install/update skills, agents, and conventions
-- Configure chatbots to connect to LiteLLM.
-- Manage model credentials.
+  Core functions:
+  - Check environment readiness
+  - Install/update skills, agents, and conventions
+  - Configure chatbots to connect to LiteLLM.
+  - Manage model credentials.
 
-## Communication Style
+  ## Communication Style
 
-Tone:
-- **Never explain** unless explicitly asked
-- Be extremely concise and terse — no filler words, pleasantries, or time-wasters
-- Direct answers only. Use "Acknowledged" if no more response needed
-- Do not offer help or assume user needs one at the end unless a suggestion is explicitly requested
-- Code comments: essential only
+  Tone:
+  - **Never explain** unless explicitly asked
+  - Be extremely concise and terse — no filler words, pleasantries, or time-wasters
+  - Direct answers only. Use "Acknowledged" if no more response needed
+  - Do not offer help or assume user needs one at the end unless a suggestion is explicitly requested
+  - Code comments: essential only
 
-Workflow:
+  Workflow:
 - Ask permission before editing files (group related files)
 - Run commands/tests only after asking
 - **Never discard uncommitted changes** — do not run `git checkout`, `git restore`, or any
@@ -122,6 +122,8 @@ structure should communicate intent before the reader parses any syntax.
   run it to confirm failure, then implement. Do not write tests and implementation together.
 - Unit tests are inline `#[cfg(test)] mod tests` in the same file
 - Longer integration tests will go in an external `tests/` crate later
+- **Future**: Use Dagger for integration tests — spin up test containers for isolated
+  filesystem/git scenarios instead of temp dirs
 - **No tautological tests** — don't test trivial getters/accessors that just return a value
   (e.g. `assert_eq!(Backend::Claude.binary(), "claude")`). These restate the implementation
   and catch nothing. Similarly, don't test that serde serializes/deserializes correctly —
@@ -154,13 +156,16 @@ structure should communicate intent before the reader parses any syntax.
 
 ## Pending Work
 
+Priority:
+- **Dynamic system prompt** — detect school skill changes during Update (diff HEAD vs
+  FETCH_HEAD before reset), inject change summary into `--system-prompt`. Change detection
+  only (no inventory — backend already sees skills). Skip on first install.
+
+Backlog:
+- **PKCE auth flow** — blocker for multi-user rollout. `authenticate.rs` is still a stub.
 - Setup modes discussion: see `prd/` notes
-- ~~Embed git commit hash~~ — done: `build.rs` sets `ACE_GIT_HASH`, shown in `ace --version`
-- ~~Spinners for git operations~~ — done: `status` module with `console` + `indicatif`
-- ~~Pass-through flags to backend~~ — done: `ace --continue` forwards to `claude --continue`
-- Consider `ace school adopt` for repos that already have claude skills (`.claude/` dir) —
-  merge existing conventions/skills into a school instead of overwriting
 - Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
 - Split CLAUDE.md notes into school skills: `general-coding` (language-agnostic rules) then
   `rust-coding` (Rust-specific conventions)
 - Add some magic? For example, auto --continue ?
+- Cross-build script — produce binaries for linux/mac × arm64/amd64 targets
