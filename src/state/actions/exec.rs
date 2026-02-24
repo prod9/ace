@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::ace::Ace;
 use crate::config::backend::Backend;
-use crate::session::Session;
 
 pub struct Exec {
     pub backend: Backend,
@@ -14,7 +14,7 @@ pub struct Exec {
 }
 
 impl Exec {
-    pub fn run(&self, _session: &mut Session<'_>) -> Result<(), std::io::Error> {
+    pub fn run(&self, _ace: &mut Ace) -> Result<(), std::io::Error> {
         let mut cmd = Command::new(self.backend.binary());
         cmd.current_dir(&self.project_dir);
 

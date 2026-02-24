@@ -1,7 +1,7 @@
 use std::path::Path;
 
+use crate::ace::Ace;
 use crate::config;
-use crate::session::Session;
 use super::prepare::PrepareError;
 
 const PREVIOUS_SKILLS_DIR: &str = "previous-skills";
@@ -14,7 +14,7 @@ pub struct Link<'a> {
 }
 
 impl Link<'_> {
-    pub fn run(&self, _session: &mut Session<'_>) -> Result<LinkResult, PrepareError> {
+    pub fn run(&self, _ace: &mut Ace) -> Result<LinkResult, PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
         let school_skills = school_paths.root.join("skills");
         if !school_skills.exists() {

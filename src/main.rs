@@ -4,7 +4,6 @@ mod config;
 mod events;
 mod git;
 mod prompts;
-mod session;
 mod state;
 mod term_ui;
 

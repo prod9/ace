@@ -2,9 +2,9 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::time::Duration;
 
+use crate::ace::Ace;
 use crate::config;
 use crate::git;
-use crate::session::Session;
 use super::prepare::PrepareError;
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
@@ -35,7 +35,7 @@ pub struct Update<'a> {
 }
 
 impl Update<'_> {
-    pub fn run(&self, session: &mut Session<'_>) -> Result<UpdateResult, PrepareError> {
+    pub fn run(&self, ace: &mut Ace) -> Result<UpdateResult, PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
         let cache = match &school_paths.cache {
@@ -59,9 +59,9 @@ impl Update<'_> {
             return Ok(UpdateResult::default());
         }
 
-        session.progress(&format!("Fetching {}", self.specifier));
+        ace.progress(&format!("Fetching {}", self.specifier));
         git_fetch(cache)?;
-        session.done(&format!("Fetched {}", self.specifier));
+        ace.done(&format!("Fetched {}", self.specifier));
 
         let changes = detect_skill_changes(cache)?;
         git_reset_to_origin_main(cache)?;

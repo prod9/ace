@@ -6,6 +6,10 @@ pub enum Event {
     Done(String),
     /// Non-fatal warning — display ⚠.
     Warn(String),
+    /// Fatal error — display ✗, stderr.
+    Error(String),
+    /// Raw data output — stdout, no prefix.
+    Data(String),
 }
 
 /// Sink that receives action events for rendering.

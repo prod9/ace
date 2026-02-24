@@ -29,22 +29,16 @@ pub enum Command {
 pub async fn run(ace: &mut Ace, command: Command) {
     match command {
         Command::Init { name, force } => {
-            if let Err(e) = run_init(ace, name, force) {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            }
+            let result = run_init(ace, name, force);
+            super::exit_on_err(ace, result);
         }
         Command::Propose => {
-            if let Err(e) = run_propose() {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            }
+            let result = run_propose();
+            super::exit_on_err(ace, result);
         }
         Command::Update => {
-            if let Err(e) = run_update() {
-                eprintln!("error: {e}");
-                std::process::exit(1);
-            }
+            let result = run_update();
+            super::exit_on_err(ace, result);
         }
     }
 }
@@ -53,13 +47,12 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
     match name {
         Some(name) => {
             let project_dir = std::env::current_dir()?;
-            let mut session = ace.session();
             SchoolInit {
                 name: &name,
                 project_dir: &project_dir,
                 force,
             }
-            .run(&mut session)?;
+            .run(ace)?;
         }
         None => {
             Tui::new(ace).run(Workflow::SchoolInit { force })?;
@@ -70,34 +63,32 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
 
 fn run_propose() -> Result<(), CmdError> {
     let project_dir = std::env::current_dir()?;
-    let mut ace = crate::ace::Ace::load(&project_dir, crate::ace::Ace::term_sink())?;
+    let mut ace = Ace::load(&project_dir, Ace::term_sink())?;
 
-    let specifier = ace.state().school_specifier.clone()
+    let specifier = ace.state.school_specifier.clone()
         .ok_or(CmdError::NoSchool)?;
 
     let repo_key = specifier.split_once(':').map_or(specifier.as_str(), |(repo, _)| repo);
     let token = load_github_token(repo_key).map_err(CmdError::Other)?;
 
-    let mut session = ace.session();
     let url = SchoolPropose {
         project_dir: &project_dir,
         token: &token,
     }
-    .run(&mut session)?;
+    .run(&mut ace)?;
 
-    println!("PR created: {url}");
+    ace.data(&format!("PR created: {url}"));
     Ok(())
 }
 
 fn run_update() -> Result<(), CmdError> {
     let school_root = resolve_school_root()?;
 
-    let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
-    let mut session = ace.session();
+    let mut ace = Ace::new(Ace::term_sink());
 
-    let result = SchoolUpdate { school_root: &school_root }.run(&mut session)?;
+    let result = SchoolUpdate { school_root: &school_root }.run(&mut ace)?;
     match result {
-        SchoolUpdateResult::NoImports => eprintln!("no imports to update"),
+        SchoolUpdateResult::NoImports => ace.warn("no imports to update"),
         SchoolUpdateResult::Updated { .. } => {}
     }
     Ok(())

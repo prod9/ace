@@ -2,14 +2,13 @@ use std::path::Path;
 
 use crate::config;
 use crate::config::ConfigError;
-use crate::events::{EventSink, NoopSink, OwnedSink};
-use crate::session::Session;
+use crate::events::{Event, EventSink, OwnedSink};
 use crate::state::State;
 use crate::term_ui::sink::TermSink;
 
 pub struct Ace {
-    state: State,
-    sink: Option<OwnedSink>,
+    pub state: State,
+    sink: OwnedSink,
 }
 
 impl Ace {
@@ -18,32 +17,37 @@ impl Ace {
     }
 
     pub fn new(sink: Box<dyn EventSink>) -> Self {
-        let state = State::empty();
-        Self { state, sink: Some(OwnedSink::new(sink)) }
+        Self { state: State::empty(), sink: OwnedSink::new(sink) }
     }
 
     pub fn load(project_dir: &Path, sink: Box<dyn EventSink>) -> Result<Self, ConfigError> {
         let paths = config::paths::resolve(project_dir)?;
         let tree = config::tree::Tree::load(&paths)?;
         let state = State::resolve(tree);
-        Ok(Self { state, sink: Some(OwnedSink::new(sink)) })
+        Ok(Self { state, sink: OwnedSink::new(sink) })
     }
 
     pub fn with_state(state: State, sink: Box<dyn EventSink>) -> Self {
-        Self { state, sink: Some(OwnedSink::new(sink)) }
+        Self { state, sink: OwnedSink::new(sink) }
     }
 
-    pub fn state(&self) -> &State {
-        &self.state
+    pub fn progress(&mut self, msg: &str) {
+        self.sink.handle(Event::Progress(msg.to_string()));
     }
 
-    pub fn state_mut(&mut self) -> &mut State {
-        &mut self.state
+    pub fn done(&mut self, msg: &str) {
+        self.sink.handle(Event::Done(msg.to_string()));
     }
 
-    pub fn session(&mut self) -> Session<'_> {
-        let sink = self.sink.take()
-            .unwrap_or_else(|| OwnedSink::new(Box::new(NoopSink)));
-        Session::new(&mut self.state, sink)
+    pub fn warn(&mut self, msg: &str) {
+        self.sink.handle(Event::Warn(msg.to_string()));
+    }
+
+    pub fn error(&mut self, msg: &str) {
+        self.sink.handle(Event::Error(msg.to_string()));
+    }
+
+    pub fn data(&mut self, msg: &str) {
+        self.sink.handle(Event::Data(msg.to_string()));
     }
 }

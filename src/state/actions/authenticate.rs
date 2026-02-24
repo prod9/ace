@@ -1,5 +1,5 @@
+use crate::ace::Ace;
 use crate::config::school_toml::ServiceDecl;
-use crate::session::Session;
 use super::prepare::PrepareError;
 
 pub struct Authenticate<'a> {
@@ -7,7 +7,7 @@ pub struct Authenticate<'a> {
 }
 
 impl Authenticate<'_> {
-    pub async fn run(&self, _session: &mut Session<'_>) -> Result<(), PrepareError> {
+    pub async fn run(&self, _ace: &mut Ace) -> Result<(), PrepareError> {
         // TODO: run PKCE OAuth flow for service
         Ok(())
     }

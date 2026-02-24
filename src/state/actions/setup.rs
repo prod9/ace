@@ -1,10 +1,10 @@
 use std::path::Path;
 
+use crate::ace::Ace;
 use crate::config;
 use crate::config::backend::Backend;
 use crate::config::ConfigError;
 use crate::prompts;
-use crate::session::Session;
 
 use super::prepare::{Prepare, PrepareError};
 use super::write_config::WriteConfig;
@@ -29,7 +29,7 @@ pub struct Setup<'a> {
 }
 
 impl Setup<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
+    pub async fn run(&self, ace: &mut Ace) -> Result<(), SetupError> {
         if !super::is_git_repo(self.project_dir) {
             return Err(SetupError::NotInGitRepo);
         }
@@ -47,7 +47,7 @@ impl Setup<'_> {
             project_dir: self.project_dir,
             skills_dir: backend.skills_dir(),
         }
-        .run(session)
+        .run(ace)
         .await?;
 
         let instructions = self.project_dir.join(backend.instructions_file());
@@ -63,7 +63,7 @@ impl Setup<'_> {
 
             std::fs::write(&instructions, content)
                 .map_err(SetupError::Write)?;
-            eprintln!("Created {}", backend.instructions_file());
+            ace.done(&format!("Created {}", backend.instructions_file()));
         }
 
         Ok(())

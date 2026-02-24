@@ -1,7 +1,7 @@
 use std::path::Path;
 
+use crate::ace::Ace;
 use crate::prompts;
-use crate::session::Session;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SchoolInitError {
@@ -20,7 +20,7 @@ pub struct SchoolInit<'a> {
 }
 
 impl SchoolInit<'_> {
-    pub fn run(&self, _session: &mut Session<'_>) -> Result<(), SchoolInitError> {
+    pub fn run(&self, ace: &mut Ace) -> Result<(), SchoolInitError> {
         if !super::is_git_repo(self.project_dir) {
             return Err(SchoolInitError::NotInGitRepo);
         }
@@ -38,7 +38,7 @@ impl SchoolInit<'_> {
             let ctx = prompts::PromptCtx::new(Path::new(".claude"), self.name);
             let content = prompts::render(prompts::SCHOOL_CLAUDE_MD, &ctx);
             std::fs::write(&instructions, content)?;
-            eprintln!("Created CLAUDE.md");
+            ace.done("Created CLAUDE.md");
         }
 
         Ok(())

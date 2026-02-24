@@ -37,6 +37,12 @@ impl EventSink for TermSink {
             Event::Warn(msg) => {
                 eprintln!("{} {msg}", style("⚠").yellow());
             }
+            Event::Error(msg) => {
+                eprintln!("{} {msg}", style("✗").red());
+            }
+            Event::Data(msg) => {
+                println!("{msg}");
+            }
         }
     }
 

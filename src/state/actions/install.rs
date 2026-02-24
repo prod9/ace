@@ -1,9 +1,9 @@
 use std::path::Path;
 
+use crate::ace::Ace;
 use crate::config;
 use crate::config::index_toml;
 use crate::git;
-use crate::session::Session;
 use super::prepare::PrepareError;
 
 use super::authenticate::Authenticate;
@@ -16,7 +16,7 @@ pub struct Install<'a> {
 }
 
 impl Install<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), PrepareError> {
+    pub async fn run(&self, ace: &mut Ace) -> Result<(), PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
         let cache = match &school_paths.cache {
             Some(c) => c,
@@ -33,18 +33,18 @@ impl Install<'_> {
         );
         let url = format!("https://github.com/{repo}.git");
 
-        session.progress(&format!("Cloning {repo}"));
+        ace.progress(&format!("Cloning {repo}"));
         git::clone_shallow(&url, cache)
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
-        session.done(&format!("Cloned {repo}"));
+        ace.done(&format!("Cloned {repo}"));
 
         update_index(&school_paths.source)?;
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
-        println!("School: {}", school_toml.name);
+        ace.done(&format!("School: {}", school_toml.name));
 
         for service in &school_toml.services {
-            Authenticate { service }.run(session).await?;
+            Authenticate { service }.run(ace).await?;
         }
 
         let ace_paths = config::paths::resolve(self.project_dir)?;

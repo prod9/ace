@@ -1,8 +1,8 @@
 use std::path::Path;
 
+use crate::ace::Ace;
 use crate::config::index_toml;
 use crate::config::ConfigError;
-use crate::session::Session;
 
 use super::install::Install;
 use super::link::Link;
@@ -31,20 +31,20 @@ pub struct PrepareResult {
 }
 
 impl Prepare<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<PrepareResult, PrepareError> {
+    pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
         let changes = if is_cached(self.specifier)? {
             let result = Update {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             }
-            .run(session)?;
+            .run(ace)?;
             result.changes
         } else {
             Install {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             }
-            .run(session)
+            .run(ace)
             .await?;
             Vec::new() // skip on first install
         };
@@ -54,18 +54,18 @@ impl Prepare<'_> {
             project_dir: self.project_dir,
             skills_dir: self.skills_dir,
         }
-        .run(session)?;
+        .run(ace)?;
 
         if !result.moved.is_empty() {
-            eprintln!(
+            ace.done(&format!(
                 "Moved {} previous skill(s) to previous-skills/: {}",
                 result.moved.len(),
                 result.moved.join(", ")
-            );
+            ));
         }
 
         if result.linked > 0 {
-            eprintln!("Linked {} skills", result.linked);
+            ace.done(&format!("Linked {} skills", result.linked));
         }
 
         Ok(PrepareResult { changes })

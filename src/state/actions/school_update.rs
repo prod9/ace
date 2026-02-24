@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::ace::Ace;
 use crate::config;
-use crate::session::Session;
 use super::import_skill::{clone_repo, copy_dir_recursive, discover_skills, ImportError};
 
 pub struct SchoolUpdate<'a> {
@@ -25,7 +25,7 @@ pub enum SchoolUpdateResult {
 }
 
 impl SchoolUpdate<'_> {
-    pub fn run(&self, session: &mut Session<'_>) -> Result<SchoolUpdateResult, SchoolUpdateError> {
+    pub fn run(&self, ace: &mut Ace) -> Result<SchoolUpdateResult, SchoolUpdateError> {
         let toml_path = self.school_root.join("school.toml");
         let school = config::school_toml::load(&toml_path)?;
 
@@ -45,7 +45,7 @@ impl SchoolUpdate<'_> {
         for (source, skill_names) in &by_source {
             let tmp = tempfile::tempdir()?;
 
-            session.progress(&format!("Fetching {source}"));
+            ace.progress(&format!("Fetching {source}"));
             clone_repo(source, tmp.path())?;
 
             let discovered = discover_skills(tmp.path())?;
@@ -54,7 +54,7 @@ impl SchoolUpdate<'_> {
                 let skill = match found {
                     Some(s) => s,
                     None => {
-                        session.warn(&format!("skill {name} not found in {source}, skipping"));
+                        ace.warn(&format!("skill {name} not found in {source}, skipping"));
                         continue;
                     }
                 };
@@ -68,8 +68,7 @@ impl SchoolUpdate<'_> {
             }
         }
 
-        session.done(&format!("Updated {count} skill(s)"));
+        ace.done(&format!("Updated {count} skill(s)"));
         Ok(SchoolUpdateResult::Updated { count })
     }
 }
-

@@ -4,29 +4,26 @@ use crate::config::{paths, school_paths};
 use super::CmdError;
 
 pub async fn run(ace: &mut Ace) {
-    if let Err(e) = run_inner(ace) {
-        eprintln!("error: {e}");
-        std::process::exit(1);
-    }
+    let result = run_inner(ace);
+    super::exit_on_err(ace, result);
 }
 
 fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
-    let session = ace.session();
     let cwd = std::env::current_dir()?;
     let p = paths::resolve(&cwd)?;
 
-    println!("config.user\t{}", p.user.display());
-    println!("config.local\t{}", p.local.display());
-    println!("config.project\t{}", p.project.display());
+    ace.data(&format!("config.user\t{}", p.user.display()));
+    ace.data(&format!("config.local\t{}", p.local.display()));
+    ace.data(&format!("config.project\t{}", p.project.display()));
 
-    if let Some(spec) = session.state.school_specifier.as_deref() {
+    if let Some(spec) = ace.state.school_specifier.as_deref() {
         let sp = school_paths::resolve(&cwd, spec)?;
 
-        println!("school.source\t{}", sp.source);
+        ace.data(&format!("school.source\t{}", sp.source));
         if let Some(ref path) = sp.cache {
-            println!("school.cache\t{}", path.display());
+            ace.data(&format!("school.cache\t{}", path.display()));
         }
-        println!("school.root\t{}", sp.root.display());
+        ace.data(&format!("school.root\t{}", sp.root.display()));
     }
 
     Ok(())

@@ -6,10 +6,8 @@ use crate::term_ui;
 use super::CmdError;
 
 pub async fn run(ace: &mut Ace, specifier: Option<&str>) {
-    if let Err(e) = run_inner(ace, specifier).await {
-        eprintln!("error: {e}");
-        std::process::exit(1);
-    }
+    let result = run_inner(ace, specifier).await;
+    super::exit_on_err(ace, result);
 }
 
 async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdError> {
@@ -20,15 +18,14 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
         None => resolve_from_cache()?,
     };
 
-    let mut session = ace.session();
     Setup {
         specifier: &resolved,
         project_dir: &project_dir,
     }
-    .run(&mut session)
+    .run(ace)
     .await?;
 
-    println!("Setup complete.");
+    ace.done("Setup complete.");
     Ok(())
 }
 

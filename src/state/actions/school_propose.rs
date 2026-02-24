@@ -2,8 +2,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::ace::Ace;
 use crate::git;
-use crate::session::Session;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SchoolProposeError {
@@ -29,8 +29,8 @@ pub struct SchoolPropose<'a> {
 }
 
 impl SchoolPropose<'_> {
-    pub fn run(&self, session: &mut Session<'_>) -> Result<String, SchoolProposeError> {
-        let specifier = session
+    pub fn run(&self, ace: &mut Ace) -> Result<String, SchoolProposeError> {
+        let specifier = ace
             .state
             .school_specifier
             .as_deref()

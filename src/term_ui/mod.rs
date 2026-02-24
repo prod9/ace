@@ -62,10 +62,9 @@ impl<'a> Tui<'a> {
         }
         let name = prompt.prompt().map_err(map_inquire_err)?;
 
-        let mut session = self.ace.session();
-        SchoolInit { name: &name, project_dir: &project_dir, force }.run(&mut session)?;
+        SchoolInit { name: &name, project_dir: &project_dir, force }.run(self.ace)?;
 
-        println!("Created {}", toml_path.display());
+        self.ace.done(&format!("Created {}", toml_path.display()));
         Ok(())
     }
 }

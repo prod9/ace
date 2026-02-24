@@ -99,11 +99,18 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
     match cli.command {
         Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
         Some(Command::Auth { name }) => auth::run(ace, &name).await,
-        Some(Command::Import { source, skill }) => import::run(&source, skill.as_deref()),
-        Some(Command::Fmt) | Some(Command::Format) => fmt::run(),
+        Some(Command::Import { source, skill }) => import::run(ace, &source, skill.as_deref()),
+        Some(Command::Fmt) | Some(Command::Format) => fmt::run(ace),
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths) => paths::run(ace).await,
         Some(Command::School { command }) => school::run(ace, command).await,
         None => main::run(ace, cli.backend_args).await,
+    }
+}
+
+fn exit_on_err(ace: &mut Ace, result: Result<(), CmdError>) {
+    if let Err(e) = result {
+        ace.error(&e.to_string());
+        std::process::exit(1);
     }
 }

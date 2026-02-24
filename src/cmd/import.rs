@@ -1,28 +1,26 @@
 use std::path::PathBuf;
 
+use crate::ace::Ace;
 use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill};
 
 use super::CmdError;
 
-pub fn run(source: &str, skill: Option<&str>) {
-    if let Err(e) = run_inner(source, skill) {
-        eprintln!("error: {e}");
-        std::process::exit(1);
-    }
+pub fn run(ace: &mut Ace, source: &str, skill: Option<&str>) {
+    let result = run_inner(source, skill);
+    super::exit_on_err(ace, result);
 }
 
 fn run_inner(source: &str, skill: Option<&str>) -> Result<(), CmdError> {
     let school_root = resolve_school_root()?;
 
     let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
-    let mut session = ace.session();
 
     let result = ImportSkill {
         source,
         skill,
         school_root: &school_root,
     }
-    .run(&mut session)?;
+    .run(&mut ace)?;
 
     match result {
         ImportResult::Done { .. } => {}
@@ -40,7 +38,7 @@ fn run_inner(source: &str, skill: Option<&str>) -> Result<(), CmdError> {
                 skill: Some(&skill.name),
                 school_root: &school_root,
             }
-            .install_selected(skill, &mut session)?;
+            .install_selected(skill, &mut ace)?;
         }
     }
     Ok(())
@@ -49,12 +47,10 @@ fn run_inner(source: &str, skill: Option<&str>) -> Result<(), CmdError> {
 fn resolve_school_root() -> Result<PathBuf, CmdError> {
     let cwd = std::env::current_dir()?;
 
-    // School repo context: school.toml in cwd
     if cwd.join("school.toml").exists() {
         return Ok(cwd);
     }
 
-    // App repo context: resolve from ace.toml
     let ace_toml_path = cwd.join("ace.toml");
     if ace_toml_path.exists() {
         let ace = crate::config::ace_toml::load(&ace_toml_path)?;

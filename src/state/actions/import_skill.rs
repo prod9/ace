@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
+use crate::ace::Ace;
 use crate::config;
 use crate::config::school_toml::ImportDecl;
-use crate::session::Session;
 
 pub struct ImportSkill<'a> {
     pub source: &'a str,
@@ -36,10 +36,10 @@ pub enum ImportResult {
 }
 
 impl ImportSkill<'_> {
-    pub fn run(&self, session: &mut Session<'_>) -> Result<ImportResult, ImportError> {
+    pub fn run(&self, ace: &mut Ace) -> Result<ImportResult, ImportError> {
         let tmp = tempfile::tempdir()?;
 
-        session.progress(&format!("Cloning {}", self.source));
+        ace.progress(&format!("Cloning {}", self.source));
         clone_repo(self.source, tmp.path())?;
 
         let skills = discover_skills(tmp.path())?;
@@ -58,15 +58,15 @@ impl ImportSkill<'_> {
         };
 
         self.install_skill(selected)?;
-        session.done(&format!("Imported skill: {}", selected.name));
+        ace.done(&format!("Imported skill: {}", selected.name));
         Ok(ImportResult::Done { skill: selected.name.clone() })
     }
 
     /// Install a specific discovered skill after selection.
-    pub fn install_selected(&self, skill: &DiscoveredSkill, session: &mut Session<'_>) -> Result<(), ImportError> {
-        session.progress(&format!("Installing {}", skill.name));
+    pub fn install_selected(&self, skill: &DiscoveredSkill, ace: &mut Ace) -> Result<(), ImportError> {
+        ace.progress(&format!("Installing {}", skill.name));
         self.install_skill(skill)?;
-        session.done(&format!("Imported skill: {}", skill.name));
+        ace.done(&format!("Imported skill: {}", skill.name));
         Ok(())
     }
 
