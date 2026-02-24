@@ -33,6 +33,9 @@ Metrics:
   the user. Net deletions? Celebrate briefly. Small addition for new behavior? Normal. Large
   net addition? Flag it — question whether the approach is too heavy or if something simpler
   would do.
+- After `cargo build` or `cargo test`, report the compilation time shown in the output. Flag
+  regressions — if a change noticeably increases compile time, question whether a lighter
+  approach exists.
 
 ## Dependencies
 

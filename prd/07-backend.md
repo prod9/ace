@@ -35,5 +35,4 @@ Fallback if no layer specifies backend: `claude`.
 
 ## Session Prompt
 
-All backends receive the session prompt via `--system-prompt` CLI flag. No environment variable
-fallback (`ACE_SYSTEM_PROMPT` is removed).
+All backends receive the session prompt via `--system-prompt` CLI flag.

@@ -48,9 +48,4 @@ session_prompt = "This project uses PostgreSQL..."
 
 ## Delivery
 
-The composed prompt is passed to the backend:
-
-- **Claude Code**: `--system-prompt <prompt>`
-- **OpenCode**: `ACE_SYSTEM_PROMPT=<prompt>` env var
-
-The CLI arg/env var names are backend conventions and are not renamed.
+The composed prompt is passed to the backend via `--system-prompt <prompt>` CLI flag.

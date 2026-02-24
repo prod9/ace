@@ -2,6 +2,8 @@ pub const SESSION: &str = include_str!("session.md");
 pub const PREVIOUS_SKILLS: &str = include_str!("previous_skills.md");
 pub const CHANGES_HEADER: &str = include_str!("changes_header.md");
 pub const CHANGES_FOOTER: &str = include_str!("changes_footer.md");
+pub const PROJECT_CLAUDE_MD: &str = include_str!("project_claude_md.md");
+pub const SCHOOL_CLAUDE_MD: &str = include_str!("school_claude_md.md");
 
 use std::path::Path;
 
@@ -11,6 +13,7 @@ const UNKNOWN_SKILLS_DIR: &str =
 /// Runtime values for prompt template placeholders.
 pub struct PromptCtx {
     skills_dir: String,
+    school_name: String,
 }
 
 impl PromptCtx {
@@ -21,13 +24,24 @@ impl PromptCtx {
             .unwrap_or(UNKNOWN_SKILLS_DIR)
             .to_string();
 
-        Self { skills_dir }
+        Self {
+            skills_dir,
+            school_name: String::new(),
+        }
+    }
+
+    pub fn new(path: &Path, school_name: &str) -> Self {
+        let mut ctx = Self::from_skills_dir(path);
+        ctx.school_name = school_name.to_string();
+        ctx
     }
 }
 
 /// Replace `{key}` placeholders in a template string with values from `ctx`.
 pub fn render(template: &str, ctx: &PromptCtx) -> String {
-    template.replace("{skills_dir}", &ctx.skills_dir)
+    template
+        .replace("{skills_dir}", &ctx.skills_dir)
+        .replace("{school_name}", &ctx.school_name)
 }
 
 #[cfg(test)]

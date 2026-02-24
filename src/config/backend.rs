@@ -22,4 +22,11 @@ impl Backend {
             Backend::OpenCode => ".opencode",
         }
     }
+
+    pub fn instructions_file(&self) -> &'static str {
+        match self {
+            Backend::Claude => "CLAUDE.md",
+            Backend::OpenCode => "AGENTS.md",
+        }
+    }
 }

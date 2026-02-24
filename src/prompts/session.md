@@ -1,4 +1,4 @@
-You are working in a project managed by ACE (AI Coding Environment).
+This coding session was launched through ACE (AI Coding Environment).
 
 Skills are loaded from the linked school repository. They are symlinked into this project
 and are editable. You may modify skill files to fix, improve, or extend them as needed

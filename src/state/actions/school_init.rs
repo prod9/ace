@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::prompts;
 use crate::session::Session;
 
 #[derive(Debug, thiserror::Error)]
@@ -31,6 +32,14 @@ impl SchoolInit<'_> {
 
         let content = format!("[school]\nname = \"{}\"\n", self.name);
         std::fs::write(&toml_path, content)?;
+
+        let instructions = self.project_dir.join("CLAUDE.md");
+        if !instructions.exists() {
+            let ctx = prompts::PromptCtx::new(Path::new(".claude"), self.name);
+            let content = prompts::render(prompts::SCHOOL_CLAUDE_MD, &ctx);
+            std::fs::write(&instructions, content)?;
+            eprintln!("Created CLAUDE.md");
+        }
 
         Ok(())
     }
