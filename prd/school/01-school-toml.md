@@ -6,9 +6,7 @@ configuration, MCP tools, environment, and project catalog for the school.
 ## Example
 
 ```toml
-[school]
 name = "Acme Corp"
-description = "Acme Corp engineering school"
 
 [env]
 NODE_VERSION = "22"
@@ -69,11 +67,10 @@ description = "Terraform and Kubernetes configs for AWS deployment."
 
 ## Sections
 
-### `[school]`
+### `name`
 
-- `name` — Display name for the school. Used in logs, UI, and fuzzy search. Not an identifier —
-  the school is identified by its GitHub `owner/repo` shorthand.
-- `description` — Short description of the school/organization. Included in AI system context.
+Display name for the school. Used in logs, UI, and fuzzy search. Not an identifier —
+the school is identified by its GitHub `owner/repo` shorthand.
 
 ### `[env]`
 

@@ -50,7 +50,7 @@ impl<'a> Tui<'a> {
 
         let existing_name = if force && toml_path.exists() {
             crate::config::school_toml::load(&toml_path).ok()
-                .map(|s| s.school.name)
+                .map(|s| s.name)
                 .filter(|n| !n.is_empty())
         } else {
             None

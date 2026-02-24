@@ -58,7 +58,7 @@ impl Setup<'_> {
             let school_toml = config::school_toml::load(&school_toml_path)?;
 
             let skills_dir = self.project_dir.join(backend.skills_dir());
-            let ctx = prompts::PromptCtx::new(&skills_dir, &school_toml.school.name);
+            let ctx = prompts::PromptCtx::new(&skills_dir, &school_toml.name);
             let content = prompts::render(prompts::PROJECT_CLAUDE_MD, &ctx);
 
             std::fs::write(&instructions, content)

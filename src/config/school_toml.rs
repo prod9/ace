@@ -8,7 +8,9 @@ use super::ConfigError;
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SchoolToml {
-    pub school: SchoolMeta,
+    pub name: String,
+    pub backend: Option<Backend>,
+    pub session_prompt: String,
     pub env: HashMap<String, String>,
     pub services: Vec<ServiceDecl>,
     pub mcp: Vec<McpDecl>,
@@ -21,15 +23,6 @@ pub struct SchoolToml {
 pub struct ImportDecl {
     pub skill: String,
     pub source: String,
-}
-
-#[derive(Debug, Default, Deserialize, Serialize)]
-#[serde(default)]
-pub struct SchoolMeta {
-    pub name: String,
-    pub description: Option<String>,
-    pub backend: Option<Backend>,
-    pub session_prompt: String,
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]

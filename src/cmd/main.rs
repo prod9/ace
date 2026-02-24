@@ -44,7 +44,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
     let school_toml_path = school_paths.root.join("school.toml");
     let school_toml = config::school_toml::load(&school_toml_path)
         .map_err(|e| CmdError::Other(format!("{}: {e}", school_toml_path.display())))?;
-    tree.school_backend = school_toml.school.backend;
+    tree.school_backend = school_toml.backend;
 
     let state = State::resolve(tree);
     *ace = Ace::with_state(state, Ace::term_sink());
@@ -52,9 +52,8 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
 
     let skills_dir = project_dir.join(session.state.backend.skills_dir());
     let session_prompt = build_session_prompt(
-        &school_toml.school.name,
-        school_toml.school.description.as_deref(),
-        &school_toml.school.session_prompt,
+        &school_toml.name,
+        &school_toml.session_prompt,
         &session.state.session_prompt,
         &skills_dir,
         &prepare_result.changes,

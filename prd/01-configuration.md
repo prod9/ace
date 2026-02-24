@@ -56,7 +56,7 @@ Serde handles deserialization only. All config structs use `#[derive(Default)]` 
 present in the TOML — missing keys get their type's `Default` value (empty string, empty vec,
 `None`, etc.).
 
-This means the TOML `[school]` with no `name` key produces `SchoolMeta { name: "".into(), .. }`
+This means a TOML with no `name` key produces `SchoolToml { name: "".into(), .. }`
 rather than a serde error. Partial or empty files always parse.
 
 ### Validation
@@ -66,14 +66,14 @@ Validation runs on the merged config (after all three layers are combined), not 
 
 Rules are expressed in code, not via serde attributes. Examples:
 
-- `school.name` must be non-empty.
+- `name` (top-level) must be non-empty.
 - `services[].authorize_url` and `services[].token_url` must be valid URLs.
 - `services[].client_id` must be non-empty.
 - No duplicate `services[].name` entries.
 - No duplicate `mcp[].name` entries.
 - `projects[].repo` must be a valid specifier.
 
-Validation errors reference the offending key path: e.g. `school.name: must not be empty`,
+Validation errors reference the offending key path: e.g. `name: must not be empty`,
 `services[0].authorize_url: not a valid URL`.
 
 ### Why

@@ -30,7 +30,7 @@ impl SchoolInit<'_> {
             return Err(SchoolInitError::AlreadyExists);
         }
 
-        let content = format!("[school]\nname = \"{}\"\n", self.name);
+        let content = format!("name = \"{}\"\n", self.name);
         std::fs::write(&toml_path, content)?;
 
         let instructions = self.project_dir.join("CLAUDE.md");
