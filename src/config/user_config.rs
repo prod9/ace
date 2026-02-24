@@ -22,13 +22,15 @@ pub type UserConfig = HashMap<String, SchoolCredentials>;
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SchoolCredentials {
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub services: HashMap<String, ServiceCredentials>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServiceCredentials {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
-    #[serde(flatten)]
+    #[serde(flatten, skip_serializing_if = "HashMap::is_empty")]
     pub extra: HashMap<String, String>,
 }
 

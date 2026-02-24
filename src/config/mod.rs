@@ -7,6 +7,12 @@ pub mod school_toml;
 pub mod tree;
 pub mod user_config;
 
+use std::collections::HashMap;
+
+pub(crate) fn is_empty_str(s: &str) -> bool { s.is_empty() }
+pub(crate) fn is_empty_map(m: &HashMap<String, String>) -> bool { m.is_empty() }
+pub(crate) fn is_empty_vec<T>(v: &[T]) -> bool { v.is_empty() }
+
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error("{0}")]
