@@ -1,3 +1,5 @@
+pub mod session;
+
 pub const SESSION: &str = include_str!("session.md");
 pub const PREVIOUS_SKILLS: &str = include_str!("previous_skills.md");
 pub const CHANGES_HEADER: &str = include_str!("changes_header.md");

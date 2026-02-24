@@ -2,7 +2,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::state::actions::exec::Exec;
 use crate::state::actions::prepare::Prepare;
-use crate::state::prompt::build_session_prompt;
+use crate::prompts::session::build_session_prompt;
 use crate::state::State;
 
 use super::CmdError;
