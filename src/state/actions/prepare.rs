@@ -64,8 +64,8 @@ impl Prepare<'_> {
             ));
         }
 
-        if result.linked > 0 {
-            ace.done(&format!("Linked {} skills", result.linked));
+        if result.linked {
+            ace.done("Linked skills");
         }
 
         Ok(PrepareResult { changes })

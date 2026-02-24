@@ -28,7 +28,7 @@ pub fn build_session_prompt(
         parts.push(format_change_summary(changes));
     }
 
-    let previous_skills = skills_dir.join("skills").join("previous-skills");
+    let previous_skills = skills_dir.join("previous-skills");
     if previous_skills.exists() {
         let ctx = prompts::PromptCtx::from_skills_dir(skills_dir);
         parts.push(prompts::render(prompts::PREVIOUS_SKILLS, &ctx));
@@ -120,7 +120,7 @@ mod tests {
     #[test]
     fn injects_previous_skills_guidance() {
         let fix = TempDir::new("ace-test-prompt-previous");
-        let prev = fix.path().join("skills").join("previous-skills");
+        let prev = fix.path().join("previous-skills");
         std::fs::create_dir_all(&prev).expect("create previous-skills dir");
 
         let prompt = build_session_prompt("Acme", "", "", fix.path(), &[]);
@@ -131,13 +131,13 @@ mod tests {
     #[test]
     fn previous_skills_uses_skills_dir_name() {
         let fix = TempDir::new("ace-test-prompt-opencode");
-        let skills = fix.path().join(".opencode").join("skills").join("previous-skills");
+        let skills = fix.path().join(".opencode").join("previous-skills");
         std::fs::create_dir_all(&skills).expect("create previous-skills dir");
 
         let skills_dir = fix.path().join(".opencode");
         let prompt = build_session_prompt("Acme", "", "", &skills_dir, &[]);
-        assert!(prompt.contains(".opencode/skills/"), "should use .opencode dir name");
-        assert!(!prompt.contains(".claude/skills/"), "should not contain .claude");
+        assert!(prompt.contains(".opencode/previous-skills/"), "should use .opencode dir name");
+        assert!(!prompt.contains(".claude/previous-skills/"), "should not contain .claude");
     }
 
     #[test]

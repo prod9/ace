@@ -6,7 +6,7 @@ use super::prepare::PrepareError;
 
 const PREVIOUS_SKILLS_DIR: &str = "previous-skills";
 
-/// Symlink school skills from cache into the project.
+/// Symlink school skills folder from cache into the project.
 pub struct Link<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
@@ -22,40 +22,11 @@ impl Link<'_> {
         }
 
         let project_skills = self.project_dir.join(self.skills_dir).join("skills");
-        std::fs::create_dir_all(&project_skills)
-            .map_err(PrepareError::Write)?;
+        let previous_skills_dir = self.project_dir.join(self.skills_dir).join(PREVIOUS_SKILLS_DIR);
 
-        let moved = adopt_previous_skills(&project_skills)?;
+        let moved = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
 
-        let mut linked = 0;
-        let entries = std::fs::read_dir(&school_skills)
-            .map_err(PrepareError::Write)?;
-
-        for entry in entries {
-            let entry = entry.map_err(PrepareError::Write)?;
-            let file_type = entry.file_type().map_err(PrepareError::Write)?;
-            if !file_type.is_dir() {
-                continue;
-            }
-
-            let skill_name = entry.file_name();
-            let link_path = project_skills.join(&skill_name);
-            let target = entry.path();
-
-            match link_status(&link_path) {
-                LinkStatus::Absent => {}
-                LinkStatus::RealDir => continue,
-                LinkStatus::Symlink(current) if current == target => continue,
-                LinkStatus::Symlink(_) => {
-                    std::fs::remove_file(&link_path)
-                        .map_err(PrepareError::Write)?;
-                }
-            }
-
-            std::os::unix::fs::symlink(&target, &link_path)
-                .map_err(PrepareError::Write)?;
-            linked += 1;
-        }
+        let linked = ensure_symlink(&project_skills, &school_skills)?;
 
         Ok(LinkResult { linked, moved })
     }
@@ -63,19 +34,47 @@ impl Link<'_> {
 
 #[derive(Debug, Default)]
 pub struct LinkResult {
-    pub linked: usize,
+    pub linked: bool,
     pub moved: Vec<String>,
 }
 
-/// On first setup (no symlinks yet), move real skill dirs into `previous-skills/`.
-fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, PrepareError> {
+/// Create or update the folder-level symlink from `link_path` to `target`.
+fn ensure_symlink(link_path: &Path, target: &Path) -> Result<bool, PrepareError> {
+    match link_status(link_path) {
+        LinkStatus::Symlink(current) if current == target => return Ok(false),
+        LinkStatus::Symlink(_) => {
+            std::fs::remove_file(link_path).map_err(PrepareError::Write)?;
+        }
+        LinkStatus::RealDir => {
+            std::fs::remove_dir_all(link_path).map_err(PrepareError::Write)?;
+        }
+        LinkStatus::Absent => {
+            if let Some(parent) = link_path.parent() {
+                std::fs::create_dir_all(parent).map_err(PrepareError::Write)?;
+            }
+        }
+    }
+
+    std::os::unix::fs::symlink(target, link_path).map_err(PrepareError::Write)?;
+    Ok(true)
+}
+
+/// On first setup (no symlinks yet), move real skill dirs into sibling `previous-skills/`.
+fn adopt_previous_skills(
+    project_skills: &Path,
+    previous_dir: &Path,
+) -> Result<Vec<String>, PrepareError> {
+    // If project_skills is already a symlink, adoption already happened.
+    if is_symlink(project_skills) {
+        return Ok(Vec::new());
+    }
+
     let entries = match std::fs::read_dir(project_skills) {
         Ok(e) => e,
         Err(_) => return Ok(Vec::new()),
     };
 
     let mut real_dirs = Vec::new();
-    let mut has_symlinks = false;
 
     for entry in entries {
         let entry = entry.map_err(PrepareError::Write)?;
@@ -84,39 +83,42 @@ fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, PrepareEr
             continue;
         }
 
-        match link_status(&entry.path()) {
-            LinkStatus::RealDir => real_dirs.push(name),
-            LinkStatus::Symlink(_) => has_symlinks = true,
-            LinkStatus::Absent => {}
+        if matches!(link_status(&entry.path()), LinkStatus::RealDir) {
+            real_dirs.push(name);
         }
     }
 
-    if real_dirs.is_empty() || has_symlinks {
+    if real_dirs.is_empty() {
         return Ok(Vec::new());
     }
 
-    let prev_dir = project_skills.join(PREVIOUS_SKILLS_DIR);
-    if prev_dir.exists() {
+    if previous_dir.exists() {
         return Err(PrepareError::Write(std::io::Error::new(
             std::io::ErrorKind::AlreadyExists,
             format!(
                 "{} already exists — consolidate or remove it first",
-                prev_dir.display()
+                previous_dir.display()
             ),
         )));
     }
 
-    std::fs::create_dir_all(&prev_dir).map_err(PrepareError::Write)?;
+    std::fs::create_dir_all(previous_dir).map_err(PrepareError::Write)?;
 
     let mut moved = Vec::new();
     for name in real_dirs {
         let src = project_skills.join(&name);
-        let dst = prev_dir.join(&name);
+        let dst = previous_dir.join(&name);
         std::fs::rename(&src, &dst).map_err(PrepareError::Write)?;
         moved.push(name.to_string_lossy().into_owned());
     }
 
     Ok(moved)
+}
+
+fn is_symlink(path: &Path) -> bool {
+    path.symlink_metadata()
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
 }
 
 enum LinkStatus {
@@ -126,11 +128,7 @@ enum LinkStatus {
 }
 
 fn link_status(path: &Path) -> LinkStatus {
-    let is_symlink = path.symlink_metadata()
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false);
-
-    if is_symlink {
+    if is_symlink(path) {
         let target = std::fs::read_link(path).unwrap_or_default();
         LinkStatus::Symlink(target)
     } else if path.exists() {
@@ -164,6 +162,7 @@ mod tests {
         fn project(&self) -> PathBuf { self.root.join("project") }
         fn school_skills(&self) -> PathBuf { self.school().join("skills") }
         fn project_skills(&self) -> PathBuf { self.project().join(".claude").join("skills") }
+        fn previous_skills(&self) -> PathBuf { self.project().join(".claude").join("previous-skills") }
 
         fn add_school_skill(&self, name: &str) {
             std::fs::create_dir_all(self.school_skills().join(name))
@@ -182,13 +181,6 @@ mod tests {
             std::fs::write(dir.join(file), content).expect("write skill file");
         }
 
-        fn add_symlink(&self, name: &str, target: &Path) {
-            let project_skills = self.project_skills();
-            std::fs::create_dir_all(&project_skills).expect("mkdir project skills");
-            std::os::unix::fs::symlink(target, project_skills.join(name))
-                .expect("create symlink");
-        }
-
         fn link(&self) -> Result<LinkResult, PrepareError> {
             link_skills(&self.school(), &self.project())
         }
@@ -204,66 +196,78 @@ mod tests {
     fn link_no_skills_dir() {
         let fix = TestFixture::new("ace-test-link-no-skills");
         let result = fix.link().expect("should succeed");
-        assert_eq!(result.linked, 0);
+        assert!(!result.linked);
         assert!(result.moved.is_empty());
     }
 
     #[test]
-    fn link_creates_symlinks() {
-        let fix = TestFixture::new("ace-test-link-symlinks");
+    fn link_creates_folder_symlink() {
+        let fix = TestFixture::new("ace-test-link-folder");
         fix.add_school_skill_with_content("git-commit", "SKILL.md", "# Git Commit");
         fix.add_school_skill_with_content("code-review", "SKILL.md", "# Code Review");
 
-        let result = fix.link().expect("should create symlinks");
-        assert_eq!(result.linked, 2);
+        let result = fix.link().expect("should create symlink");
+        assert!(result.linked);
 
-        let link = fix.project_skills().join("git-commit");
+        let link = fix.project_skills();
         assert!(link.symlink_metadata().expect("link exists").file_type().is_symlink());
 
-        let content = std::fs::read_to_string(link.join("SKILL.md")).expect("read through symlink");
+        let target = std::fs::read_link(&link).expect("read link");
+        assert_eq!(target, fix.school_skills());
+
+        let content = std::fs::read_to_string(link.join("git-commit").join("SKILL.md"))
+            .expect("read through symlink");
         assert_eq!(content, "# Git Commit");
     }
 
     #[test]
-    fn link_skips_matching_symlinks() {
-        let fix = TestFixture::new("ace-test-link-skip-matching");
+    fn link_skips_correct_symlink() {
+        let fix = TestFixture::new("ace-test-link-skip-correct");
         fix.add_school_skill("my-skill");
-        fix.add_symlink("my-skill", &fix.school_skills().join("my-skill"));
+
+        // Create correct symlink manually
+        let project_skills = fix.project_skills();
+        std::fs::create_dir_all(project_skills.parent().expect("has parent"))
+            .expect("mkdir parent");
+        std::os::unix::fs::symlink(fix.school_skills(), &project_skills)
+            .expect("create symlink");
 
         let result = fix.link().expect("should skip existing");
-        assert_eq!(result.linked, 0);
+        assert!(!result.linked);
     }
 
     #[test]
-    fn link_replaces_stale_symlinks() {
-        let fix = TestFixture::new("ace-test-link-replace");
+    fn link_replaces_stale_symlink() {
+        let fix = TestFixture::new("ace-test-link-replace-stale");
         fix.add_school_skill("my-skill");
-        fix.add_symlink("my-skill", &fix.root.join("nonexistent"));
+
+        // Create stale symlink
+        let project_skills = fix.project_skills();
+        std::fs::create_dir_all(project_skills.parent().expect("has parent"))
+            .expect("mkdir parent");
+        std::os::unix::fs::symlink(fix.root.join("nonexistent"), &project_skills)
+            .expect("create stale symlink");
 
         let result = fix.link().expect("should replace stale");
-        assert_eq!(result.linked, 1);
+        assert!(result.linked);
 
-        let target = std::fs::read_link(fix.project_skills().join("my-skill")).expect("read link");
-        assert_eq!(target, fix.school_skills().join("my-skill"));
+        let target = std::fs::read_link(&project_skills).expect("read link");
+        assert_eq!(target, fix.school_skills());
     }
 
     #[test]
-    fn link_skips_real_dirs_when_symlinks_present() {
-        let fix = TestFixture::new("ace-test-link-skip-real");
+    fn link_replaces_empty_dir() {
+        let fix = TestFixture::new("ace-test-link-replace-empty");
         fix.add_school_skill("my-skill");
-        fix.add_school_skill("other-skill");
-        fix.add_real_skill("my-skill", "local.md", "local override");
-        fix.add_symlink("other-skill", &fix.school_skills().join("other-skill"));
 
-        let result = fix.link().expect("should skip real dirs");
-        assert_eq!(result.linked, 0, "both already present");
-        assert!(result.moved.is_empty(), "no move when symlinks exist");
+        // Create empty project skills dir
+        std::fs::create_dir_all(fix.project_skills()).expect("mkdir");
 
-        let content = std::fs::read_to_string(
-            fix.project_skills().join("my-skill").join("local.md"),
-        )
-        .expect("local file should still exist");
-        assert_eq!(content, "local override");
+        let result = fix.link().expect("should replace empty dir");
+        assert!(result.linked);
+
+        let target = std::fs::read_link(fix.project_skills()).expect("read link");
+        assert_eq!(target, fix.school_skills());
     }
 
     #[test]
@@ -273,14 +277,19 @@ mod tests {
         fix.add_real_skill("my-skill", "SKILL.md", "# My Skill");
 
         let result = fix.link().expect("should adopt and link");
-        assert_eq!(result.linked, 1, "school skill linked");
+        assert!(result.linked, "school skills linked");
         assert_eq!(result.moved, vec!["my-skill"]);
 
-        let prev = fix.project_skills().join("previous-skills").join("my-skill").join("SKILL.md");
+        // Previous skills at sibling level
+        let prev = fix.previous_skills().join("my-skill").join("SKILL.md");
         let content = std::fs::read_to_string(prev).expect("moved skill should exist");
         assert_eq!(content, "# My Skill");
 
-        assert!(!fix.project_skills().join("my-skill").exists(), "original should be gone");
+        // project_skills is now a symlink
+        assert!(
+            fix.project_skills().symlink_metadata().expect("exists").file_type().is_symlink(),
+            "project skills should be a symlink"
+        );
     }
 
     #[test]
@@ -289,12 +298,28 @@ mod tests {
         fix.add_school_skill("school-skill");
         fix.add_real_skill("my-skill", "SKILL.md", "");
 
-        let prev = fix.project_skills().join("previous-skills");
-        std::fs::create_dir_all(&prev).expect("create prev dir");
+        // Create previous-skills at sibling level
+        std::fs::create_dir_all(fix.previous_skills()).expect("create prev dir");
 
         let err = fix.link().expect_err("should error");
         let msg = format!("{err}");
         assert!(msg.contains("already exists"), "error: {msg}");
+    }
+
+    #[test]
+    fn adopt_skips_when_already_symlinked() {
+        let fix = TestFixture::new("ace-test-link-adopt-skip");
+        fix.add_school_skill("my-skill");
+
+        // Already a symlink — adoption should be skipped
+        let project_skills = fix.project_skills();
+        std::fs::create_dir_all(project_skills.parent().expect("has parent"))
+            .expect("mkdir parent");
+        std::os::unix::fs::symlink(fix.school_skills(), &project_skills)
+            .expect("create symlink");
+
+        let result = fix.link().expect("should succeed");
+        assert!(result.moved.is_empty(), "no adoption when already symlinked");
     }
 
     /// Helper to test symlink logic without needing full specifier resolution.
@@ -305,36 +330,10 @@ mod tests {
         }
 
         let project_skills = project_dir.join(".claude").join("skills");
-        std::fs::create_dir_all(&project_skills).map_err(PrepareError::Write)?;
+        let previous_skills_dir = project_dir.join(".claude").join(PREVIOUS_SKILLS_DIR);
 
-        let moved = adopt_previous_skills(&project_skills)?;
-
-        let mut linked = 0;
-        let entries = std::fs::read_dir(&school_skills).map_err(PrepareError::Write)?;
-
-        for entry in entries {
-            let entry = entry.map_err(PrepareError::Write)?;
-            let file_type = entry.file_type().map_err(PrepareError::Write)?;
-            if !file_type.is_dir() {
-                continue;
-            }
-
-            let skill_name = entry.file_name();
-            let link_path = project_skills.join(&skill_name);
-            let target = entry.path();
-
-            match link_status(&link_path) {
-                LinkStatus::Absent => {}
-                LinkStatus::RealDir => continue,
-                LinkStatus::Symlink(current) if current == target => continue,
-                LinkStatus::Symlink(_) => {
-                    std::fs::remove_file(&link_path).map_err(PrepareError::Write)?;
-                }
-            }
-
-            std::os::unix::fs::symlink(&target, &link_path).map_err(PrepareError::Write)?;
-            linked += 1;
-        }
+        let moved = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
+        let linked = ensure_symlink(&project_skills, &school_skills)?;
 
         Ok(LinkResult { linked, moved })
     }
