@@ -1,8 +1,8 @@
 use std::path::Path;
-use std::process::Command;
 
 use crate::config;
 use crate::config::index_toml;
+use crate::git;
 use crate::session::Session;
 use super::prepare::PrepareError;
 
@@ -34,22 +34,14 @@ impl Install<'_> {
         let url = format!("https://github.com/{repo}.git");
 
         session.progress(&format!("Cloning {repo}"));
-        let status = Command::new("git")
-            .args(["clone", "--depth", "1", "--single-branch", "--no-tags", &url])
-            .arg(cache)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .map_err(|e| PrepareError::Clone(format!("git clone: {e}")))?;
-        if !status.success() {
-            return Err(PrepareError::Clone(format!("git clone exited {status}")));
-        }
+        git::clone_shallow(&url, cache)
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
         session.done(&format!("Cloned {repo}"));
 
         update_index(&school_paths.source)?;
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
-        println!("School: {}", school_toml.school.name);
+        println!("School: {}", school_toml.name);
 
         for service in &school_toml.services {
             Authenticate { service }.run(session).await?;

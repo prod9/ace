@@ -96,18 +96,8 @@ impl ImportSkill<'_> {
 
 pub fn clone_repo(source: &str, dest: &Path) -> Result<(), ImportError> {
     let url = format!("https://github.com/{source}.git");
-    let status = std::process::Command::new("git")
-        .args(["clone", "--depth", "1", "--single-branch", "--no-tags", &url])
-        .arg(dest)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map_err(|e| ImportError::Clone(format!("git clone: {e}")))?;
-
-    if !status.success() {
-        return Err(ImportError::Clone(format!("git clone exited {status}")));
-    }
-    Ok(())
+    crate::git::clone_shallow(&url, dest)
+        .map_err(|e| ImportError::Clone(e.to_string()))
 }
 
 /// Discover skills by finding SKILL.md files in the repo.

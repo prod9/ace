@@ -1,8 +1,8 @@
 use std::path::Path;
-use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
+use crate::git;
 use crate::session::Session;
 
 #[derive(Debug, thiserror::Error)]
@@ -74,26 +74,23 @@ fn parse_owner_repo(specifier: &str) -> Result<(&str, &str), SchoolProposeError>
 }
 
 fn has_changes(repo: &Path) -> Result<bool, SchoolProposeError> {
-    let output = Command::new("git")
-        .args(["status", "--porcelain"])
-        .current_dir(repo)
-        .output()
-        .map_err(|e| SchoolProposeError::Git(format!("git status: {e}")))?;
-
-    Ok(!output.stdout.is_empty())
+    git::is_dirty(repo).map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 fn create_branch(repo: &Path, branch: &str) -> Result<(), SchoolProposeError> {
-    run_git(repo, &["checkout", "-b", branch])
+    git::checkout_new_branch(repo, branch)
+        .map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 fn stage_and_commit(repo: &Path) -> Result<(), SchoolProposeError> {
-    run_git(repo, &["add", "-A"])?;
-    run_git(repo, &["commit", "-m", "Propose school changes from ace"])
+    git::add_all(repo).map_err(|e| SchoolProposeError::Git(e.to_string()))?;
+    git::commit(repo, "Propose school changes from ace")
+        .map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 fn push_branch(repo: &Path, branch: &str) -> Result<(), SchoolProposeError> {
-    run_git(repo, &["push", "-u", "origin", branch])
+    git::push_new_branch(repo, "origin", branch)
+        .map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 #[derive(Serialize)]
@@ -133,22 +130,8 @@ fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<Strin
 }
 
 fn reset_to_main(repo: &Path) -> Result<(), SchoolProposeError> {
-    run_git(repo, &["checkout", "main"])?;
-    run_git(repo, &["reset", "--hard", "origin/main"])
-}
-
-fn run_git(repo: &Path, args: &[&str]) -> Result<(), SchoolProposeError> {
-    let label = args.join(" ");
-    let status = Command::new("git")
-        .args(args)
-        .current_dir(repo)
-        .status()
-        .map_err(|e| SchoolProposeError::Git(format!("git {label}: {e}")))?;
-
-    if !status.success() {
-        return Err(SchoolProposeError::Git(format!("git {label} exited {status}")));
-    }
-    Ok(())
+    git::checkout(repo, "main").map_err(|e| SchoolProposeError::Git(e.to_string()))?;
+    git::reset_hard(repo, "origin/main").map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 fn timestamp() -> String {

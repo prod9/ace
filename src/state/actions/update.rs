@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::path::Path;
-use std::process::Command;
 use std::time::Duration;
 
 use crate::config;
+use crate::git;
 use crate::session::Session;
 use super::prepare::PrepareError;
 
@@ -86,57 +86,24 @@ fn is_stale(repo: &Path) -> bool {
 }
 
 fn is_dirty(repo: &Path) -> Result<bool, PrepareError> {
-    let output = Command::new("git")
-        .args(["status", "--porcelain"])
-        .current_dir(repo)
-        .output()
-        .map_err(|e| PrepareError::Clone(format!("git status: {e}")))?;
-
-    Ok(!output.stdout.is_empty())
+    git::is_dirty(repo).map_err(|e| PrepareError::Clone(e.to_string()))
 }
 
 fn git_fetch(repo: &Path) -> Result<(), PrepareError> {
-    let status = Command::new("git")
-        .args(["fetch", "--depth", "1", "--no-tags", "origin", "main"])
-        .current_dir(repo)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map_err(|e| PrepareError::Clone(format!("git fetch: {e}")))?;
-
-    if !status.success() {
-        return Err(PrepareError::Clone(format!("git fetch exited {status}")));
-    }
-    Ok(())
+    git::fetch_shallow(repo, "origin", "main")
+        .map_err(|e| PrepareError::Clone(e.to_string()))
 }
 
 fn git_reset_to_origin_main(repo: &Path) -> Result<(), PrepareError> {
-    let status = Command::new("git")
-        .args(["reset", "--hard", "origin/main"])
-        .current_dir(repo)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map_err(|e| PrepareError::Clone(format!("git reset: {e}")))?;
-
-    if !status.success() {
-        return Err(PrepareError::Clone(format!("git reset exited {status}")));
-    }
-    Ok(())
+    git::reset_hard(repo, "origin/main")
+        .map_err(|e| PrepareError::Clone(e.to_string()))
 }
 
 fn detect_skill_changes(repo: &Path) -> Result<Vec<SkillChange>, PrepareError> {
-    let output = Command::new("git")
-        .args(["diff", "--name-status", "HEAD", "origin/main", "--", "skills/"])
-        .current_dir(repo)
-        .output()
-        .map_err(|e| PrepareError::Clone(format!("git diff: {e}")))?;
-
-    if !output.status.success() {
-        return Ok(Vec::new());
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = match git::diff_name_status(repo, "HEAD", "origin/main", Some("skills/")) {
+        Ok(s) => s,
+        Err(_) => return Ok(Vec::new()),
+    };
     Ok(parse_diff_output(&stdout))
 }
 

@@ -2,6 +2,7 @@ mod ace;
 mod cmd;
 mod config;
 mod events;
+mod git;
 mod prompts;
 mod session;
 mod state;
