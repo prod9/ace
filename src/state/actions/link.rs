@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::config;
 use crate::session::Session;
-use super::setup::SetupError;
+use super::prepare::PrepareError;
 
 const PREVIOUS_SKILLS_DIR: &str = "previous-skills";
 
@@ -14,7 +14,7 @@ pub struct Link<'a> {
 }
 
 impl Link<'_> {
-    pub fn run(&self, _session: &mut Session<'_>) -> Result<LinkResult, SetupError> {
+    pub fn run(&self, _session: &mut Session<'_>) -> Result<LinkResult, PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
         let school_skills = school_paths.root.join("skills");
         if !school_skills.exists() {
@@ -23,17 +23,17 @@ impl Link<'_> {
 
         let project_skills = self.project_dir.join(self.skills_dir).join("skills");
         std::fs::create_dir_all(&project_skills)
-            .map_err(SetupError::WriteConfig)?;
+            .map_err(PrepareError::Write)?;
 
         let moved = adopt_previous_skills(&project_skills)?;
 
         let mut linked = 0;
         let entries = std::fs::read_dir(&school_skills)
-            .map_err(SetupError::WriteConfig)?;
+            .map_err(PrepareError::Write)?;
 
         for entry in entries {
-            let entry = entry.map_err(SetupError::WriteConfig)?;
-            let file_type = entry.file_type().map_err(SetupError::WriteConfig)?;
+            let entry = entry.map_err(PrepareError::Write)?;
+            let file_type = entry.file_type().map_err(PrepareError::Write)?;
             if !file_type.is_dir() {
                 continue;
             }
@@ -48,12 +48,12 @@ impl Link<'_> {
                 LinkStatus::Symlink(current) if current == target => continue,
                 LinkStatus::Symlink(_) => {
                     std::fs::remove_file(&link_path)
-                        .map_err(SetupError::WriteConfig)?;
+                        .map_err(PrepareError::Write)?;
                 }
             }
 
             std::os::unix::fs::symlink(&target, &link_path)
-                .map_err(SetupError::WriteConfig)?;
+                .map_err(PrepareError::Write)?;
             linked += 1;
         }
 
@@ -68,7 +68,7 @@ pub struct LinkResult {
 }
 
 /// On first setup (no symlinks yet), move real skill dirs into `previous-skills/`.
-fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, SetupError> {
+fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, PrepareError> {
     let entries = match std::fs::read_dir(project_skills) {
         Ok(e) => e,
         Err(_) => return Ok(Vec::new()),
@@ -78,7 +78,7 @@ fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, SetupErro
     let mut has_symlinks = false;
 
     for entry in entries {
-        let entry = entry.map_err(SetupError::WriteConfig)?;
+        let entry = entry.map_err(PrepareError::Write)?;
         let name = entry.file_name();
         if name == PREVIOUS_SKILLS_DIR {
             continue;
@@ -97,7 +97,7 @@ fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, SetupErro
 
     let prev_dir = project_skills.join(PREVIOUS_SKILLS_DIR);
     if prev_dir.exists() {
-        return Err(SetupError::WriteConfig(std::io::Error::new(
+        return Err(PrepareError::Write(std::io::Error::new(
             std::io::ErrorKind::AlreadyExists,
             format!(
                 "{} already exists — consolidate or remove it first",
@@ -106,13 +106,13 @@ fn adopt_previous_skills(project_skills: &Path) -> Result<Vec<String>, SetupErro
         )));
     }
 
-    std::fs::create_dir_all(&prev_dir).map_err(SetupError::WriteConfig)?;
+    std::fs::create_dir_all(&prev_dir).map_err(PrepareError::Write)?;
 
     let mut moved = Vec::new();
     for name in real_dirs {
         let src = project_skills.join(&name);
         let dst = prev_dir.join(&name);
-        std::fs::rename(&src, &dst).map_err(SetupError::WriteConfig)?;
+        std::fs::rename(&src, &dst).map_err(PrepareError::Write)?;
         moved.push(name.to_string_lossy().into_owned());
     }
 
@@ -189,7 +189,7 @@ mod tests {
                 .expect("create symlink");
         }
 
-        fn link(&self) -> Result<LinkResult, SetupError> {
+        fn link(&self) -> Result<LinkResult, PrepareError> {
             link_skills(&self.school(), &self.project())
         }
     }
@@ -298,23 +298,23 @@ mod tests {
     }
 
     /// Helper to test symlink logic without needing full specifier resolution.
-    fn link_skills(school_root: &Path, project_dir: &Path) -> Result<LinkResult, SetupError> {
+    fn link_skills(school_root: &Path, project_dir: &Path) -> Result<LinkResult, PrepareError> {
         let school_skills = school_root.join("skills");
         if !school_skills.exists() {
             return Ok(LinkResult::default());
         }
 
         let project_skills = project_dir.join(".claude").join("skills");
-        std::fs::create_dir_all(&project_skills).map_err(SetupError::WriteConfig)?;
+        std::fs::create_dir_all(&project_skills).map_err(PrepareError::Write)?;
 
         let moved = adopt_previous_skills(&project_skills)?;
 
         let mut linked = 0;
-        let entries = std::fs::read_dir(&school_skills).map_err(SetupError::WriteConfig)?;
+        let entries = std::fs::read_dir(&school_skills).map_err(PrepareError::Write)?;
 
         for entry in entries {
-            let entry = entry.map_err(SetupError::WriteConfig)?;
-            let file_type = entry.file_type().map_err(SetupError::WriteConfig)?;
+            let entry = entry.map_err(PrepareError::Write)?;
+            let file_type = entry.file_type().map_err(PrepareError::Write)?;
             if !file_type.is_dir() {
                 continue;
             }
@@ -328,11 +328,11 @@ mod tests {
                 LinkStatus::RealDir => continue,
                 LinkStatus::Symlink(current) if current == target => continue,
                 LinkStatus::Symlink(_) => {
-                    std::fs::remove_file(&link_path).map_err(SetupError::WriteConfig)?;
+                    std::fs::remove_file(&link_path).map_err(PrepareError::Write)?;
                 }
             }
 
-            std::os::unix::fs::symlink(&target, &link_path).map_err(SetupError::WriteConfig)?;
+            std::os::unix::fs::symlink(&target, &link_path).map_err(PrepareError::Write)?;
             linked += 1;
         }
 

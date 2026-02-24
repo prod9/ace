@@ -11,12 +11,6 @@ use crate::config::ace_toml::AceToml;
 use crate::config::backend::Backend;
 use crate::config::tree::Tree;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ValidationError {
-    #[error("school: must not be empty")]
-    NoSchool,
-}
-
 /// Resolved effective state, computed from config::Tree.
 pub struct State {
     pub config: Tree,
@@ -71,12 +65,8 @@ impl State {
         }
     }
 
-    pub fn validate(&self) -> Result<(), ValidationError> {
-        match &self.school_specifier {
-            Some(s) if !s.is_empty() => {}
-            _ => return Err(ValidationError::NoSchool),
-        }
-        Ok(())
+    pub fn has_school(&self) -> bool {
+        matches!(&self.school_specifier, Some(s) if !s.is_empty())
     }
 }
 
@@ -275,22 +265,22 @@ mod tests {
     }
 
     #[test]
-    fn validate_no_school() {
+    fn has_school_none() {
         let state = State::empty();
-        assert!(state.validate().is_err());
+        assert!(!state.has_school());
     }
 
     #[test]
-    fn validate_empty_school() {
+    fn has_school_empty() {
         let mut state = State::empty();
         state.school_specifier = Some(String::new());
-        assert!(state.validate().is_err());
+        assert!(!state.has_school());
     }
 
     #[test]
-    fn validate_ok() {
+    fn has_school_ok() {
         let mut state = State::empty();
         state.school_specifier = Some("prod9/school".to_string());
-        assert!(state.validate().is_ok());
+        assert!(state.has_school());
     }
 }

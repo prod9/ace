@@ -5,12 +5,6 @@ use std::process::Command;
 use crate::config::backend::Backend;
 use crate::session::Session;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ExecError {
-    #[error("exec failed: {0}")]
-    Exec(std::io::Error),
-}
-
 pub struct Exec {
     pub backend: Backend,
     pub session_prompt: String,
@@ -20,7 +14,7 @@ pub struct Exec {
 }
 
 impl Exec {
-    pub fn run(&self, _session: &mut Session<'_>) -> Result<(), ExecError> {
+    pub fn run(&self, _session: &mut Session<'_>) -> Result<(), std::io::Error> {
         let mut cmd = Command::new(self.backend.binary());
         cmd.current_dir(&self.project_dir);
 
@@ -33,6 +27,6 @@ impl Exec {
 
         use std::os::unix::process::CommandExt;
         let err = cmd.exec();
-        Err(ExecError::Exec(err))
+        Err(err)
     }
 }

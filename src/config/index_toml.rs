@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 use super::paths::cache_dir;
+use super::ConfigError;
 
 /// ~/.cache/ace/index.toml — tracks downloaded schools.
 ///
@@ -31,24 +32,12 @@ pub struct SchoolEntry {
     pub path: String,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum IndexError {
-    #[error("{0}")]
-    Io(#[from] std::io::Error),
-    #[error("bad index: {0}")]
-    Parse(#[from] toml::de::Error),
-    #[error("{0}")]
-    Serialize(#[from] toml::ser::Error),
-    #[error("{0}")]
-    Path(#[from] super::paths::PathError),
-}
-
-pub fn index_path() -> Result<PathBuf, IndexError> {
+pub fn index_path() -> Result<PathBuf, ConfigError> {
     let path = cache_dir()?.join("ace").join("index.toml");
     Ok(path)
 }
 
-pub fn load(path: &Path) -> Result<IndexToml, IndexError> {
+pub fn load(path: &Path) -> Result<IndexToml, ConfigError> {
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(IndexToml::default()),
@@ -58,7 +47,7 @@ pub fn load(path: &Path) -> Result<IndexToml, IndexError> {
     Ok(index)
 }
 
-pub fn save(path: &Path, index: &IndexToml) -> Result<(), IndexError> {
+pub fn save(path: &Path, index: &IndexToml) -> Result<(), ConfigError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }

@@ -4,7 +4,7 @@ use std::process::Command;
 use crate::config;
 use crate::config::index_toml;
 use crate::session::Session;
-use super::setup::SetupError;
+use super::prepare::PrepareError;
 
 use super::authenticate::Authenticate;
 use super::write_config::WriteConfig;
@@ -16,7 +16,7 @@ pub struct Install<'a> {
 }
 
 impl Install<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
+    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
         let cache = match &school_paths.cache {
             Some(c) => c,
@@ -25,7 +25,7 @@ impl Install<'_> {
 
         if let Some(parent) = cache.parent() {
             std::fs::create_dir_all(parent)
-                .map_err(|e| SetupError::Clone(format!("mkdir: {e}")))?;
+                .map_err(|e| PrepareError::Clone(format!("mkdir: {e}")))?;
         }
         let repo = self.specifier.split_once(':').map_or(
             self.specifier,
@@ -40,9 +40,9 @@ impl Install<'_> {
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .status()
-            .map_err(|e| SetupError::Clone(format!("git clone: {e}")))?;
+            .map_err(|e| PrepareError::Clone(format!("git clone: {e}")))?;
         if !status.success() {
-            return Err(SetupError::Clone(format!("git clone exited {status}")));
+            return Err(PrepareError::Clone(format!("git clone exited {status}")));
         }
         session.done(&format!("Cloned {repo}"));
 
@@ -62,13 +62,13 @@ impl Install<'_> {
     }
 }
 
-fn update_index(source: &str) -> Result<(), SetupError> {
+fn update_index(source: &str) -> Result<(), PrepareError> {
     let index_path = index_toml::index_path()
-        .map_err(|e| SetupError::Clone(format!("index path: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("index path: {e}")))?;
     let mut index = index_toml::load(&index_path)
-        .map_err(|e| SetupError::Clone(format!("load index: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("load index: {e}")))?;
     index_toml::upsert(&mut index, source);
     index_toml::save(&index_path, &index)
-        .map_err(|e| SetupError::Clone(format!("save index: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("save index: {e}")))?;
     Ok(())
 }

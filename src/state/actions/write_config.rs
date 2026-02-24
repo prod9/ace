@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::config::ace_toml::AceToml;
 use crate::config::user_config::{SchoolCredentials, UserConfig};
-use super::setup::SetupError;
+use super::prepare::PrepareError;
 
 pub struct WriteConfig;
 
@@ -12,7 +12,7 @@ impl WriteConfig {
     /// Create/update ~/.config/ace/config.toml with an entry for the school.
     /// Preserves existing entries and credentials — only adds the school key
     /// if it doesn't already exist.
-    pub fn user(path: &Path, specifier: &str) -> Result<(), SetupError> {
+    pub fn user(path: &Path, specifier: &str) -> Result<(), PrepareError> {
         let mut config: UserConfig = load_or_default(path)?;
 
         let repo_key = specifier
@@ -26,7 +26,7 @@ impl WriteConfig {
             });
 
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(SetupError::WriteConfig)?;
+            std::fs::create_dir_all(parent).map_err(PrepareError::Write)?;
         }
 
         write_toml(path, &config)
@@ -34,30 +34,30 @@ impl WriteConfig {
 
     /// Write ace.toml with school = "<specifier>".
     /// Preserves existing env entries if the file already exists.
-    pub fn project(path: &Path, specifier: &str) -> Result<(), SetupError> {
+    pub fn project(path: &Path, specifier: &str) -> Result<(), PrepareError> {
         let mut config: AceToml = load_or_default(path)?;
         config.school = specifier.to_string();
         write_toml(path, &config)
     }
 }
 
-fn load_or_default<T: DeserializeOwned + Default>(path: &Path) -> Result<T, SetupError> {
+fn load_or_default<T: DeserializeOwned + Default>(path: &Path) -> Result<T, PrepareError> {
     match std::fs::read_to_string(path) {
         Ok(content) => toml::from_str::<T>(&content)
-            .map_err(|e| SetupError::WriteConfig(
+            .map_err(|e| PrepareError::Write(
                 std::io::Error::new(std::io::ErrorKind::InvalidData, e),
             )),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(T::default()),
-        Err(e) => Err(SetupError::WriteConfig(e)),
+        Err(e) => Err(PrepareError::Write(e)),
     }
 }
 
-fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), SetupError> {
+fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), PrepareError> {
     let content = toml::to_string(value)
-        .map_err(|e| SetupError::WriteConfig(
+        .map_err(|e| PrepareError::Write(
             std::io::Error::new(std::io::ErrorKind::InvalidData, e),
         ))?;
-    std::fs::write(path, content).map_err(SetupError::WriteConfig)
+    std::fs::write(path, content).map_err(PrepareError::Write)
 }
 
 #[cfg(test)]

@@ -20,7 +20,7 @@ pub enum SchoolProposeError {
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
-    Config(#[from] crate::config::school_paths::ResolveError),
+    Config(#[from] crate::config::ConfigError),
 }
 
 pub struct SchoolPropose<'a> {

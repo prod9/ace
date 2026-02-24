@@ -2,19 +2,7 @@ use std::path::PathBuf;
 
 use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill};
 
-#[derive(Debug, thiserror::Error)]
-enum RunError {
-    #[error("{0}")]
-    Io(#[from] std::io::Error),
-    #[error("{0}")]
-    Config(#[from] crate::config::ConfigError),
-    #[error("{0}")]
-    Import(#[from] ImportError),
-    #[error("{0}")]
-    Resolve(#[from] crate::config::school_paths::ResolveError),
-    #[error("no school found, run ace setup or cd into a school repo")]
-    NoSchool,
-}
+use super::CmdError;
 
 pub fn run(source: &str, skill: Option<&str>) {
     if let Err(e) = run_inner(source, skill) {
@@ -23,7 +11,7 @@ pub fn run(source: &str, skill: Option<&str>) {
     }
 }
 
-fn run_inner(source: &str, skill: Option<&str>) -> Result<(), RunError> {
+fn run_inner(source: &str, skill: Option<&str>) -> Result<(), CmdError> {
     let school_root = resolve_school_root()?;
 
     let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
@@ -58,7 +46,7 @@ fn run_inner(source: &str, skill: Option<&str>) -> Result<(), RunError> {
     Ok(())
 }
 
-fn resolve_school_root() -> Result<PathBuf, RunError> {
+fn resolve_school_root() -> Result<PathBuf, CmdError> {
     let cwd = std::env::current_dir()?;
 
     // School repo context: school.toml in cwd
@@ -74,5 +62,5 @@ fn resolve_school_root() -> Result<PathBuf, RunError> {
         return Ok(paths.root);
     }
 
-    Err(RunError::NoSchool)
+    Err(CmdError::NoSchool)
 }

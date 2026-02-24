@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::config;
 use crate::session::Session;
-use super::setup::SetupError;
+use super::prepare::PrepareError;
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
 
@@ -35,7 +35,7 @@ pub struct Update<'a> {
 }
 
 impl Update<'_> {
-    pub fn run(&self, session: &mut Session<'_>) -> Result<UpdateResult, SetupError> {
+    pub fn run(&self, session: &mut Session<'_>) -> Result<UpdateResult, PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
         let cache = match &school_paths.cache {
@@ -44,13 +44,13 @@ impl Update<'_> {
         };
 
         if !cache.join(".git").exists() {
-            return Err(SetupError::Clone(format!(
+            return Err(PrepareError::Clone(format!(
                 "school not installed: {}", self.specifier
             )));
         }
 
         if is_dirty(cache)? {
-            return Err(SetupError::Clone(
+            return Err(PrepareError::Clone(
                 "school cache has uncommitted changes, run `ace school propose` or discard first".to_string()
             ));
         }
@@ -85,52 +85,52 @@ fn is_stale(repo: &Path) -> bool {
     }
 }
 
-fn is_dirty(repo: &Path) -> Result<bool, SetupError> {
+fn is_dirty(repo: &Path) -> Result<bool, PrepareError> {
     let output = Command::new("git")
         .args(["status", "--porcelain"])
         .current_dir(repo)
         .output()
-        .map_err(|e| SetupError::Clone(format!("git status: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("git status: {e}")))?;
 
     Ok(!output.stdout.is_empty())
 }
 
-fn git_fetch(repo: &Path) -> Result<(), SetupError> {
+fn git_fetch(repo: &Path) -> Result<(), PrepareError> {
     let status = Command::new("git")
         .args(["fetch", "--depth", "1", "--no-tags", "origin", "main"])
         .current_dir(repo)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
-        .map_err(|e| SetupError::Clone(format!("git fetch: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("git fetch: {e}")))?;
 
     if !status.success() {
-        return Err(SetupError::Clone(format!("git fetch exited {status}")));
+        return Err(PrepareError::Clone(format!("git fetch exited {status}")));
     }
     Ok(())
 }
 
-fn git_reset_to_origin_main(repo: &Path) -> Result<(), SetupError> {
+fn git_reset_to_origin_main(repo: &Path) -> Result<(), PrepareError> {
     let status = Command::new("git")
         .args(["reset", "--hard", "origin/main"])
         .current_dir(repo)
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
-        .map_err(|e| SetupError::Clone(format!("git reset: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("git reset: {e}")))?;
 
     if !status.success() {
-        return Err(SetupError::Clone(format!("git reset exited {status}")));
+        return Err(PrepareError::Clone(format!("git reset exited {status}")));
     }
     Ok(())
 }
 
-fn detect_skill_changes(repo: &Path) -> Result<Vec<SkillChange>, SetupError> {
+fn detect_skill_changes(repo: &Path) -> Result<Vec<SkillChange>, PrepareError> {
     let output = Command::new("git")
         .args(["diff", "--name-status", "HEAD", "origin/main", "--", "skills/"])
         .current_dir(repo)
         .output()
-        .map_err(|e| SetupError::Clone(format!("git diff: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("git diff: {e}")))?;
 
     if !output.status.success() {
         return Ok(Vec::new());

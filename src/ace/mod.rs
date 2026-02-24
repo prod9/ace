@@ -1,18 +1,11 @@
 use std::path::Path;
 
 use crate::config;
+use crate::config::ConfigError;
 use crate::events::{EventSink, NoopSink, OwnedSink};
 use crate::session::Session;
 use crate::state::State;
 use crate::term_ui::sink::TermSink;
-
-#[derive(Debug, thiserror::Error)]
-pub enum LoadError {
-    #[error("{0}")]
-    Path(#[from] config::paths::PathError),
-    #[error("{0}")]
-    Config(#[from] config::tree::LoadError),
-}
 
 pub struct Ace {
     state: State,
@@ -29,7 +22,7 @@ impl Ace {
         Self { state, sink: Some(OwnedSink::new(sink)) }
     }
 
-    pub fn load(project_dir: &Path, sink: Box<dyn EventSink>) -> Result<Self, LoadError> {
+    pub fn load(project_dir: &Path, sink: Box<dyn EventSink>) -> Result<Self, ConfigError> {
         let paths = config::paths::resolve(project_dir)?;
         let tree = config::tree::Tree::load(&paths)?;
         let state = State::resolve(tree);

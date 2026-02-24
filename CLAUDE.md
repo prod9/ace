@@ -51,6 +51,10 @@ Metrics:
 - Crate must be stable and well-maintained
 - Measure twice before adding a new dependency
 - Check crate versions/metadata/docs via `cargo search` or `cargo info`, not web searches
+- **Minimize import surface** — at every level (function, file, module), fewer imports means
+  less coupling. When multiple callers need the same cluster of imports, rethink the abstraction
+  boundaries — the concerns may not be factored cleanly. Consolidating behind an entry point
+  is a quick fix; properly separating concerns so the coupling doesn't arise is the real one.
 
 ## Coding Style
 
@@ -67,7 +71,12 @@ Clarity:
   they simplify over match/if chains
 
 Error handling:
-- Prefer per-module error enums (e.g. `ParseError`) over `Box<dyn Error>`
+- **One error enum per folder** — `ConfigError` for `src/config/`, `SetupError`/`PrepareError`
+  for `src/state/actions/`, `CmdError` for `src/cmd/`. Action-specific errors
+  (`SchoolInitError`, `SchoolProposeError`, `ImportError`) are fine when well-scoped.
+  Don't create wrapper enums that just re-wrap the same `io::Error` / `toml` errors —
+  consolidate into the folder-level enum.
+- Actions that only produce I/O errors return `std::io::Error` directly — no wrapping.
 - **NEVER use `.unwrap()`** — always propagate errors with `?` or handle explicitly. No exceptions.
 - In tests, use `.expect("reason")` instead of `.unwrap()` so failures always have context.
 - Be strict with error handling everywhere. No lazy shortcuts, no swallowing errors.

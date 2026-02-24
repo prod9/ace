@@ -2,28 +2,25 @@ use std::path::Path;
 
 use crate::config;
 use crate::config::backend::Backend;
+use crate::config::ConfigError;
 use crate::prompts;
 use crate::session::Session;
 
-use super::prepare::Prepare;
+use super::prepare::{Prepare, PrepareError};
 use super::write_config::WriteConfig;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SetupError {
-    #[error("bad specifier: {0}")]
-    InvalidSpecifier(#[from] config::school_paths::ResolveError),
     #[error("{0}")]
-    SchoolConfig(#[from] config::ConfigError),
+    Config(#[from] ConfigError),
     #[error("{0}")]
-    Path(#[from] config::paths::PathError),
+    Prepare(#[from] PrepareError),
     #[error("not in git repo, git init?")]
     NotInGitRepo,
     #[error("already set up, use `ace` to run")]
     AlreadySetUp,
-    #[error("clone failed: {0}")]
-    Clone(String),
     #[error("write failed: {0}")]
-    WriteConfig(std::io::Error),
+    Write(std::io::Error),
 }
 
 pub struct Setup<'a> {
@@ -65,7 +62,7 @@ impl Setup<'_> {
             let content = prompts::render(prompts::PROJECT_CLAUDE_MD, &ctx);
 
             std::fs::write(&instructions, content)
-                .map_err(SetupError::WriteConfig)?;
+                .map_err(SetupError::Write)?;
             eprintln!("Created {}", backend.instructions_file());
         }
 

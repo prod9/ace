@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use super::paths::cache_dir;
+use super::ConfigError;
 
 pub struct SchoolPaths {
     pub source: String,
@@ -11,7 +12,7 @@ pub struct SchoolPaths {
 pub fn resolve(
     project_dir: &std::path::Path,
     specifier: &str,
-) -> Result<SchoolPaths, ResolveError> {
+) -> Result<SchoolPaths, ConfigError> {
     let (source, path) = parse_specifier(specifier)?;
     let (base, cache) = if source == "." {
         (project_dir.to_path_buf(), None)
@@ -27,50 +28,8 @@ pub fn resolve(
     })
 }
 
-#[derive(Debug)]
-pub enum ResolveError {
-    Parse(ParseError),
-    Path(super::paths::PathError),
-}
-
-impl std::error::Error for ResolveError {}
-
-impl std::fmt::Display for ResolveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Parse(e) => write!(f, "{e}"),
-            Self::Path(e) => write!(f, "{e}"),
-        }
-    }
-}
-
-impl From<ParseError> for ResolveError {
-    fn from(e: ParseError) -> Self { Self::Parse(e) }
-}
-
-impl From<super::paths::PathError> for ResolveError {
-    fn from(e: super::paths::PathError) -> Self { Self::Path(e) }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ParseError {
-    TraversalInSource(String),
-    TraversalInPath(String),
-}
-
-impl std::error::Error for ParseError {}
-
-impl std::fmt::Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::TraversalInSource(s) => write!(f, "traversal in source: {s}"),
-            Self::TraversalInPath(s) => write!(f, "traversal in path: {s}"),
-        }
-    }
-}
-
 /// Parse "source:path" specifier into (source, optional path).
-fn parse_specifier(spec: &str) -> Result<(String, Option<&str>), ParseError> {
+fn parse_specifier(spec: &str) -> Result<(String, Option<&str>), ConfigError> {
     let (source, path) = match spec.split_once(':') {
         Some((source, path)) => {
             let path = path.trim_start_matches('/');
@@ -80,12 +39,12 @@ fn parse_specifier(spec: &str) -> Result<(String, Option<&str>), ParseError> {
     };
 
     if source != "." && has_traversal(source) {
-        return Err(ParseError::TraversalInSource(source.to_string()));
+        return Err(ConfigError::TraversalInSource(source.to_string()));
     }
 
     if let Some(p) = path {
         if has_traversal(p) {
-            return Err(ParseError::TraversalInPath(p.to_string()));
+            return Err(ConfigError::TraversalInPath(p.to_string()));
         }
     }
 

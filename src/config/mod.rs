@@ -15,4 +15,20 @@ pub enum ConfigError {
     Parse(#[from] toml::de::Error),
     #[error("bad config: {0}")]
     Encode(#[from] toml::ser::Error),
+
+    // paths
+    #[error("neither XDG_CONFIG_HOME nor HOME is set")]
+    NoConfigDir,
+    #[error("neither XDG_CACHE_HOME nor HOME is set")]
+    NoCacheDir,
+
+    // tree
+    #[error("no config found, ace setup?")]
+    NoConfig,
+
+    // school_paths
+    #[error("traversal in source: {0}")]
+    TraversalInSource(String),
+    #[error("traversal in path: {0}")]
+    TraversalInPath(String),
 }

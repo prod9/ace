@@ -9,6 +9,14 @@ mod setup;
 use clap::{Parser, Subcommand};
 
 use crate::ace::Ace;
+use crate::config::ConfigError;
+use crate::state::actions::import_skill::ImportError;
+use crate::state::actions::prepare::PrepareError;
+use crate::state::actions::school_init::SchoolInitError;
+use crate::state::actions::school_propose::SchoolProposeError;
+use crate::state::actions::school_update::SchoolUpdateError;
+use crate::state::actions::setup::SetupError;
+use crate::term_ui::TermError;
 
 #[derive(Parser)]
 #[command(
@@ -54,6 +62,32 @@ enum Command {
         #[command(subcommand)]
         command: school::Command,
     },
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum CmdError {
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Config(#[from] ConfigError),
+    #[error("{0}")]
+    Setup(#[from] SetupError),
+    #[error("{0}")]
+    Prepare(#[from] PrepareError),
+    #[error("{0}")]
+    Import(#[from] ImportError),
+    #[error("{0}")]
+    SchoolInit(#[from] SchoolInitError),
+    #[error("{0}")]
+    SchoolPropose(#[from] SchoolProposeError),
+    #[error("{0}")]
+    SchoolUpdate(#[from] SchoolUpdateError),
+    #[error("{0}")]
+    Tui(#[from] TermError),
+    #[error("no school configured, run `ace setup`")]
+    NoSchool,
+    #[error("{0}")]
+    Other(String),
 }
 
 pub async fn run(ace: &mut Ace, cli: Cli) {

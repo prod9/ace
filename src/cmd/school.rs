@@ -1,10 +1,12 @@
 use clap::Subcommand;
 
 use crate::ace::Ace;
-use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
-use crate::state::actions::school_propose::{SchoolPropose, SchoolProposeError};
-use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateError, SchoolUpdateResult};
-use crate::term_ui::{TermError, Tui, Workflow};
+use crate::state::actions::school_init::SchoolInit;
+use crate::state::actions::school_propose::SchoolPropose;
+use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateResult};
+use crate::term_ui::{Tui, Workflow};
+
+use super::CmdError;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -22,30 +24,6 @@ pub enum Command {
     Propose,
     /// Re-fetch all imported skills from their sources
     Update,
-}
-
-#[derive(Debug, thiserror::Error)]
-enum RunError {
-    #[error("{0}")]
-    Io(#[from] std::io::Error),
-    #[error("{0}")]
-    Load(#[from] crate::ace::LoadError),
-    #[error("{0}")]
-    Init(#[from] SchoolInitError),
-    #[error("{0}")]
-    Propose(#[from] SchoolProposeError),
-    #[error("{0}")]
-    SchoolUpdate(#[from] SchoolUpdateError),
-    #[error("{0}")]
-    Resolve(#[from] crate::config::school_paths::ResolveError),
-    #[error("{0}")]
-    Config(#[from] crate::config::ConfigError),
-    #[error("{0}")]
-    Tui(#[from] TermError),
-    #[error("no school linked, run ace setup first")]
-    NoSchool,
-    #[error("{0}")]
-    Token(String),
 }
 
 pub async fn run(ace: &mut Ace, command: Command) {
@@ -71,7 +49,7 @@ pub async fn run(ace: &mut Ace, command: Command) {
     }
 }
 
-fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), RunError> {
+fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdError> {
     match name {
         Some(name) => {
             let project_dir = std::env::current_dir()?;
@@ -90,15 +68,15 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), RunE
     Ok(())
 }
 
-fn run_propose() -> Result<(), RunError> {
+fn run_propose() -> Result<(), CmdError> {
     let project_dir = std::env::current_dir()?;
     let mut ace = crate::ace::Ace::load(&project_dir, crate::ace::Ace::term_sink())?;
 
     let specifier = ace.state().school_specifier.clone()
-        .ok_or(RunError::NoSchool)?;
+        .ok_or(CmdError::NoSchool)?;
 
     let repo_key = specifier.split_once(':').map_or(specifier.as_str(), |(repo, _)| repo);
-    let token = load_github_token(repo_key).map_err(RunError::Token)?;
+    let token = load_github_token(repo_key).map_err(CmdError::Other)?;
 
     let mut session = ace.session();
     let url = SchoolPropose {
@@ -111,7 +89,7 @@ fn run_propose() -> Result<(), RunError> {
     Ok(())
 }
 
-fn run_update() -> Result<(), RunError> {
+fn run_update() -> Result<(), CmdError> {
     let school_root = resolve_school_root()?;
 
     let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
@@ -125,7 +103,7 @@ fn run_update() -> Result<(), RunError> {
     Ok(())
 }
 
-fn resolve_school_root() -> Result<std::path::PathBuf, RunError> {
+fn resolve_school_root() -> Result<std::path::PathBuf, CmdError> {
     let cwd = std::env::current_dir()?;
 
     if cwd.join("school.toml").exists() {
@@ -139,7 +117,7 @@ fn resolve_school_root() -> Result<std::path::PathBuf, RunError> {
         return Ok(paths.root);
     }
 
-    Err(RunError::NoSchool)
+    Err(CmdError::NoSchool)
 }
 
 fn load_github_token(repo_key: &str) -> Result<String, String> {

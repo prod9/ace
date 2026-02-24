@@ -1,12 +1,22 @@
 use std::path::Path;
 
 use crate::config::index_toml;
+use crate::config::ConfigError;
 use crate::session::Session;
 
 use super::install::Install;
 use super::link::Link;
-use super::setup::SetupError;
 use super::update::{SkillChange, Update};
+
+#[derive(Debug, thiserror::Error)]
+pub enum PrepareError {
+    #[error("{0}")]
+    Config(#[from] ConfigError),
+    #[error("clone failed: {0}")]
+    Clone(String),
+    #[error("write failed: {0}")]
+    Write(std::io::Error),
+}
 
 /// Ensure school is ready: install if not cached, update if cached, link into project.
 pub struct Prepare<'a> {
@@ -21,7 +31,7 @@ pub struct PrepareResult {
 }
 
 impl Prepare<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<PrepareResult, SetupError> {
+    pub async fn run(&self, session: &mut Session<'_>) -> Result<PrepareResult, PrepareError> {
         let changes = if is_cached(self.specifier)? {
             let result = Update {
                 specifier: self.specifier,
@@ -62,10 +72,10 @@ impl Prepare<'_> {
     }
 }
 
-fn is_cached(specifier: &str) -> Result<bool, SetupError> {
+fn is_cached(specifier: &str) -> Result<bool, PrepareError> {
     let index_path = index_toml::index_path()
-        .map_err(|e| SetupError::Clone(format!("index path: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("index path: {e}")))?;
     let index = index_toml::load(&index_path)
-        .map_err(|e| SetupError::Clone(format!("load index: {e}")))?;
+        .map_err(|e| PrepareError::Clone(format!("load index: {e}")))?;
     Ok(index.school.iter().any(|s| s.specifier == specifier))
 }

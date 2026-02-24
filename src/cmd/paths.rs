@@ -1,15 +1,7 @@
 use crate::ace::Ace;
 use crate::config::{paths, school_paths};
 
-#[derive(Debug, thiserror::Error)]
-enum RunError {
-    #[error("{0}")]
-    Io(#[from] std::io::Error),
-    #[error("{0}")]
-    Path(#[from] paths::PathError),
-    #[error("{0}")]
-    SchoolPath(#[from] school_paths::ResolveError),
-}
+use super::CmdError;
 
 pub async fn run(ace: &mut Ace) {
     if let Err(e) = run_inner(ace) {
@@ -18,7 +10,7 @@ pub async fn run(ace: &mut Ace) {
     }
 }
 
-fn run_inner(ace: &mut Ace) -> Result<(), RunError> {
+fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     let session = ace.session();
     let cwd = std::env::current_dir()?;
     let p = paths::resolve(&cwd)?;

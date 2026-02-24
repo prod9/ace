@@ -14,16 +14,8 @@ pub struct Tree {
     pub school_backend: Option<Backend>,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum LoadError {
-    #[error("no config found, ace setup?")]
-    NoConfig,
-    #[error("{0}")]
-    Config(#[from] ConfigError),
-}
-
 impl Tree {
-    pub fn load(paths: &AcePaths) -> Result<Self, LoadError> {
+    pub fn load(paths: &AcePaths) -> Result<Self, ConfigError> {
         let user = load_or_default(&paths.user)?;
         let project = load_or_default(&paths.project)?;
         let local = load_or_default(&paths.local)?;
@@ -32,7 +24,7 @@ impl Tree {
             .iter()
             .any(|p| p.exists());
         if !any_found {
-            return Err(LoadError::NoConfig);
+            return Err(ConfigError::NoConfig);
         }
 
         Ok(Tree { user, project, local, school_backend: None })
