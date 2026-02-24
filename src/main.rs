@@ -1,6 +1,7 @@
 mod ace;
 mod cmd;
 mod config;
+mod prompts;
 mod session;
 mod state;
 mod status;

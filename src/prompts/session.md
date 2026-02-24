@@ -1,8 +1,4 @@
-# ACE System Context
-
 You are working in a project managed by ACE (AI Coding Environment).
-
-## Skills
 
 Skills are loaded from the linked school repository. They are symlinked into this project
 and are editable. You may modify skill files to fix, improve, or extend them as needed

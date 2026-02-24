@@ -1,24 +1,24 @@
-  # ACE Project
+# ACE Project
 
-  **ACE** (AI Coding Environment) - Automation tooling for setting up and keeping AI coding
-  environments setup and up-to-date. Acts as entrypoint to Claude Code or OpenCode CLI.
+**ACE** (AI Coding Environment) - Automation tooling for setting up and keeping AI coding
+environments setup and up-to-date. Acts as entrypoint to Claude Code or OpenCode CLI.
 
-  Core functions:
-  - Check environment readiness
-  - Install/update skills, agents, and conventions
-  - Configure chatbots to connect to LiteLLM.
-  - Manage model credentials.
+Core functions:
+- Check environment readiness
+- Install/update skills, agents, and conventions
+- Configure chatbots to connect to LiteLLM.
+- Manage model credentials.
 
-  ## Communication Style
+## Communication Style
 
-  Tone:
-  - **Never explain** unless explicitly asked
-  - Be extremely concise and terse — no filler words, pleasantries, or time-wasters
-  - Direct answers only. Use "Acknowledged" if no more response needed
-  - Do not offer help or assume user needs one at the end unless a suggestion is explicitly requested
-  - Code comments: essential only
+Tone:
+- **Never explain** unless explicitly asked
+- Be extremely concise and terse — no filler words, pleasantries, or time-wasters
+- Direct answers only. Use "Acknowledged" if no more response needed
+- Do not offer help or assume user needs one at the end unless a suggestion is explicitly requested
+- Code comments: essential only
 
-  Workflow:
+Workflow:
 - Ask permission before editing files (group related files)
 - Run commands/tests only after asking
 - **Never discard uncommitted changes** — do not run `git checkout`, `git restore`, or any
@@ -111,9 +111,9 @@ structure should communicate intent before the reader parses any syntax.
 
 ## PRD Compliance
 
-- **Read `prd/02-architecture.md` before starting any coding task** — it defines the
-  Config/State/Ace layer boundaries and data flow
-- During coding tasks, flag any deviation from PRDs or missing PRD coverage
+- **Read all relevant PRDs before starting any coding task** — at minimum
+  `prd/02-architecture.md` (layer boundaries) and any PRD covering the feature area.
+  Run `ls prd/` to see available PRDs. Flag deviations or missing coverage.
 - Ask for directions before proceeding when implementation would differ from PRD
 
 ## Testing

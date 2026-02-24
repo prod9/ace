@@ -13,7 +13,21 @@ The session prompt is built by concatenating three layers, separated by blank li
    instructions from the school maintainer.
 3. **Project** — `session_prompt` field in `ace.toml`. Project-specific overrides or additions.
 
-Empty layers are skipped. No replace or template mechanism for now.
+Empty layers are skipped.
+
+### Templating
+
+Prompt `.md` files support `{key}` placeholders rendered at runtime via `PromptCtx`. This is a
+simple `str::replace` per field — no regex, no crate.
+
+Current placeholders:
+
+| Placeholder     | Source                          | Example    |
+|-----------------|---------------------------------|------------|
+| `{skills_dir}`  | Backend skills directory name   | `.claude`  |
+
+To add a new placeholder: add a field to `PromptCtx` in `src/prompts/mod.rs`, add a
+`.replace()` call in `render()`, then use `{field_name}` in any prompt `.md` file.
 
 ## Config Fields
 

@@ -1,11 +1,7 @@
 use std::path::Path;
 
-use super::actions::update::{ChangeKind, SkillChange};
-
-const SCHOOL_EDITABLE: &str = include_str!("prompts/school_editable.txt");
-const PREVIOUS_SKILLS: &str = include_str!("prompts/previous_skills.txt");
-const CHANGES_HEADER: &str = include_str!("prompts/changes_header.txt");
-const CHANGES_FOOTER: &str = include_str!("prompts/changes_footer.txt");
+use crate::prompts;
+use crate::state::actions::update::{ChangeKind, SkillChange};
 
 /// Build the session prompt from built-in + school + project layers.
 pub fn build_session_prompt(
@@ -22,7 +18,7 @@ pub fn build_session_prompt(
     if let Some(desc) = description {
         builtin.push_str(&format!("\n\n{desc}"));
     }
-    builtin.push_str(&format!("\n\n{SCHOOL_EDITABLE}"));
+    builtin.push_str(&format!("\n\n{}", prompts::SESSION));
     parts.push(builtin);
 
     if !school_session_prompt.is_empty() {
@@ -39,7 +35,8 @@ pub fn build_session_prompt(
 
     let previous_skills = skills_dir.join("skills").join("previous-skills");
     if previous_skills.exists() {
-        parts.push(PREVIOUS_SKILLS.to_string());
+        let ctx = prompts::PromptCtx::from_skills_dir(skills_dir);
+        parts.push(prompts::render(prompts::PREVIOUS_SKILLS, &ctx));
     }
 
     parts.join("\n\n")
@@ -58,13 +55,13 @@ fn format_change_summary(changes: &[SkillChange]) -> String {
         }
     }
 
-    let mut lines = vec![CHANGES_HEADER.to_string()];
+    let mut lines = vec![prompts::CHANGES_HEADER.to_string()];
     for (label, names) in [("Added", added), ("Updated", modified), ("Removed", removed)] {
         for name in names {
             lines.push(format!("- {label}: `{name}`"));
         }
     }
-    lines.push(format!("\n{CHANGES_FOOTER}"));
+    lines.push(format!("\n{}", prompts::CHANGES_FOOTER));
 
     lines.join("\n")
 }
@@ -98,10 +95,11 @@ mod tests {
     }
 
     #[test]
-    fn builtin_only() {
+    fn builtin_includes_session_base() {
         let dir = nonexistent_dir();
         let prompt = build_session_prompt("Acme", None, "", "", &dir, &[]);
         assert!(prompt.contains("School: Acme"));
+        assert!(prompt.contains("ACE (AI Coding Environment)"));
         assert!(prompt.contains("ace school propose"));
     }
 
@@ -141,6 +139,18 @@ mod tests {
         let prompt = build_session_prompt("Acme", None, "", "", fix.path(), &[]);
         assert!(prompt.contains("unconsolidated skills"));
         assert!(prompt.contains("previous-skills"));
+    }
+
+    #[test]
+    fn previous_skills_uses_skills_dir_name() {
+        let fix = TempDir::new("ace-test-prompt-opencode");
+        let skills = fix.path().join(".opencode").join("skills").join("previous-skills");
+        std::fs::create_dir_all(&skills).expect("create previous-skills dir");
+
+        let skills_dir = fix.path().join(".opencode");
+        let prompt = build_session_prompt("Acme", None, "", "", &skills_dir, &[]);
+        assert!(prompt.contains(".opencode/skills/"), "should use .opencode dir name");
+        assert!(!prompt.contains(".claude/skills/"), "should not contain .claude");
     }
 
     #[test]

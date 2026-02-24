@@ -1,3 +1,5 @@
+pub mod prompt;
+
 use crate::state::State;
 
 pub struct Session<'a> {

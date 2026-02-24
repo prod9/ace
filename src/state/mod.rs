@@ -1,5 +1,4 @@
 pub mod actions;
-pub mod prompt;
 pub mod school;
 pub mod service;
 
