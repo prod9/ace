@@ -134,3 +134,25 @@ what they do, enabling better cross-project reasoning and navigation.
   (project values override).
 - `mcp` — Optional. Project-specific MCP servers. Added alongside top-level `[[mcp]]` servers.
   Same schema as top-level `[[mcp]]`.
+
+### `[[imports]]`
+
+Array of imported skill declarations. Each entry tracks a skill that was imported from an
+external repository via `ace import`. Used by `ace school update` to re-fetch skills from
+their sources.
+
+- `skill` — Skill directory name. Matches the folder name under `skills/`.
+- `source` — GitHub `owner/repo` shorthand where the skill was imported from.
+
+Skills are copied into the school as real files (the school owns and commits them). The
+`[[imports]]` entries record provenance so `ace school update` knows where to re-fetch from.
+
+```toml
+[[imports]]
+skill = "skill-creator"
+source = "anthropics/skills"
+
+[[imports]]
+skill = "frontend-design"
+source = "anthropics/skills"
+```

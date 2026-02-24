@@ -10,6 +10,7 @@ indicatif = "0.18.4"
 inquire = { version = "0.9.3", default-features = false, features = ["console", "one-liners"] }
 serde = { version = "1.0.228", features = ["derive"] }
 smol = "2.0.2"
+tempfile = "3.26.0"
 thiserror = "2.0.18"
 toml = "1.0.3"
 ureq = { version = "3.2.0", default-features = false, features = [

@@ -77,3 +77,49 @@ that:
 
 This enables a natural workflow: developers use skills, notice improvements, edit them
 in-place, and propose changes — all without leaving their coding session.
+
+## `ace import <source> [--skill <name>]`
+
+Import a skill from an external repository into the school. Top-level command (not under
+`ace school`) for convenience.
+
+- **source** — GitHub `owner/repo` shorthand or full URL (same convention as school specifiers).
+- **--skill** — Specific skill name within the repo (if repo has multiple skills).
+
+### Flow
+
+1. Resolve school context: if `school.toml` in cwd → school dir. Otherwise resolve linked
+   school from `ace.toml` → school cache path.
+2. Clone source repo to temp dir (`git clone --depth 1`).
+3. Discover `SKILL.md` files in the repo (checks both `skills/` subdirectory and root-level).
+4. Select skill:
+   - `--skill` given → find by name.
+   - Single skill in repo → auto-import.
+   - Multiple skills → interactive `inquire::Select` prompt.
+5. Copy skill folder into `{school_root}/skills/{skill_name}/`.
+6. Append `[[imports]]` entry to `school.toml` (upsert — replace if skill name already exists).
+7. Print confirmation to stderr.
+
+### Important
+
+- Skills are copied as real files — the school owns and commits them.
+- Re-importing the same skill overwrites files and updates (not duplicates) the `[[imports]]`
+  entry.
+- Never imports all skills wholesale when multiple are present — always prompts for selection.
+
+## `ace school update`
+
+Re-fetch all imported skills from their sources.
+
+### Flow
+
+1. Read `[[imports]]` from `school.toml`.
+2. If empty, print "no imports to update" and return.
+3. Group imports by source (avoid cloning same repo twice).
+4. For each source group: clone to temp dir, discover skills, copy matching ones over existing.
+5. Report which skills were updated to stderr.
+
+### Important
+
+- Only updates skills listed in `[[imports]]` — does not discover or import new skills.
+- If a skill is no longer found in the source repo, prints a warning and skips it.

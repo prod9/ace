@@ -13,4 +13,6 @@ pub enum ConfigError {
     Io(#[from] std::io::Error),
     #[error("bad config: {0}")]
     Parse(#[from] toml::de::Error),
+    #[error("bad config: {0}")]
+    Encode(#[from] toml::ser::Error),
 }

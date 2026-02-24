@@ -17,9 +17,11 @@ cargo install --path .
 ## Usage
 
 ```sh
-ace setup prod9/school    # clone a school, auth services, write config
-ace                       # launch backend (claude/opencode)
-ace -- --continue         # pass flags through to the backend
+ace setup prod9/school                       # clone a school, auth services, write config
+ace                                          # launch backend (claude/opencode)
+ace -- --continue                            # pass flags through to the backend
+ace import anthropics/skills --skill commit  # import a skill from an external repo
+ace school update                            # re-fetch all imported skills
 ```
 
 ## Commands
@@ -30,8 +32,10 @@ ace -- --continue         # pass flags through to the backend
 | `ace auth <service>` | Re-authenticate a service |
 | `ace config` | Print effective configuration |
 | `ace paths` | Print resolved filesystem paths |
+| `ace import <source> [--skill <name>]` | Import a skill from an external repository |
 | `ace school init` | Initialize a new school repository |
 | `ace school propose` | Propose local school changes back to upstream |
+| `ace school update` | Re-fetch all imported skills from their sources |
 
 ## How it works
 

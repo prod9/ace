@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod import;
 mod main;
 mod paths;
 mod school;
@@ -40,6 +41,14 @@ enum Command {
     Config,
     /// Print resolved filesystem paths ACE uses
     Paths,
+    /// Import a skill from an external repository into the school
+    Import {
+        /// Skill source (owner/repo or URL)
+        source: String,
+        /// Specific skill name within the repo
+        #[arg(long)]
+        skill: Option<String>,
+    },
     /// Manage schools
     School {
         #[command(subcommand)]
@@ -51,6 +60,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
     match cli.command {
         Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
         Some(Command::Auth { name }) => auth::run(ace, &name).await,
+        Some(Command::Import { source, skill }) => import::run(&source, skill.as_deref()),
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths) => paths::run(ace).await,
         Some(Command::School { command }) => school::run(ace, command).await,

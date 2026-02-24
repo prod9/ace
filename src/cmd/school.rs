@@ -3,6 +3,7 @@ use clap::Subcommand;
 use crate::ace::Ace;
 use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
 use crate::state::actions::school_propose::{SchoolPropose, SchoolProposeError};
+use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateError, SchoolUpdateResult};
 use crate::term_ui::{TermError, Tui, Workflow};
 
 #[derive(Subcommand)]
@@ -19,6 +20,8 @@ pub enum Command {
     /// Propose local school changes back to upstream
     #[clap(alias = "pr")]
     Propose,
+    /// Re-fetch all imported skills from their sources
+    Update,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -31,6 +34,12 @@ enum RunError {
     Init(#[from] SchoolInitError),
     #[error("{0}")]
     Propose(#[from] SchoolProposeError),
+    #[error("{0}")]
+    SchoolUpdate(#[from] SchoolUpdateError),
+    #[error("{0}")]
+    Resolve(#[from] crate::config::school_paths::ResolveError),
+    #[error("{0}")]
+    Config(#[from] crate::config::ConfigError),
     #[error("{0}")]
     Tui(#[from] TermError),
     #[error("no school linked, run ace setup first")]
@@ -49,6 +58,12 @@ pub async fn run(ace: &mut Ace, command: Command) {
         }
         Command::Propose => {
             if let Err(e) = run_propose() {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+        }
+        Command::Update => {
+            if let Err(e) = run_update() {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }
@@ -94,6 +109,39 @@ fn run_propose() -> Result<(), RunError> {
 
     println!("PR created: {url}");
     Ok(())
+}
+
+fn run_update() -> Result<(), RunError> {
+    let school_root = resolve_school_root()?;
+
+    let sp = crate::status::spinner("Updating imported skills");
+    let result = SchoolUpdate { school_root: &school_root }.run()?;
+    sp.finish_and_clear();
+
+    match result {
+        SchoolUpdateResult::NoImports => eprintln!("no imports to update"),
+        SchoolUpdateResult::Updated { count } => {
+            crate::status::done(&format!("Updated {count} skill(s)"));
+        }
+    }
+    Ok(())
+}
+
+fn resolve_school_root() -> Result<std::path::PathBuf, RunError> {
+    let cwd = std::env::current_dir()?;
+
+    if cwd.join("school.toml").exists() {
+        return Ok(cwd);
+    }
+
+    let ace_toml_path = cwd.join("ace.toml");
+    if ace_toml_path.exists() {
+        let ace = crate::config::ace_toml::load(&ace_toml_path)?;
+        let paths = crate::config::school_paths::resolve(&cwd, &ace.school)?;
+        return Ok(paths.root);
+    }
+
+    Err(RunError::NoSchool)
 }
 
 fn load_github_token(repo_key: &str) -> Result<String, String> {

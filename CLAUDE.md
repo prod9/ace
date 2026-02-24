@@ -19,6 +19,10 @@ Tone:
 - Code comments: essential only
 
 Workflow:
+- **NEVER assume intent — ASK.** When the user flags something, do not guess what they mean
+  and silently re-plan or re-implement. Ask one clarifying question. Re-planning loops burn
+  tokens and time for nothing. One question beats six wrong iterations. This is the single
+  most expensive failure mode — treat ambiguous feedback as a hard stop until clarified.
 - Ask permission before editing files (group related files)
 - Run commands/tests only after asking
 - **Never discard uncommitted changes** — do not run `git checkout`, `git restore`, or any
@@ -46,6 +50,11 @@ Metrics:
 - Check crate versions/metadata/docs via `cargo search` or `cargo info`, not web searches
 
 ## Coding Style
+
+Naming:
+- **Names must be unambiguous in context** — choose names that have one clear reading given
+  the surrounding code, dependencies, and domain. E.g. in a serde-heavy codebase, `Encode`
+  is a better error variant than `Serialize` because `Serialize` already means the serde trait.
 
 Clarity:
 - Clarity over compression — prefer named variables for each branch over long chained expressions

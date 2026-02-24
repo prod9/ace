@@ -1,0 +1,59 @@
+```
+░█▀█░█▀▀░█▀▀
+░█▀█░█░░░█▀▀
+░▀░▀░▀▀▀░▀▀▀
+```
+
+**ACE** (AI Coding Environment) — เครื่องมืออัตโนมัติสำหรับตั้งค่าและดูแลสภาพแวดล้อม AI coding
+ให้พร้อมใช้งานอยู่เสมอ ทำหน้าที่เป็นจุดเริ่มต้นสู่ [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+หรือ [OpenCode](https://github.com/opencode-ai/opencode)
+
+## ติดตั้ง
+
+```sh
+cargo install --path .
+```
+
+## การใช้งาน
+
+```sh
+ace setup prod9/school                       # โคลน school, ยืนยันตัวตน, เขียน config
+ace                                          # เปิด backend (claude/opencode)
+ace -- --continue                            # ส่ง flag ต่อไปยัง backend
+ace import anthropics/skills --skill commit  # นำเข้า skill จาก repo ภายนอก
+ace school update                            # ดึง skill ที่นำเข้าทั้งหมดใหม่
+```
+
+## คำสั่ง
+
+| คำสั่ง | รายละเอียด |
+|--------|-----------|
+| `ace setup [specifier]` | โคลน school, ยืนยันตัวตน, เขียน config |
+| `ace auth <service>` | ยืนยันตัวตนบริการใหม่ |
+| `ace config` | แสดง configuration ที่ resolve แล้ว |
+| `ace paths` | แสดง path ของระบบไฟล์ที่ resolve แล้ว |
+| `ace import <source> [--skill <name>]` | นำเข้า skill จาก repository ภายนอก |
+| `ace school init` | สร้าง school repository ใหม่ |
+| `ace school propose` | เสนอการเปลี่ยนแปลง school กลับไปยัง upstream |
+| `ace school update` | ดึง skill ที่นำเข้าทั้งหมดใหม่จากแหล่งที่มา |
+
+## วิธีการทำงาน
+
+ACE จัดการ **schools** — repository ที่แชร์ร่วมกัน ประกอบด้วย skills, conventions และ configuration
+สำหรับเครื่องมือ AI coding เมื่อรัน `ace` จะ:
+
+1. หา school ที่จะใช้ (จาก `ace.toml`)
+2. ดึง/อัปเดต school repository
+3. สร้าง symlink ของ skills เข้าไปในโปรเจกต์
+4. เปิด backend ที่ตั้งค่าไว้พร้อม session prompt ของ school
+
+## Configuration
+
+- `ace.toml` — config ระดับโปรเจกต์ (school specifier, backend, env)
+- `ace.local.toml` — override เฉพาะเครื่อง (gitignored)
+- `~/.config/ace/config.toml` — config ระดับผู้ใช้ (credentials)
+- `school.toml` — ข้อมูล school (ชื่อ, services, MCP servers, projects)
+
+## License
+
+MIT
