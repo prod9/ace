@@ -1,0 +1,1 @@
+Skills are loaded from the linked school and are editable. If you modify any skill files during this session, run `ace school propose` afterward to propose changes back to the school repo.

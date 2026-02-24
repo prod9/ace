@@ -6,7 +6,7 @@ use crate::session::Session;
 use super::install::Install;
 use super::link::Link;
 use super::setup::SetupError;
-use super::update::Update;
+use super::update::{SkillChange, Update};
 
 /// Ensure school is ready: install if not cached, update if cached, link into project.
 pub struct Prepare<'a> {
@@ -15,14 +15,20 @@ pub struct Prepare<'a> {
     pub skills_dir: &'a str,
 }
 
+#[derive(Debug, Default)]
+pub struct PrepareResult {
+    pub changes: Vec<SkillChange>,
+}
+
 impl Prepare<'_> {
-    pub async fn run(&self, session: &mut Session<'_>) -> Result<(), SetupError> {
-        if is_cached(self.specifier)? {
-            Update {
+    pub async fn run(&self, session: &mut Session<'_>) -> Result<PrepareResult, SetupError> {
+        let changes = if is_cached(self.specifier)? {
+            let result = Update {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             }
             .run(session)?;
+            result.changes
         } else {
             Install {
                 specifier: self.specifier,
@@ -30,7 +36,8 @@ impl Prepare<'_> {
             }
             .run(session)
             .await?;
-        }
+            Vec::new() // skip on first install
+        };
 
         let result = Link {
             specifier: self.specifier,
@@ -51,7 +58,7 @@ impl Prepare<'_> {
             eprintln!("Linked {} skills", result.linked);
         }
 
-        Ok(())
+        Ok(PrepareResult { changes })
     }
 }
 

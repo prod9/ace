@@ -1,0 +1,5 @@
+This project has unconsolidated skills in `.claude/skills/previous-skills/`. Before starting work:
+1. Review previous skills and current school skills (symlinked in `.claude/skills/`)
+2. For each previous skill: merge into an existing school skill (edit through symlink), or add as a new school skill (create a new dir in `.claude/skills/`)
+3. After consolidation, run `ace school propose` to submit changes upstream
+4. Delete `.claude/skills/previous-skills/` when done

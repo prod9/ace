@@ -50,7 +50,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), RunEr
 
     let mut preliminary_state = State::empty();
     let mut session = crate::session::Session { state: &mut preliminary_state };
-    (Prepare {
+    let prepare_result = (Prepare {
         specifier: &specifier,
         project_dir: &project_dir,
         skills_dir: preliminary_backend.skills_dir(),
@@ -76,6 +76,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), RunEr
         &school_toml.school.session_prompt,
         &session.state.session_prompt,
         &skills_dir,
+        &prepare_result.changes,
     );
 
     Exec {

@@ -143,186 +143,158 @@ fn link_status(path: &Path) -> LinkStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    struct TestFixture {
+        root: PathBuf,
+    }
+
+    impl TestFixture {
+        fn new(name: &str) -> Self {
+            let root = std::env::temp_dir().join(name);
+            let _ = std::fs::remove_dir_all(&root);
+
+            let fix = Self { root };
+            std::fs::create_dir_all(fix.school()).expect("create school dir");
+            std::fs::create_dir_all(fix.project()).expect("create project dir");
+            fix
+        }
+
+        fn school(&self) -> PathBuf { self.root.join("school") }
+        fn project(&self) -> PathBuf { self.root.join("project") }
+        fn school_skills(&self) -> PathBuf { self.school().join("skills") }
+        fn project_skills(&self) -> PathBuf { self.project().join(".claude").join("skills") }
+
+        fn add_school_skill(&self, name: &str) {
+            std::fs::create_dir_all(self.school_skills().join(name))
+                .expect("create school skill dir");
+        }
+
+        fn add_school_skill_with_content(&self, name: &str, file: &str, content: &str) {
+            let dir = self.school_skills().join(name);
+            std::fs::create_dir_all(&dir).expect("create school skill dir");
+            std::fs::write(dir.join(file), content).expect("write skill file");
+        }
+
+        fn add_real_skill(&self, name: &str, file: &str, content: &str) {
+            let dir = self.project_skills().join(name);
+            std::fs::create_dir_all(&dir).expect("create real skill dir");
+            std::fs::write(dir.join(file), content).expect("write skill file");
+        }
+
+        fn add_symlink(&self, name: &str, target: &Path) {
+            let project_skills = self.project_skills();
+            std::fs::create_dir_all(&project_skills).expect("mkdir project skills");
+            std::os::unix::fs::symlink(target, project_skills.join(name))
+                .expect("create symlink");
+        }
+
+        fn link(&self) -> Result<LinkResult, SetupError> {
+            link_skills(&self.school(), &self.project())
+        }
+    }
+
+    impl Drop for TestFixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.root);
+        }
+    }
 
     #[test]
     fn link_no_skills_dir() {
-        let dir = std::env::temp_dir().join("ace-test-link-no-skills");
-        let _ = std::fs::remove_dir_all(&dir);
-        let school = dir.join("school");
-        let project = dir.join("project");
-        std::fs::create_dir_all(&school).expect("create school dir");
-        std::fs::create_dir_all(&project).expect("create project dir");
-
-        let result = link_skills(&school, &project).expect("should succeed");
+        let fix = TestFixture::new("ace-test-link-no-skills");
+        let result = fix.link().expect("should succeed");
         assert_eq!(result.linked, 0);
         assert!(result.moved.is_empty());
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn link_creates_symlinks() {
-        let dir = std::env::temp_dir().join("ace-test-link-symlinks");
-        let _ = std::fs::remove_dir_all(&dir);
+        let fix = TestFixture::new("ace-test-link-symlinks");
+        fix.add_school_skill_with_content("git-commit", "SKILL.md", "# Git Commit");
+        fix.add_school_skill_with_content("code-review", "SKILL.md", "# Code Review");
 
-        let school = dir.join("school");
-        let project = dir.join("project");
-        let skills = school.join("skills");
-
-        std::fs::create_dir_all(skills.join("git-commit")).expect("create skill dir");
-        std::fs::write(skills.join("git-commit").join("SKILL.md"), "# Git Commit")
-            .expect("write skill");
-
-        std::fs::create_dir_all(skills.join("code-review")).expect("create skill dir");
-        std::fs::write(skills.join("code-review").join("SKILL.md"), "# Code Review")
-            .expect("write skill");
-
-        std::fs::create_dir_all(&project).expect("create project dir");
-
-        let result = link_skills(&school, &project).expect("should create symlinks");
+        let result = fix.link().expect("should create symlinks");
         assert_eq!(result.linked, 2);
 
-        let link = project.join(".claude").join("skills").join("git-commit");
-        assert!(link.symlink_metadata().expect("link should exist").file_type().is_symlink());
+        let link = fix.project_skills().join("git-commit");
+        assert!(link.symlink_metadata().expect("link exists").file_type().is_symlink());
 
         let content = std::fs::read_to_string(link.join("SKILL.md")).expect("read through symlink");
         assert_eq!(content, "# Git Commit");
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn link_skips_matching_symlinks() {
-        let dir = std::env::temp_dir().join("ace-test-link-skip-matching");
-        let _ = std::fs::remove_dir_all(&dir);
+        let fix = TestFixture::new("ace-test-link-skip-matching");
+        fix.add_school_skill("my-skill");
+        fix.add_symlink("my-skill", &fix.school_skills().join("my-skill"));
 
-        let school = dir.join("school");
-        let project = dir.join("project");
-        let skills = school.join("skills");
-
-        std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
-
-        let project_skills = project.join(".claude").join("skills");
-        std::fs::create_dir_all(&project_skills).expect("mkdir");
-        std::os::unix::fs::symlink(skills.join("my-skill"), project_skills.join("my-skill"))
-            .expect("create symlink");
-
-        let result = link_skills(&school, &project).expect("should skip existing");
+        let result = fix.link().expect("should skip existing");
         assert_eq!(result.linked, 0);
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn link_replaces_stale_symlinks() {
-        let dir = std::env::temp_dir().join("ace-test-link-replace");
-        let _ = std::fs::remove_dir_all(&dir);
+        let fix = TestFixture::new("ace-test-link-replace");
+        fix.add_school_skill("my-skill");
+        fix.add_symlink("my-skill", &fix.root.join("nonexistent"));
 
-        let school = dir.join("school");
-        let project = dir.join("project");
-        let skills = school.join("skills");
-
-        std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
-        std::fs::create_dir_all(&project).expect("create project dir");
-
-        let project_skills = project.join(".claude").join("skills");
-        std::fs::create_dir_all(&project_skills).expect("mkdir");
-        std::os::unix::fs::symlink(dir.join("nonexistent"), project_skills.join("my-skill"))
-            .expect("create stale symlink");
-
-        let result = link_skills(&school, &project).expect("should replace stale");
+        let result = fix.link().expect("should replace stale");
         assert_eq!(result.linked, 1);
 
-        let target = std::fs::read_link(project_skills.join("my-skill")).expect("read link");
-        assert_eq!(target, skills.join("my-skill"));
-
-        let _ = std::fs::remove_dir_all(&dir);
+        let target = std::fs::read_link(fix.project_skills().join("my-skill")).expect("read link");
+        assert_eq!(target, fix.school_skills().join("my-skill"));
     }
 
     #[test]
     fn link_skips_real_dirs_when_symlinks_present() {
-        let dir = std::env::temp_dir().join("ace-test-link-skip-real");
-        let _ = std::fs::remove_dir_all(&dir);
+        let fix = TestFixture::new("ace-test-link-skip-real");
+        fix.add_school_skill("my-skill");
+        fix.add_school_skill("other-skill");
+        fix.add_real_skill("my-skill", "local.md", "local override");
+        fix.add_symlink("other-skill", &fix.school_skills().join("other-skill"));
 
-        let school = dir.join("school");
-        let project = dir.join("project");
-        let skills = school.join("skills");
-
-        std::fs::create_dir_all(skills.join("my-skill")).expect("create skill dir");
-        std::fs::create_dir_all(skills.join("other-skill")).expect("create skill dir");
-
-        let project_skills = project.join(".claude").join("skills");
-        std::fs::create_dir_all(project_skills.join("my-skill")).expect("create real dir");
-        std::fs::write(project_skills.join("my-skill").join("local.md"), "local override")
-            .expect("write local file");
-
-        // Add an existing symlink so this looks like a re-link (not first setup)
-        std::os::unix::fs::symlink(
-            skills.join("other-skill"),
-            project_skills.join("other-skill"),
-        )
-        .expect("create symlink");
-
-        let result = link_skills(&school, &project).expect("should skip real dirs");
+        let result = fix.link().expect("should skip real dirs");
         assert_eq!(result.linked, 0, "both already present");
         assert!(result.moved.is_empty(), "no move when symlinks exist");
 
-        let content = std::fs::read_to_string(project_skills.join("my-skill").join("local.md"))
-            .expect("local file should still exist");
+        let content = std::fs::read_to_string(
+            fix.project_skills().join("my-skill").join("local.md"),
+        )
+        .expect("local file should still exist");
         assert_eq!(content, "local override");
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn adopt_moves_real_dirs_on_first_setup() {
-        let dir = std::env::temp_dir().join("ace-test-link-adopt");
-        let _ = std::fs::remove_dir_all(&dir);
+        let fix = TestFixture::new("ace-test-link-adopt");
+        fix.add_school_skill("school-skill");
+        fix.add_real_skill("my-skill", "SKILL.md", "# My Skill");
 
-        let school = dir.join("school");
-        let project = dir.join("project");
-        let skills = school.join("skills");
-
-        std::fs::create_dir_all(skills.join("school-skill")).expect("create school skill");
-
-        let project_skills = project.join(".claude").join("skills");
-        std::fs::create_dir_all(project_skills.join("my-skill")).expect("create real dir");
-        std::fs::write(project_skills.join("my-skill").join("SKILL.md"), "# My Skill")
-            .expect("write skill file");
-
-        let result = link_skills(&school, &project).expect("should adopt and link");
+        let result = fix.link().expect("should adopt and link");
         assert_eq!(result.linked, 1, "school skill linked");
         assert_eq!(result.moved, vec!["my-skill"]);
 
-        let prev = project_skills.join("previous-skills").join("my-skill").join("SKILL.md");
+        let prev = fix.project_skills().join("previous-skills").join("my-skill").join("SKILL.md");
         let content = std::fs::read_to_string(prev).expect("moved skill should exist");
         assert_eq!(content, "# My Skill");
 
-        assert!(!project_skills.join("my-skill").exists(), "original should be gone");
-
-        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!fix.project_skills().join("my-skill").exists(), "original should be gone");
     }
 
     #[test]
     fn adopt_errors_if_previous_skills_exists() {
-        let dir = std::env::temp_dir().join("ace-test-link-adopt-exists");
-        let _ = std::fs::remove_dir_all(&dir);
+        let fix = TestFixture::new("ace-test-link-adopt-exists");
+        fix.add_school_skill("school-skill");
+        fix.add_real_skill("my-skill", "SKILL.md", "");
 
-        let school = dir.join("school");
-        let project = dir.join("project");
-        let skills = school.join("skills");
+        let prev = fix.project_skills().join("previous-skills");
+        std::fs::create_dir_all(&prev).expect("create prev dir");
 
-        std::fs::create_dir_all(skills.join("school-skill")).expect("create school skill");
-
-        let project_skills = project.join(".claude").join("skills");
-        std::fs::create_dir_all(project_skills.join("my-skill")).expect("create real dir");
-        std::fs::create_dir_all(project_skills.join("previous-skills")).expect("create prev dir");
-
-        let err = link_skills(&school, &project).expect_err("should error");
+        let err = fix.link().expect_err("should error");
         let msg = format!("{err}");
         assert!(msg.contains("already exists"), "error: {msg}");
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// Helper to test symlink logic without needing full specifier resolution.
@@ -351,18 +323,12 @@ mod tests {
             let link_path = project_skills.join(&skill_name);
             let target = entry.path();
 
-            if link_path.exists() || link_path.symlink_metadata().is_ok() {
-                if link_path.symlink_metadata()
-                    .map(|m| m.file_type().is_symlink())
-                    .unwrap_or(false)
-                {
-                    let current = std::fs::read_link(&link_path).map_err(SetupError::WriteConfig)?;
-                    if current == target {
-                        continue;
-                    }
+            match link_status(&link_path) {
+                LinkStatus::Absent => {}
+                LinkStatus::RealDir => continue,
+                LinkStatus::Symlink(current) if current == target => continue,
+                LinkStatus::Symlink(_) => {
                     std::fs::remove_file(&link_path).map_err(SetupError::WriteConfig)?;
-                } else {
-                    continue;
                 }
             }
 
