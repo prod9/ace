@@ -1,10 +1,10 @@
 mod ace;
 mod cmd;
 mod config;
+mod events;
 mod prompts;
 mod session;
 mod state;
-mod status;
 mod term_ui;
 
 use clap::Parser;
@@ -16,6 +16,6 @@ fn main() {
     eprintln!("{}", term_ui::LOGO);
     eprintln!("  {}\n", env!("ACE_GIT_HASH"));
 
-    let mut ace = ace::Ace::new();
+    let mut ace = ace::Ace::new(ace::Ace::term_sink());
     smol::block_on(cmd::run(&mut ace, cli));
 }

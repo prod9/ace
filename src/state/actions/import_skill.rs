@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use crate::config;
 use crate::config::school_toml::ImportDecl;
+use crate::session::Session;
 
 pub struct ImportSkill<'a> {
     pub source: &'a str,
@@ -35,8 +36,10 @@ pub enum ImportResult {
 }
 
 impl ImportSkill<'_> {
-    pub fn run(&self) -> Result<ImportResult, ImportError> {
+    pub fn run(&self, session: &mut Session<'_>) -> Result<ImportResult, ImportError> {
         let tmp = tempfile::tempdir()?;
+
+        session.progress(&format!("Cloning {}", self.source));
         clone_repo(self.source, tmp.path())?;
 
         let skills = discover_skills(tmp.path())?;
@@ -55,12 +58,16 @@ impl ImportSkill<'_> {
         };
 
         self.install_skill(selected)?;
+        session.done(&format!("Imported skill: {}", selected.name));
         Ok(ImportResult::Done { skill: selected.name.clone() })
     }
 
     /// Install a specific discovered skill after selection.
-    pub fn install_selected(&self, skill: &DiscoveredSkill) -> Result<(), ImportError> {
-        self.install_skill(skill)
+    pub fn install_selected(&self, skill: &DiscoveredSkill, session: &mut Session<'_>) -> Result<(), ImportError> {
+        session.progress(&format!("Installing {}", skill.name));
+        self.install_skill(skill)?;
+        session.done(&format!("Imported skill: {}", skill.name));
+        Ok(())
     }
 
     fn install_skill(&self, skill: &DiscoveredSkill) -> Result<(), ImportError> {
@@ -87,7 +94,7 @@ impl ImportSkill<'_> {
     }
 }
 
-fn clone_repo(source: &str, dest: &Path) -> Result<(), ImportError> {
+pub fn clone_repo(source: &str, dest: &Path) -> Result<(), ImportError> {
     let url = format!("https://github.com/{source}.git");
     let status = std::process::Command::new("git")
         .args(["clone", "--depth", "1", "--single-branch", "--no-tags", &url])
@@ -150,7 +157,7 @@ fn scan_for_skills(
     Ok(())
 }
 
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), std::io::Error> {
+pub fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), std::io::Error> {
     std::fs::create_dir_all(dst)?;
 
     for entry in std::fs::read_dir(src)? {

@@ -35,7 +35,7 @@ pub struct Update<'a> {
 }
 
 impl Update<'_> {
-    pub fn run(&self, _session: &mut Session<'_>) -> Result<UpdateResult, SetupError> {
+    pub fn run(&self, session: &mut Session<'_>) -> Result<UpdateResult, SetupError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
         let cache = match &school_paths.cache {
@@ -59,7 +59,10 @@ impl Update<'_> {
             return Ok(UpdateResult::default());
         }
 
-        git_fetch(cache, self.specifier)?;
+        session.progress(&format!("Fetching {}", self.specifier));
+        git_fetch(cache)?;
+        session.done(&format!("Fetched {}", self.specifier));
+
         let changes = detect_skill_changes(cache)?;
         git_reset_to_origin_main(cache)?;
 
@@ -92,8 +95,7 @@ fn is_dirty(repo: &Path) -> Result<bool, SetupError> {
     Ok(!output.stdout.is_empty())
 }
 
-fn git_fetch(repo: &Path, specifier: &str) -> Result<(), SetupError> {
-    let sp = crate::status::spinner(&format!("Fetching {specifier} from origin"));
+fn git_fetch(repo: &Path) -> Result<(), SetupError> {
     let status = Command::new("git")
         .args(["fetch", "--depth", "1", "--no-tags", "origin", "main"])
         .current_dir(repo)
@@ -101,12 +103,10 @@ fn git_fetch(repo: &Path, specifier: &str) -> Result<(), SetupError> {
         .stderr(std::process::Stdio::null())
         .status()
         .map_err(|e| SetupError::Clone(format!("git fetch: {e}")))?;
-    sp.finish_and_clear();
 
     if !status.success() {
         return Err(SetupError::Clone(format!("git fetch exited {status}")));
     }
-    crate::status::done(&format!("Fetched {specifier}"));
     Ok(())
 }
 

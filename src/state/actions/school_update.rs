@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::config;
-use super::import_skill::{discover_skills, ImportError};
+use crate::session::Session;
+use super::import_skill::{clone_repo, copy_dir_recursive, discover_skills, ImportError};
 
 pub struct SchoolUpdate<'a> {
     pub school_root: &'a Path,
@@ -24,7 +25,7 @@ pub enum SchoolUpdateResult {
 }
 
 impl SchoolUpdate<'_> {
-    pub fn run(&self) -> Result<SchoolUpdateResult, SchoolUpdateError> {
+    pub fn run(&self, session: &mut Session<'_>) -> Result<SchoolUpdateResult, SchoolUpdateError> {
         let toml_path = self.school_root.join("school.toml");
         let school = config::school_toml::load(&toml_path)?;
 
@@ -43,6 +44,8 @@ impl SchoolUpdate<'_> {
         let mut count = 0;
         for (source, skill_names) in &by_source {
             let tmp = tempfile::tempdir()?;
+
+            session.progress(&format!("Fetching {source}"));
             clone_repo(source, tmp.path())?;
 
             let discovered = discover_skills(tmp.path())?;
@@ -51,7 +54,7 @@ impl SchoolUpdate<'_> {
                 let skill = match found {
                     Some(s) => s,
                     None => {
-                        eprintln!("warning: skill {name} not found in {source}, skipping");
+                        session.warn(&format!("skill {name} not found in {source}, skipping"));
                         continue;
                     }
                 };
@@ -65,39 +68,8 @@ impl SchoolUpdate<'_> {
             }
         }
 
+        session.done(&format!("Updated {count} skill(s)"));
         Ok(SchoolUpdateResult::Updated { count })
     }
 }
 
-fn clone_repo(source: &str, dest: &Path) -> Result<(), ImportError> {
-    let url = format!("https://github.com/{source}.git");
-    let status = std::process::Command::new("git")
-        .args(["clone", "--depth", "1", "--single-branch", "--no-tags", &url])
-        .arg(dest)
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map_err(|e| ImportError::Clone(format!("git clone: {e}")))?;
-
-    if !status.success() {
-        return Err(ImportError::Clone(format!("git clone exited {status}")));
-    }
-    Ok(())
-}
-
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), std::io::Error> {
-    std::fs::create_dir_all(dst)?;
-
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-
-        if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
-        } else {
-            std::fs::copy(&src_path, &dst_path)?;
-        }
-    }
-    Ok(())
-}

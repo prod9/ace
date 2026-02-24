@@ -92,7 +92,7 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), RunE
 
 fn run_propose() -> Result<(), RunError> {
     let project_dir = std::env::current_dir()?;
-    let mut ace = crate::ace::Ace::load(&project_dir)?;
+    let mut ace = crate::ace::Ace::load(&project_dir, crate::ace::Ace::term_sink())?;
 
     let specifier = ace.state().school_specifier.clone()
         .ok_or(RunError::NoSchool)?;
@@ -114,15 +114,13 @@ fn run_propose() -> Result<(), RunError> {
 fn run_update() -> Result<(), RunError> {
     let school_root = resolve_school_root()?;
 
-    let sp = crate::status::spinner("Updating imported skills");
-    let result = SchoolUpdate { school_root: &school_root }.run()?;
-    sp.finish_and_clear();
+    let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
+    let mut session = ace.session();
 
+    let result = SchoolUpdate { school_root: &school_root }.run(&mut session)?;
     match result {
         SchoolUpdateResult::NoImports => eprintln!("no imports to update"),
-        SchoolUpdateResult::Updated { count } => {
-            crate::status::done(&format!("Updated {count} skill(s)"));
-        }
+        SchoolUpdateResult::Updated { .. } => {}
     }
     Ok(())
 }

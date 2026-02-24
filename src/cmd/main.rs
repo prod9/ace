@@ -48,8 +48,8 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), RunEr
         .or(tree.user.backend)
         .unwrap_or_default();
 
-    let mut preliminary_state = State::empty();
-    let mut session = crate::session::Session { state: &mut preliminary_state };
+    let mut preliminary_ace = Ace::new(Ace::term_sink());
+    let mut session = preliminary_ace.session();
     let prepare_result = (Prepare {
         specifier: &specifier,
         project_dir: &project_dir,
@@ -66,7 +66,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), RunEr
     tree.school_backend = school_toml.school.backend;
 
     let state = State::resolve(tree);
-    *ace = Ace::with_state(state);
+    *ace = Ace::with_state(state, Ace::term_sink());
     let mut session = ace.session();
 
     let skills_dir = project_dir.join(session.state.backend.skills_dir());

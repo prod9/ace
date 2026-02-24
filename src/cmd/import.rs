@@ -26,19 +26,18 @@ pub fn run(source: &str, skill: Option<&str>) {
 fn run_inner(source: &str, skill: Option<&str>) -> Result<(), RunError> {
     let school_root = resolve_school_root()?;
 
-    let sp = crate::status::spinner(&format!("Importing from {source}"));
+    let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
+    let mut session = ace.session();
+
     let result = ImportSkill {
         source,
         skill,
         school_root: &school_root,
     }
-    .run()?;
-    sp.finish_and_clear();
+    .run(&mut session)?;
 
     match result {
-        ImportResult::Done { skill } => {
-            crate::status::done(&format!("Imported skill: {skill}"));
-        }
+        ImportResult::Done { .. } => {}
         ImportResult::NeedsSelection(skills) => {
             let names: Vec<&str> = skills.iter().map(|s| s.name.as_str()).collect();
             let selected = inquire::Select::new("Multiple skills found, pick one:", names)
@@ -48,16 +47,12 @@ fn run_inner(source: &str, skill: Option<&str>) -> Result<(), RunError> {
             let skill = skills.iter().find(|s| s.name == selected)
                 .ok_or_else(|| ImportError::SkillNotFound(selected.to_string()))?;
 
-            let sp = crate::status::spinner(&format!("Installing {}", skill.name));
             ImportSkill {
                 source,
                 skill: Some(&skill.name),
                 school_root: &school_root,
             }
-            .install_selected(skill)?;
-            sp.finish_and_clear();
-
-            crate::status::done(&format!("Imported skill: {}", skill.name));
+            .install_selected(skill, &mut session)?;
         }
     }
     Ok(())

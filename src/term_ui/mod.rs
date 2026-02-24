@@ -1,3 +1,5 @@
+pub mod sink;
+
 use crate::ace::Ace;
 use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
 
