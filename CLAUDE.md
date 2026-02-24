@@ -46,27 +46,10 @@ Metrics:
 
 ## Dependencies
 
-- Prioritize fast compilation times when choosing crates
-- Prefer small crates with fewer compilation units over feature-rich heavy ones
-- Crate must be stable and well-maintained
-- Measure twice before adding a new dependency
 - Check crate versions/metadata/docs via `cargo search` or `cargo info`, not web searches
-- **Minimize import surface** — at every level (function, file, module), fewer imports means
-  less coupling. When multiple callers need the same cluster of imports, rethink the abstraction
-  boundaries — the concerns may not be factored cleanly. Consolidating behind an entry point
-  is a quick fix; properly separating concerns so the coupling doesn't arise is the real one.
 
 ## Coding Style
 
-Naming:
-- **Names must be unambiguous in context** — choose names that have one clear reading given
-  the surrounding code, dependencies, and domain. E.g. in a serde-heavy codebase, `Encode`
-  is a better error variant than `Serialize` because `Serialize` already means the serde trait.
-
-Clarity:
-- Clarity over compression — prefer named variables for each branch over long chained expressions
-- When there are multiple possible sources for a value, compute each into a named variable
-  first, then combine (e.g. `xdg.or_else(|| home)`)
 - Use monadic combinators (`map`, `and_then`, `unwrap_or`, etc.) on `Option`/`Result` where
   they simplify over match/if chains
 
@@ -81,37 +64,6 @@ Error handling:
 - In tests, use `.expect("reason")` instead of `.unwrap()` so failures always have context.
 - Be strict with error handling everywhere. No lazy shortcuts, no swallowing errors.
 
-Structure:
-- Keep indentation shallow — fail fast with `?` or early return instead of nesting. When
-  branching is unavoidable, keep branch arms short: delegate to named functions rather than
-  inlining logic inside match/if blocks.
-
-## Code Grouping (Typography for Code)
-
-Apply print typography principles to code layout. Code is read far more than written — visual
-structure should communicate intent before the reader parses any syntax.
-
-- **Proximity** — statements that work together belong together. Group related lines (e.g. a
-  variable and the operation on it, or a sequence of setup steps) with no blank lines between
-  them. The absence of space signals "these are one thought."
-- **Paragraph breaks** — separate groups with a single blank line. Each group should represent
-  one logical step or concern: setup, transformation, result. A blank line says "new thought
-  starts here." Two blank lines is too many inside a function.
-- **Chunking** — aim for groups of roughly 3-5 lines. Humans parse information in small chunks.
-  A function that is a wall of 20 ungrouped lines is harder to read than four groups of five.
-  Conversely, scattering every line with blank lines between them destroys grouping and makes
-  everything feel equally (un)important.
-- **Rhythm** — alternate between density (grouped logic) and space (blank line separators) to
-  create a visual rhythm. The reader's eye should be able to skim group boundaries and
-  understand the function's flow at a glance, like scanning paragraph starts in prose.
-- **Method structure** — ideal functions follow a three-act pattern: (1) preconditions — validate
-  inputs and fail fast with `?` or early return, (2) do work — the core logic, (3) postconditions
-  — verify results if needed, then return. Each act is its own group separated by blank lines.
-  This makes it immediately obvious where validation ends and real work begins.
-- **Consistency** — apply the same grouping logic across the codebase. If `resolve()` groups
-  as parse → compute → return, then similar functions should follow the same cadence. Consistent
-  rhythm across files reduces cognitive load when navigating unfamiliar code.
-
 ## Config and Data Structs
 
 - **Loading vs validation**: Serde handles parsing only. Validation is a separate pass in code
@@ -125,34 +77,22 @@ structure should communicate intent before the reader parses any syntax.
 
 ## Action Pattern
 
-- **Actions are for mutations only** — disk writes, git commands, process exec, network calls.
-  Pure computation (building strings, merging data, validation) belongs on `State` or in
-  helper modules under `state/`, not as actions.
-- Actions are structs with params as fields, single method: `run(&self, session: &mut Session)`
-- No extra parameters in `run()` — everything goes on the struct
-- All actions live in `state/actions/`
+- Actions follow the unit-of-work pattern (see `general-coding` skill)
+- ACE-specific: `run(&self, session: &mut Session)`, all actions in `state/actions/`
 - Session bundles `&mut State` — passed to every action
-
-## PRD Compliance
-
-- **Read all relevant PRDs before starting any coding task** — at minimum
-  `prd/02-architecture.md` (layer boundaries) and any PRD covering the feature area.
-  Run `ls prd/` to see available PRDs. Flag deviations or missing coverage.
-- Ask for directions before proceeding when implementation would differ from PRD
 
 ## Testing
 
-- **TDD flow**: If a change warrants tests (per the rules below), write the failing test first,
-  run it to confirm failure, then implement. Do not write tests and implementation together.
 - Unit tests are inline `#[cfg(test)] mod tests` in the same file
 - Longer integration tests will go in an external `tests/` crate later
 - **Future**: Use Dagger for integration tests — spin up test containers for isolated
   filesystem/git scenarios instead of temp dirs
-- **No tautological tests** — don't test trivial getters/accessors that just return a value
-  (e.g. `assert_eq!(Backend::Claude.binary(), "claude")`). These restate the implementation
-  and catch nothing. Similarly, don't test that serde serializes/deserializes correctly —
-  that's testing the crate, not our code. Test behavior that involves logic, branching, or
-  composition.
+- Don't test that serde serializes/deserializes correctly — that's testing the crate, not our code.
+
+## PRD Compliance
+
+- ACE specs live in `prd/` — read at minimum `prd/02-architecture.md` (layer boundaries) and
+  any PRD covering the feature area. Run `ls prd/` to see available PRDs.
 
 ## CLI Conventions
 
@@ -186,7 +126,6 @@ Priority:
 Backlog:
 - Setup modes discussion: see `prd/` notes
 - Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
-- Split CLAUDE.md notes into school skills: `general-coding` (language-agnostic rules) then
-  `rust-coding` (Rust-specific conventions)
+- `rust-coding` skill (Rust-specific conventions) — extract from this file next
 - Add some magic? For example, auto --continue ?
 - Cross-build script — produce binaries for linux/mac × arm64/amd64 targets
