@@ -54,6 +54,20 @@ ACE จัดการ **schools** — repository ที่แชร์ร่ว
 - `~/.config/ace/config.toml` — config ระดับผู้ใช้ (credentials)
 - `school.toml` — ข้อมูล school (ชื่อ, services, MCP servers, projects)
 
+## Cross-build
+
+Build สำหรับ linux/mac × arm64/amd64 โดย target ของเครื่องใช้ `cargo` ส่วน target อื่นใช้
+[`cross`](https://github.com/cross-rs/cross) (ใช้ Docker)
+
+ต้องมี: Docker, `cargo install cross`, Rust stable toolchain
+
+```sh
+./build-all.sh            # output ไปที่ target/dist/
+./build-all.sh out/       # กำหนด output dir เอง
+```
+
+`ureq` ใช้ `rustls` (pure Rust TLS) จึงไม่ต้องพึ่ง OpenSSL ของระบบ
+
 ## License
 
 MIT

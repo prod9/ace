@@ -69,6 +69,11 @@ Metrics:
 - ACE specs live in `prd/` — read at minimum `prd/02-architecture.md` (layer boundaries) and
   any PRD covering the feature area. Run `ls prd/` to see available PRDs.
 
+## Documentation
+
+- `README.th.md` is the Thai translation of `README.md`. When updating README.md, update
+  README.th.md to match.
+
 ## CLI Conventions
 
 - `ace paths` uses tab-separated `key\tvalue` for machine parseability
@@ -100,6 +105,5 @@ Priority:
 
 Backlog:
 - Setup modes discussion: see `prd/` notes
-- Move skills.md into proper skills directory, then `ace school propose` to upstream to prod9
 - Add some magic? For example, auto --continue ?
-- Cross-build script — see `scripts/cross-build.md` for findings and next steps
+- Cross-build script — `./build-all.sh` (cargo for native, `cross` for cross-platform)

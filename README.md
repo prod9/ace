@@ -66,6 +66,20 @@ to push changes back to the shared school.
 - `~/.config/ace/config.toml` — user-level config (credentials)
 - `school.toml` — school metadata (name, services, MCP servers, projects)
 
+## Cross-build
+
+Builds for linux/mac × arm64/amd64. Host-native target uses `cargo`, everything else uses
+[`cross`](https://github.com/cross-rs/cross) (Docker-based).
+
+Prerequisites: Docker, `cargo install cross`, stable Rust toolchain.
+
+```sh
+./build-all.sh            # output to target/dist/
+./build-all.sh out/       # custom output dir
+```
+
+`ureq` uses `rustls` (pure Rust TLS) so there are no system OpenSSL dependencies.
+
 ## License
 
 MIT
