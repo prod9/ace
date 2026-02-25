@@ -49,7 +49,7 @@ Metrics:
   `src/state/actions/`, `CmdError` for `src/cmd/`. Action-specific errors
   (`SchoolInitError`, `SchoolProposeError`, `ImportError`) are fine when well-scoped.
 - Actions that only produce I/O errors return `std::io::Error` directly — no wrapping.
-- See `prd/01-configuration.md` for config validation details.
+- See `spec/configuration.md` for config validation details.
 
 ## Action Pattern
 
@@ -64,10 +64,10 @@ Metrics:
 - **Future**: Use Dagger for integration tests — spin up test containers for isolated
   filesystem/git scenarios instead of temp dirs
 
-## PRD Compliance
+## Spec Compliance
 
-- ACE specs live in `prd/` — read at minimum `prd/02-architecture.md` (layer boundaries) and
-  any PRD covering the feature area. Run `ls prd/` to see available PRDs.
+- ACE specs live in `spec/` — read at minimum `spec/architecture.md` (layer boundaries) and
+  any spec covering the feature area. Run `ls spec/` to see available specs.
 
 ## Documentation
 
@@ -104,7 +104,7 @@ Priority:
 - **PKCE auth flow** — blocker for multi-user rollout. `authenticate.rs` is still a stub.
 
 Backlog:
-- Setup modes discussion: see `prd/` notes
+- Setup modes discussion: see `spec/` notes
 - Add some magic? For example, auto --continue ?
 - Cross-build script — `./build-all.sh` (cargo for native, `cross` for cross-platform)
 - Release workflow — blocked on GitHub MCP server lacking `CreateRelease` tool

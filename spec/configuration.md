@@ -17,13 +17,13 @@ Resolved by merging (later overrides earlier):
 Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
-- `backend` — `"claude"` or `"opencode"` (last `Some` wins, fallback `claude`). See [07-backend.md](07-backend.md).
+- `backend` — `"claude"` or `"opencode"` (last `Some` wins, fallback `claude`). See [backend.md](backend.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
 
 ## Schools
 
-Schools are identified by a specifier in `ace.toml` (see [school/00-overview.md](school/00-overview.md#specifier)).
+Schools are identified by a specifier in `ace.toml` (see [school/overview.md](school/overview.md#specifier)).
 Credentials are keyed by the source portion (`owner/repo` or `.`) in config and cache paths.
 
 ```toml

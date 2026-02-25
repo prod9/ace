@@ -83,7 +83,7 @@ These are not secrets. Tokens and credentials belong in the user-level config
 ### `[[services]]`
 
 Array of service declarations. Each entry defines an external service that developers need
-credentials for. See [06-authentication.md](../06-authentication.md) for the full PKCE
+credentials for. See [authentication.md](../authentication.md) for the full PKCE
 flow and token lifecycle.
 
 - `name` — Service identifier. Referenced in templates as `{{ services.<name>.token }}`.

@@ -6,15 +6,15 @@ underlying AI coding tool.
 
 ## Table of Contents
 
-- [00-overview.md](00-overview.md) — This file. Philosophy, school concept, lifecycle.
-- [01-configuration.md](01-configuration.md) — Config file locations, layering, format.
-- [02-architecture.md](02-architecture.md) — Layers, data flow, dependency direction.
-- [03-setup.md](03-setup.md) — `ace setup` first-run flow.
-- [04-skills-sync.md](04-skills-sync.md) — Skill installation and sync.
-- [06-authentication.md](06-authentication.md) — OAuth PKCE flow for services.
-- [school/00-overview.md](school/00-overview.md) — School repository structure.
-- [school/01-school-toml.md](school/01-school-toml.md) — `school.toml` format reference.
-- [school/02-school-commands.md](school/02-school-commands.md) — `ace school` subcommands.
+- [index.md](index.md) — This file. Philosophy, school concept, lifecycle.
+- [configuration.md](configuration.md) — Config file locations, layering, format.
+- [architecture.md](architecture.md) — Layers, data flow, dependency direction.
+- [setup.md](setup.md) — `ace setup` first-run flow.
+- [skills-sync.md](skills-sync.md) — Skill installation and sync.
+- [authentication.md](authentication.md) — OAuth PKCE flow for services.
+- [school/overview.md](school/overview.md) — School repository structure.
+- [school/school-toml.md](school/school-toml.md) — `school.toml` format reference.
+- [school/school-commands.md](school/school-commands.md) — `ace school` subcommands.
 
 ## Philosophy
 
@@ -64,13 +64,13 @@ package management — we are not replicating lockfile-and-pin paradigms in the 
 ## School
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and
-other shared resources for an organization. See [school/00-overview.md](school/00-overview.md) for
+other shared resources for an organization. See [school/overview.md](school/overview.md) for
 full details on specifiers, structure, and relationship to projects.
 
 ## Lifecycle
 
 1. **Discover config files** — find user-global, project-local, project-committed
-2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [03-setup.md](03-setup.md))
+2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [setup.md](setup.md))
 3. **Parse and merge** — layer configs together
 4. **Authenticate** — validate tokens for the active school
 5. **Fetch school** — `git fetch` the school's repo (clone on first run)
