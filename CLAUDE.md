@@ -107,3 +107,5 @@ Backlog:
 - Setup modes discussion: see `prd/` notes
 - Add some magic? For example, auto --continue ?
 - Cross-build script — `./build-all.sh` (cargo for native, `cross` for cross-platform)
+- Release workflow — blocked on GitHub MCP server lacking `CreateRelease` tool
+  ([github/github-mcp-server#1012](https://github.com/github/github-mcp-server/issues/1012))
