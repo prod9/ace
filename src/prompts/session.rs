@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super as prompts;
+use crate::prompts;
 use crate::state::actions::update::{ChangeKind, SkillChange};
 
 /// Build the session prompt from built-in + school + project layers.
