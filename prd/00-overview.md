@@ -32,22 +32,34 @@ Get the user into coding as fast as possible. Never block on operations that can
 
 ## Versioning Philosophy
 
-Skills are intentionally unversioned. Always track latest main.
+Skills are versioned in their own repository (the school), but projects never pin to a specific
+version — they always track latest main.
 
-In an LLM world, what matters is capturing **intent and preferences** — not locking specific tool
-versions to prevent compatibility problems. Versioning an entire suite of context (à la Tessel) is
-a non-goal. The skills folder optimizes for the LLM to work with, not for reproducible builds.
+Traditional dependency management assumes a dumb consumer that breaks on any interface change, so
+it locks versions to prevent compatibility problems. But an LLM is not a dumb consumer. It reads
+the skill, understands what changed, and adapts. When a skill update causes a regression, the LLM
+can fix it. This fundamentally changes the cost calculus: always-latest is cheap because the
+consumer is intelligent; version-pinning is expensive and provides no real guarantee — even with
+identical specs on the same model, LLM outputs are non-deterministic. The same prompt produces
+different code on different runs. Pinning skill versions cannot make a non-reproducible execution
+engine reproducible.
 
-Old tools + new model = different results anyway, so pinning versions provides false stability.
-Skills that ship companion scripts or binaries make this worse — once committed into the project's
-git history, the tool version is locked to that commit. Updating the skill means the new tool runs
-against old code, but checking out old code forces the old tool. The version matrix is unwinnable.
-Keeping skills outside the project repo as symlinks to an always-latest cache sidesteps this
-entirely. Workflow tooling should never cause compatibility problems with building the actual
-project artifact — it sits outside the build graph entirely.
+A school evolves on its own timeline, independently of the projects that consume it. Skills and
+their companion tools should be written to work across as many project versions as possible — a
+skill can be deployed into any project at any point in its history, so targeting a specific version
+makes no sense. When compatibility issues do arise, the LLM understands both the tool and the
+project code, and can resolve the incompatibility itself.
 
-This is a deliberate departure from traditional package management. We are not replicating old
-build paradigms in the LLM era.
+Skills that ship companion scripts or binaries make version-pinning especially harmful. Once
+committed into a project's git history, the tool version is locked to that commit. Updating the
+skill means the new tool runs against old code; checking out old code forces the old tool. The
+version matrix is unwinnable. Keeping skills outside the project repo as symlinks to an
+always-latest cache sidesteps this entirely.
+
+Bundling a versioned suite of context into the project (à la Tessel) is a non-goal. The skills
+folder optimizes for the LLM to work with, not for reproducible builds. What matters is capturing
+intent and preferences, not locking versions. This is a deliberate departure from traditional
+package management — we are not replicating lockfile-and-pin paradigms in the LLM era.
 
 ## School
 
