@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config;
 use crate::state::actions::exec::Exec;
-use crate::state::actions::prepare::Prepare;
+use crate::state::actions::prepare::{Prepare, PrepareError, PrepareResult};
 use crate::prompts::session::build_session_prompt;
 use crate::state::State;
 
@@ -28,13 +28,24 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         .unwrap_or_default();
 
     let mut preliminary_ace = Ace::new(Ace::term_sink());
-    let prepare_result = (Prepare {
+    let prepare_result = match (Prepare {
         specifier: &specifier,
         project_dir: &project_dir,
         skills_dir: preliminary_backend.skills_dir(),
     })
     .run(&mut preliminary_ace)
-    .await?;
+    .await
+    {
+        Ok(r) => r,
+        Err(PrepareError::DirtyCache) => {
+            preliminary_ace.warn(
+                "school cache has uncommitted changes, skipping update \
+                 (run `ace school propose` or discard when ready)",
+            );
+            PrepareResult::default()
+        }
+        Err(e) => return Err(e.into()),
+    };
 
     // Pass 2: load school.toml, feed backend into tree, full resolve.
     let school_paths = config::school_paths::resolve(&project_dir, &specifier)?;

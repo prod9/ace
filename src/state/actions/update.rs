@@ -28,7 +28,7 @@ pub struct UpdateResult {
 }
 
 /// Git fetch + reset school cache to latest origin/main.
-/// Aborts if cache has uncommitted changes (user should `school propose` or discard first).
+/// Returns `PrepareError::DirtyCache` if cache has uncommitted changes.
 pub struct Update<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
@@ -50,9 +50,7 @@ impl Update<'_> {
         }
 
         if is_dirty(cache)? {
-            return Err(PrepareError::Clone(
-                "school cache has uncommitted changes, run `ace school propose` or discard first".to_string()
-            ));
+            return Err(PrepareError::DirtyCache);
         }
 
         if !is_stale(cache) {

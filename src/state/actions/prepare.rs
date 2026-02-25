@@ -16,6 +16,8 @@ pub enum PrepareError {
     Clone(String),
     #[error("write failed: {0}")]
     Write(std::io::Error),
+    #[error("school cache has uncommitted changes")]
+    DirtyCache,
 }
 
 /// Ensure school is ready: install if not cached, update if cached, link into project.
