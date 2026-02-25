@@ -30,6 +30,25 @@ GitHub is the assumed default host. `owner/repo` shorthand maps to
 
 Get the user into coding as fast as possible. Never block on operations that can be deferred.
 
+## Versioning Philosophy
+
+Skills are intentionally unversioned. Always track latest main.
+
+In an LLM world, what matters is capturing **intent and preferences** — not locking specific tool
+versions to prevent compatibility problems. Versioning an entire suite of context (à la Tessel) is
+a non-goal. The skills folder optimizes for the LLM to work with, not for reproducible builds.
+
+Old tools + new model = different results anyway, so pinning versions provides false stability.
+Skills that ship companion scripts or binaries make this worse — once committed into the project's
+git history, the tool version is locked to that commit. Updating the skill means the new tool runs
+against old code, but checking out old code forces the old tool. The version matrix is unwinnable.
+Keeping skills outside the project repo as symlinks to an always-latest cache sidesteps this
+entirely. Workflow tooling should never cause compatibility problems with building the actual
+project artifact — it sits outside the build graph entirely.
+
+This is a deliberate departure from traditional package management. We are not replicating old
+build paradigms in the LLM era.
+
 ## School
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and
