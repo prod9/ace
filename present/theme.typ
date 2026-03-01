@@ -1,6 +1,12 @@
 #import "@preview/touying:0.6.1": *
 #import themes.metropolis: *
 
+// Re-export touying symbols for section files
+#let slide = slide
+#let title-slide = title-slide
+#let focus-slide = focus-slide
+#let pause = pause
+
 #let ace-theme(body) = {
   set text(font: "Kanit", weight: "light", size: 20pt, fill: rgb("#e0e0e0"))
   show heading: set text(font: "Space Grotesk", weight: "medium", fill: rgb("#00ffff"))
