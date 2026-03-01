@@ -21,21 +21,59 @@ Run `ace` to start a coding session for developing this school.
 
 ## Adding Services
 
-Use `ace school add-service` to add an OAuth service entry to school.toml. Errors on duplicate
-service names.
+### Via CLI
 
-**IMPORTANT:** When invoked from an AI/LLM session or any non-interactive context, ALL flags
-must be provided — the command falls back to interactive TUI prompts when flags are missing,
-which is not available to tool use.
+Use `ace school add-service` to add an OAuth service entry. Errors on duplicate names.
+
+**IMPORTANT:** In AI/LLM sessions, ALL flags must be provided — missing flags trigger
+interactive TUI prompts which are unavailable to tool use.
 
 ```
 ace school add-service \
-  --name github \
-  --authorize-url https://github.com/login/oauth/authorize \
-  --token-url https://github.com/login/oauth/access_token \
-  --client-id Iv1.abc123 \
-  --scopes repo,read:org
+  --name <name> \
+  --authorize-url <url> \
+  --token-url <url> \
+  --client-id <id> \
+  --scopes <comma-separated>
 ```
+
+### Via TOML
+
+Append directly to school.toml:
+
+```toml
+[[services]]
+name = "github"
+authorize_url = "https://github.com/login/oauth/authorize"
+token_url = "https://github.com/login/oauth/access_token"
+client_id = "Iv1.abc123"
+scopes = ["repo", "read:org"]
+```
+
+Fields: `name` (unique identifier, referenced as `{{ services.<name>.token }}`),
+`authorize_url`, `token_url`, `client_id` (all required), `scopes` (optional array).
+`client_id` is not a secret — safe to commit. Tokens are never stored in school.toml.
+
+### Common Providers
+
+**GitHub:**
+- authorize_url: `https://github.com/login/oauth/authorize`
+- token_url: `https://github.com/login/oauth/access_token`
+- Common scopes: `repo` (full repo access), `read:org` (org membership), `read:user` (profile), `workflow` (Actions)
+- Docs: https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps
+
+**Linear:**
+- authorize_url: `https://linear.app/oauth/authorize`
+- token_url: `https://api.linear.app/oauth/token`
+- Common scopes: `read` (always present), `write` (write access), `issues:create` (new issues only), `comments:create` (new comments only)
+- Docs: https://linear.app/developers/oauth-2-0-authentication
+
+### Scope Selection
+
+Choose the narrowest scopes that cover the use case:
+- Read-only integrations → read scopes only (e.g. `read:org` for GitHub, `read` for Linear)
+- Issue/PR automation → add write scopes for the specific resource (e.g. `repo` for GitHub, `issues:create` for Linear)
+- Avoid admin/full-access scopes unless the tool genuinely needs them
 
 ## Useful Commands
 
