@@ -105,18 +105,6 @@ Metrics:
 - Index: `~/.cache/ace/index.toml` — tracks downloaded schools (specifier, repo, path)
 - Git operations use `std::process::Command`, no sqlite or git crate
 
-## Tech Debt
+## Roadmap
 
-- `user_config.rs` has duplicate `dirs_or_home`/`config_dir` — refactor to use `config::paths` versions
-
-## Pending Work
-
-Priority:
-- **PKCE auth flow** — blocker for multi-user rollout. `authenticate.rs` is still a stub.
-
-Backlog:
-- Setup modes discussion: see `spec/` notes
-- Add some magic? For example, auto --continue ?
-- Cross-build script — `./build-all.sh` (cargo for native, `cross` for cross-platform)
-- Release workflow — blocked on GitHub MCP server lacking `CreateRelease` tool
-  ([github/github-mcp-server#1012](https://github.com/github/github-mcp-server/issues/1012))
+See `ROADMAP.md` for the consolidated task list (priority, features, backlog).

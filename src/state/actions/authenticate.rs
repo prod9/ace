@@ -3,6 +3,7 @@ use crate::config::school_toml::ServiceDecl;
 use super::prepare::PrepareError;
 
 pub struct Authenticate<'a> {
+    #[allow(dead_code)] // will be used when PKCE flow is implemented
     pub service: &'a ServiceDecl,
 }
 

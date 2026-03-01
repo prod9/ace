@@ -1,6 +1,5 @@
 pub mod actions;
 pub mod school;
-pub mod service;
 
 pub use school::School;
 
@@ -38,6 +37,7 @@ impl State {
         }
     }
 
+    #[allow(dead_code)] // used in tests + future use
     pub fn empty() -> Self {
         Self {
             config: Tree {
@@ -56,6 +56,7 @@ impl State {
         }
     }
 
+    #[allow(dead_code)] // used in tests + future use
     pub fn has_school(&self) -> bool {
         matches!(&self.school_specifier, Some(s) if !s.is_empty())
     }

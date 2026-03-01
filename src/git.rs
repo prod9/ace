@@ -34,26 +34,6 @@ impl<'a> Git<'a> {
         self.run(&["reset", "--hard", target])
     }
 
-    pub fn checkout(&self, branch: &str) -> Result<(), GitError> {
-        self.run(&["checkout", branch])
-    }
-
-    pub fn checkout_new_branch(&self, branch: &str) -> Result<(), GitError> {
-        self.run(&["checkout", "-b", branch])
-    }
-
-    pub fn add_all(&self) -> Result<(), GitError> {
-        self.run(&["add", "-A"])
-    }
-
-    pub fn commit(&self, message: &str) -> Result<(), GitError> {
-        self.run(&["commit", "-m", message])
-    }
-
-    pub fn push_new_branch(&self, remote: &str, branch: &str) -> Result<(), GitError> {
-        self.run(&["push", "-u", remote, branch])
-    }
-
     pub fn diff_name_status(
         &self,
         from: &str,

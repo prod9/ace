@@ -83,10 +83,6 @@ impl Ace {
         Ok(self.state.as_ref().expect("state was just set"))
     }
 
-    pub fn output_mode(&self) -> OutputMode {
-        self.mode
-    }
-
     pub fn git<'a>(&self, repo: &'a Path) -> Git<'a> {
         Git::new(repo, self.mode)
     }

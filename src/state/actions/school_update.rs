@@ -21,7 +21,10 @@ pub enum SchoolUpdateError {
 
 pub enum SchoolUpdateResult {
     NoImports,
-    Updated { count: usize },
+    Updated {
+        #[allow(dead_code)] // part of result API
+        count: usize,
+    },
 }
 
 impl SchoolUpdate<'_> {

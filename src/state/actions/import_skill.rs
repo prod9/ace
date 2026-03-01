@@ -31,7 +31,10 @@ pub enum ImportError {
 
 /// Result of a successful import — or a request for the caller to pick a skill.
 pub enum ImportResult {
-    Done { skill: String },
+    Done {
+        #[allow(dead_code)] // part of result API
+        skill: String,
+    },
     NeedsSelection(Vec<DiscoveredSkill>),
 }
 

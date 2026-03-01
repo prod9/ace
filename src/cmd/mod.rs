@@ -1,4 +1,3 @@
-mod auth;
 mod config;
 mod diff;
 mod fmt;
@@ -45,11 +44,6 @@ enum Command {
     Setup {
         /// School specifier (owner/repo). Omit to link a cached school.
         specifier: Option<String>,
-    },
-    /// Re-authenticate a service
-    Auth {
-        /// Service name to authenticate
-        name: String,
     },
     /// Show uncommitted changes in the school cache
     Diff,
@@ -106,7 +100,6 @@ pub(crate) enum CmdError {
 pub async fn run(ace: &mut Ace, cli: Cli) {
     match cli.command {
         Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
-        Some(Command::Auth { name }) => auth::run(ace, &name).await,
         Some(Command::Import { source, skill }) => import::run(ace, &source, skill.as_deref()),
         Some(Command::Diff) => diff::run(ace).await,
         Some(Command::Fmt) | Some(Command::Format) => fmt::run(ace),

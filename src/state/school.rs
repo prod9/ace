@@ -9,6 +9,7 @@ pub struct School {
     pub session_prompt: String,
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub env: HashMap<String, String>,
+    #[allow(dead_code)] // populated from school.toml, consumed when auth is implemented
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub services: Vec<ServiceDecl>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
