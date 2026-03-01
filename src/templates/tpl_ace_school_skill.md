@@ -1,8 +1,14 @@
-# ACE School Management
+---
+name: ace-school
+description: >
+  ACE school management — proposing skill changes, creating PRs to the school
+  repo, and understanding school structure. TRIGGER when: user wants to propose
+  changes to skills, create a school PR, run `ace diff`, or asks about school
+  structure/workflow. DO NOT TRIGGER for: normal coding tasks or project-specific
+  work.
+---
 
-> **Template skill** — shipped with the `ace` binary and copied into new schools by
-> `ace school init`. The live copy in the school repo is what the AI backend actually reads.
-> To improve the template, PR to the ace repo. To improve the live copy, PR to the school repo.
+# ACE School Management
 
 ## What is an ACE school?
 
