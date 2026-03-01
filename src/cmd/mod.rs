@@ -11,6 +11,7 @@ use clap::{Parser, Subcommand};
 
 use crate::ace::Ace;
 use crate::config::ConfigError;
+use crate::state::actions::add_service::AddServiceError;
 use crate::state::actions::import_skill::ImportError;
 use crate::state::actions::prepare::PrepareError;
 use crate::state::actions::school_init::SchoolInitError;
@@ -85,6 +86,8 @@ pub(crate) enum CmdError {
     Prepare(#[from] PrepareError),
     #[error("{0}")]
     Import(#[from] ImportError),
+    #[error("{0}")]
+    AddService(#[from] AddServiceError),
     #[error("{0}")]
     SchoolInit(#[from] SchoolInitError),
     #[error("{0}")]

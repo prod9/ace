@@ -103,6 +103,40 @@ Re-fetch all imported skills from their sources.
 - Only updates skills listed in `[[imports]]` — does not discover or import new skills.
 - If a skill is no longer found in the source repo, prints a warning and skips it.
 
+## `ace school add-service`
+
+Add an OAuth service declaration to `school.toml`. Services define external providers that
+developers need credentials for — ACE uses them to acquire tokens via PKCE and template them
+into MCP server env vars (see [authentication.md](../authentication.md)).
+
+### Flags
+
+All optional. If any required field is missing, falls back to interactive TUI prompts.
+
+- `--name` — Service identifier (e.g. `github`, `jira`). Referenced as `{{ services.<name>.token }}`.
+- `--authorize-url` — OAuth authorization endpoint.
+- `--token-url` — OAuth token exchange endpoint.
+- `--client-id` — OAuth app client ID.
+- `--scopes` — Comma-separated list of OAuth scopes.
+
+### Flow
+
+1. Resolve school root (school repo context or linked school cache).
+2. Load `school.toml`.
+3. Check for duplicate — error if a service with the same name already exists.
+4. Append `[[services]]` entry to `school.toml` and save.
+
+### Example
+
+```
+ace school add-service \
+  --name github \
+  --authorize-url https://github.com/login/oauth/authorize \
+  --token-url https://github.com/login/oauth/access_token \
+  --client-id Iv1.abc123 \
+  --scopes repo,read:org
+```
+
 ## `ace diff`
 
 Show uncommitted changes in the school cache. Runs `git diff` in the cached school repo.

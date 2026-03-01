@@ -9,7 +9,7 @@
 A school is a git repo containing skills, conventions, and session prompts shared across
 projects. Structure:
 
-- `school.toml` — school metadata, session prompt, imports
+- `school.toml` — school metadata, session prompt, imports, services, MCP servers
 - `skills/` — skill directories, each with a `SKILL.md`
 
 Projects subscribe via `ace setup`, which clones the school into a local cache

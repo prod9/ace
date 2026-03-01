@@ -1,6 +1,8 @@
 use clap::Subcommand;
 
 use crate::ace::Ace;
+use crate::config::school_toml::ServiceDecl;
+use crate::state::actions::add_service::AddService;
 use crate::state::actions::school_init::SchoolInit;
 use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateResult};
 use crate::term_ui::{Tui, Workflow};
@@ -20,6 +22,24 @@ pub enum Command {
     },
     /// Re-fetch all imported skills from their sources
     Update,
+    /// Add a service (OAuth provider) to school.toml
+    AddService {
+        /// Service name (e.g. "github")
+        #[arg(long)]
+        name: Option<String>,
+        /// OAuth authorize URL
+        #[arg(long)]
+        authorize_url: Option<String>,
+        /// OAuth token URL
+        #[arg(long)]
+        token_url: Option<String>,
+        /// OAuth client ID
+        #[arg(long)]
+        client_id: Option<String>,
+        /// Comma-separated scopes
+        #[arg(long, value_delimiter = ',')]
+        scopes: Option<Vec<String>>,
+    },
 }
 
 pub async fn run(ace: &mut Ace, command: Command) {
@@ -30,6 +50,10 @@ pub async fn run(ace: &mut Ace, command: Command) {
         }
         Command::Update => {
             let result = run_update(ace);
+            super::exit_on_err(ace, result);
+        }
+        Command::AddService { name, authorize_url, token_url, client_id, scopes } => {
+            let result = run_add_service(ace, name, authorize_url, token_url, client_id, scopes);
             super::exit_on_err(ace, result);
         }
     }
@@ -60,6 +84,33 @@ fn run_update(ace: &mut Ace) -> Result<(), CmdError> {
     match result {
         SchoolUpdateResult::NoImports => ace.warn("no imports to update"),
         SchoolUpdateResult::Updated { .. } => {}
+    }
+    Ok(())
+}
+
+fn run_add_service(
+    ace: &mut Ace,
+    name: Option<String>,
+    authorize_url: Option<String>,
+    token_url: Option<String>,
+    client_id: Option<String>,
+    scopes: Option<Vec<String>>,
+) -> Result<(), CmdError> {
+    let school_root = ace.require_school()?.root.clone();
+
+    if let (Some(name), Some(authorize_url), Some(token_url), Some(client_id)) =
+        (name, authorize_url, token_url, client_id)
+    {
+        let service = ServiceDecl {
+            name,
+            authorize_url,
+            token_url,
+            client_id,
+            scopes: scopes.unwrap_or_default(),
+        };
+        AddService { school_root: &school_root, service }.run(ace)?;
+    } else {
+        Tui::new(ace).run(Workflow::AddService { school_root })?;
     }
     Ok(())
 }
