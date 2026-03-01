@@ -59,15 +59,15 @@ impl Update<'_> {
             return Ok(UpdateResult::default());
         }
 
-        let old_head = ace.git(cache).rev_parse("HEAD")
+        let old_head = git.rev_parse("HEAD")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         ace.progress(&format!("Fetching {}", self.specifier));
-        ace.git(cache).fetch_shallow("origin", "main")
+        git.fetch_shallow("origin", "main")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
         ace.done(&format!("Fetched {}", self.specifier));
 
-        if ace.git(cache).is_ahead_of("origin/main")
+        if git.is_ahead_of("origin/main")
             .map_err(|e| PrepareError::Clone(e.to_string()))?
         {
             ace.warn(&format!("school has local commits at {}", cache.display()));
@@ -75,17 +75,17 @@ impl Update<'_> {
             return Ok(UpdateResult::default());
         }
 
-        if let Err(_) = ace.git(cache).merge_ff_only("origin/main") {
+        if let Err(_) = git.merge_ff_only("origin/main") {
             ace.warn("school has diverged from origin/main");
             ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
             return Ok(UpdateResult::default());
         }
 
-        let new_head = ace.git(cache).rev_parse("HEAD")
+        let new_head = git.rev_parse("HEAD")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         let changes = if old_head != new_head {
-            match ace.git(cache).diff_name_status(&old_head, &new_head, Some("skills/")) {
+            match git.diff_name_status(&old_head, &new_head, Some("skills/")) {
                 Ok(stdout) => parse_diff_output(&stdout),
                 Err(_) => Vec::new(),
             }
