@@ -38,7 +38,7 @@ pub async fn run(ace: &mut Ace, command: Command) {
 fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdError> {
     match name {
         Some(name) => {
-            let project_dir = std::env::current_dir()?;
+            let project_dir = ace.project_dir().to_path_buf();
             SchoolInit {
                 name: &name,
                 project_dir: &project_dir,
@@ -54,32 +54,12 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
 }
 
 fn run_update(ace: &mut Ace) -> Result<(), CmdError> {
-    let school_root = resolve_school_root()?;
+    let school_root = ace.require_school()?.root.clone();
 
-    let mode = ace.output_mode();
-    let mut ace = Ace::new(mode);
-
-    let result = SchoolUpdate { school_root: &school_root }.run(&mut ace)?;
+    let result = SchoolUpdate { school_root: &school_root }.run(ace)?;
     match result {
         SchoolUpdateResult::NoImports => ace.warn("no imports to update"),
         SchoolUpdateResult::Updated { .. } => {}
     }
     Ok(())
-}
-
-fn resolve_school_root() -> Result<std::path::PathBuf, CmdError> {
-    let cwd = std::env::current_dir()?;
-
-    if cwd.join("school.toml").exists() {
-        return Ok(cwd);
-    }
-
-    let ace_toml_path = cwd.join("ace.toml");
-    if ace_toml_path.exists() {
-        let ace = crate::config::ace_toml::load(&ace_toml_path)?;
-        let paths = crate::config::school_paths::resolve(&cwd, &ace.school)?;
-        return Ok(paths.root);
-    }
-
-    Err(CmdError::NoSchool)
 }

@@ -3,12 +3,12 @@ pub mod school;
 pub mod service;
 
 pub use school::School;
-pub use service::Service;
 
 use std::collections::HashMap;
 
 use crate::config::ace_toml::AceToml;
 use crate::config::backend::Backend;
+use crate::config::school_toml::SchoolToml;
 use crate::config::tree::Tree;
 
 /// Resolved effective state, computed from config::Tree.
@@ -20,6 +20,7 @@ pub struct State {
     pub backend: Backend,
     pub session_prompt: String,
     pub env: HashMap<String, String>,
+    pub school: Option<School>,
 }
 
 impl State {
@@ -39,7 +40,7 @@ impl State {
 
     /// Full resolution: resolve all effective values from config layers.
     /// Set tree.school_backend before calling if school.toml is available.
-    pub fn resolve(tree: Tree) -> Self {
+    pub fn resolve(tree: Tree, school_toml: Option<SchoolToml>) -> Self {
         let resolved = resolve_layers(&tree);
         Self {
             config: tree,
@@ -47,6 +48,7 @@ impl State {
             backend: resolved.backend,
             session_prompt: resolved.session_prompt,
             env: resolved.env,
+            school: school_toml.map(School::from),
         }
     }
 
@@ -62,6 +64,7 @@ impl State {
             backend: Backend::default(),
             session_prompt: String::new(),
             env: HashMap::new(),
+            school: None,
         }
     }
 

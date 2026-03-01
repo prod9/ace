@@ -1,5 +1,38 @@
 use crate::ace::Ace;
+use crate::config::ace_toml::AceToml;
 
-pub async fn run(_ace: &mut Ace) {
-    println!("config: effective config");
+use super::CmdError;
+
+pub async fn run(ace: &mut Ace) {
+    let result = run_inner(ace);
+    super::exit_on_err(ace, result);
+}
+
+fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
+    ace.require_state()?;
+    let state = ace.state();
+
+    let effective = AceToml {
+        school: state.school_specifier.clone().unwrap_or_default(),
+        backend: Some(state.backend),
+        session_prompt: if state.session_prompt.is_empty() {
+            None
+        } else {
+            Some(state.session_prompt.clone())
+        },
+        env: state.env.clone(),
+    };
+
+    let output = toml::to_string_pretty(&effective)
+        .map_err(|e| CmdError::Other(e.to_string()))?;
+    print!("{output}");
+
+    if let Some(school) = &ace.state().school {
+        let school_output = toml::to_string_pretty(school)
+            .map_err(|e| CmdError::Other(e.to_string()))?;
+        println!("\n# school.toml");
+        print!("{school_output}");
+    }
+
+    Ok(())
 }

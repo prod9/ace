@@ -32,6 +32,10 @@ pub enum ConfigError {
     #[error("no config found, ace setup?")]
     NoConfig,
 
+    // school
+    #[error("no school configured, run `ace setup`")]
+    NoSchool,
+
     // school_paths
     #[error("traversal in source: {0}")]
     TraversalInSource(String),

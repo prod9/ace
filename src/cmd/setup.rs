@@ -11,7 +11,7 @@ pub async fn run(ace: &mut Ace, specifier: Option<&str>) {
 }
 
 async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdError> {
-    let project_dir = std::env::current_dir()?;
+    let project_dir = ace.project_dir().to_path_buf();
 
     let resolved = match specifier {
         Some(s) => s.to_string(),

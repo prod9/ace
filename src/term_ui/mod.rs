@@ -52,7 +52,7 @@ impl<'a> Tui<'a> {
     }
 
     fn school_init(&mut self, force: bool) -> Result<(), TermError> {
-        let project_dir = std::env::current_dir()?;
+        let project_dir = self.ace.project_dir().to_path_buf();
         let toml_path = project_dir.join("school.toml");
 
         if !crate::state::actions::is_git_repo(&project_dir) {

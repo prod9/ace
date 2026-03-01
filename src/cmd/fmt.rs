@@ -11,7 +11,7 @@ pub fn run(ace: &mut Ace) {
 }
 
 fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
-    let cwd = std::env::current_dir()?;
+    let cwd = ace.project_dir().to_path_buf();
     let mut formatted = 0;
 
     let ace_path = cwd.join("ace.toml");

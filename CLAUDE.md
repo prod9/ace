@@ -39,6 +39,12 @@ Workflow:
 - **One logical change per commit** — each commit should contain exactly one sensible grouping
   of related changes. Don't lump unrelated work into a single commit, and don't split a
   coherent change across multiple commits unnecessarily.
+- **Never lose conversation state.** Before ANY context switch (compaction, task switch,
+  tangent, side-ask like "while you're at it…", "after this…", "also…", or any new thread),
+  write to MEMORY.md first: plans, decisions, user preferences, impl notes, half-formed
+  ideas — anything discussed but not yet in code/specs. This includes interruptions mid-task.
+  E.g. planning feature A, user says "do B first" → write all notes on A to MEMORY.md before
+  even starting on B. Conversation evaporates on compaction; MEMORY.md is the only survivor.
 
 Metrics:
 - After finishing code changes, report `git diff --stat` and share your read on the delta with

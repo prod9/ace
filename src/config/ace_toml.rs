@@ -5,7 +5,7 @@ use std::path::Path;
 use super::backend::Backend;
 use super::{is_empty_str, is_empty_map, ConfigError};
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AceToml {
     #[serde(skip_serializing_if = "is_empty_str")]

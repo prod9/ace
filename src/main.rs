@@ -21,6 +21,7 @@ fn main() {
         eprintln!("  {}\n", env!("ACE_GIT_HASH"));
     }
 
-    let mut ace = ace::Ace::new(mode);
+    let project_dir = std::env::current_dir().expect("cannot determine current directory");
+    let mut ace = ace::Ace::new(project_dir, mode);
     smol::block_on(cmd::run(&mut ace, cli));
 }

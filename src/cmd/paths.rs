@@ -9,12 +9,10 @@ pub async fn run(ace: &mut Ace, key: Option<&str>) {
 }
 
 fn run_inner(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
-    let cwd = std::env::current_dir()?;
-    let mode = ace.output_mode();
-    let mut ace = Ace::load(&cwd, mode)?;
-    let p = paths::resolve(&cwd)?;
+    ace.require_state()?;
+    let p = paths::resolve(ace.project_dir())?;
 
-    let all = build_paths(&ace, &cwd, &p)?;
+    let all = build_paths(ace, &p)?;
 
     match key {
         Some(k) => {
@@ -36,7 +34,6 @@ fn run_inner(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
 
 fn build_paths(
     ace: &Ace,
-    cwd: &std::path::Path,
     p: &paths::AcePaths,
 ) -> Result<Vec<(String, String)>, CmdError> {
     let mut out = Vec::new();
@@ -45,8 +42,8 @@ fn build_paths(
     out.push(("config.local".into(), p.local.display().to_string()));
     out.push(("config.project".into(), p.project.display().to_string()));
 
-    if let Some(spec) = ace.state.school_specifier.as_deref() {
-        let sp = school_paths::resolve(cwd, spec)?;
+    if let Some(spec) = ace.state().school_specifier.as_deref() {
+        let sp = school_paths::resolve(ace.project_dir(), spec)?;
 
         out.push(("school.source".into(), sp.source));
         if let Some(ref path) = sp.cache {

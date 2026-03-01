@@ -6,6 +6,7 @@ use super::paths::AcePaths;
 use super::ConfigError;
 
 /// Raw config layers, preserved for write-back and inspection.
+#[derive(Clone)]
 pub struct Tree {
     pub user: AceToml,
     pub project: AceToml,

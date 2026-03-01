@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use crate::ace::Ace;
 use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill};
 
@@ -11,17 +9,14 @@ pub fn run(ace: &mut Ace, source: &str, skill: Option<&str>) {
 }
 
 fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>) -> Result<(), CmdError> {
-    let school_root = resolve_school_root()?;
-
-    let mode = ace.output_mode();
-    let mut ace = Ace::new(mode);
+    let school_root = ace.require_school()?.root.clone();
 
     let result = ImportSkill {
         source,
         skill,
         school_root: &school_root,
     }
-    .run(&mut ace)?;
+    .run(ace)?;
 
     match result {
         ImportResult::Done { .. } => {}
@@ -39,25 +34,8 @@ fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>) -> Result<(), Cmd
                 skill: Some(&skill.name),
                 school_root: &school_root,
             }
-            .install_selected(skill, &mut ace)?;
+            .install_selected(skill, ace)?;
         }
     }
     Ok(())
-}
-
-fn resolve_school_root() -> Result<PathBuf, CmdError> {
-    let cwd = std::env::current_dir()?;
-
-    if cwd.join("school.toml").exists() {
-        return Ok(cwd);
-    }
-
-    let ace_toml_path = cwd.join("ace.toml");
-    if ace_toml_path.exists() {
-        let ace = crate::config::ace_toml::load(&ace_toml_path)?;
-        let paths = crate::config::school_paths::resolve(&cwd, &ace.school)?;
-        return Ok(paths.root);
-    }
-
-    Err(CmdError::NoSchool)
 }

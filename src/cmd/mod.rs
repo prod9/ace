@@ -99,8 +99,6 @@ pub(crate) enum CmdError {
     Git(#[from] GitError),
     #[error("{0}")]
     Tui(#[from] TermError),
-    #[error("no school configured, run `ace setup`")]
-    NoSchool,
     #[error("{0}")]
     Other(String),
 }
