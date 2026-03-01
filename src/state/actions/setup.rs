@@ -52,13 +52,13 @@ impl Setup<'_> {
 
         let instructions = self.project_dir.join(backend.instructions_file());
         if !instructions.exists() {
-            let school_paths =
-                config::school_paths::resolve(self.project_dir, self.specifier)?;
-            let school_toml_path = school_paths.root.join("school.toml");
-            let school_toml = config::school_toml::load(&school_toml_path)?;
+            ace.require_state()?;
+            let school_name = ace.state().school.as_ref()
+                .ok_or(ConfigError::NoSchool)?
+                .name.clone();
 
             let skills_dir = self.project_dir.join(backend.skills_dir());
-            let ctx = prompts::PromptCtx::new(&skills_dir, &school_toml.name);
+            let ctx = prompts::PromptCtx::new(&skills_dir, &school_name);
             let content = prompts::render(prompts::PROJECT_CLAUDE_MD, &ctx);
 
             std::fs::write(&instructions, content)
