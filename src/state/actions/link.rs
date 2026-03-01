@@ -24,18 +24,18 @@ impl Link<'_> {
         let project_skills = self.project_dir.join(self.skills_dir).join("skills");
         let previous_skills_dir = self.project_dir.join(self.skills_dir).join(PREVIOUS_SKILLS_DIR);
 
-        let moved = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
+        let adopted = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
 
         let linked = ensure_symlink(&project_skills, &school_skills)?;
 
-        Ok(LinkResult { linked, moved })
+        Ok(LinkResult { linked, adopted })
     }
 }
 
 #[derive(Debug, Default)]
 pub struct LinkResult {
     pub linked: bool,
-    pub moved: Vec<String>,
+    pub adopted: bool,
 }
 
 /// Create or update the folder-level symlink from `link_path` to `target`.
@@ -46,7 +46,13 @@ fn ensure_symlink(link_path: &Path, target: &Path) -> Result<bool, PrepareError>
             std::fs::remove_file(link_path).map_err(PrepareError::Write)?;
         }
         LinkStatus::RealDir => {
-            std::fs::remove_dir_all(link_path).map_err(PrepareError::Write)?;
+            return Err(PrepareError::Write(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!(
+                    "{} is a real directory — adoption should have renamed it away",
+                    link_path.display()
+                ),
+            )));
         }
         LinkStatus::Absent => {
             if let Some(parent) = link_path.parent() {
@@ -59,39 +65,17 @@ fn ensure_symlink(link_path: &Path, target: &Path) -> Result<bool, PrepareError>
     Ok(true)
 }
 
-/// On first setup (no symlinks yet), move real skill dirs into sibling `previous-skills/`.
+/// On first setup (no symlinks yet), rename the whole skills dir to `previous-skills/`.
 fn adopt_previous_skills(
     project_skills: &Path,
     previous_dir: &Path,
-) -> Result<Vec<String>, PrepareError> {
-    // If project_skills is already a symlink, adoption already happened.
-    if is_symlink(project_skills) {
-        return Ok(Vec::new());
+) -> Result<bool, PrepareError> {
+    // Symlink or absent — nothing to adopt.
+    if is_symlink(project_skills) || !project_skills.exists() {
+        return Ok(false);
     }
 
-    let entries = match std::fs::read_dir(project_skills) {
-        Ok(e) => e,
-        Err(_) => return Ok(Vec::new()),
-    };
-
-    let mut real_dirs = Vec::new();
-
-    for entry in entries {
-        let entry = entry.map_err(PrepareError::Write)?;
-        let name = entry.file_name();
-        if name == PREVIOUS_SKILLS_DIR {
-            continue;
-        }
-
-        if matches!(link_status(&entry.path()), LinkStatus::RealDir) {
-            real_dirs.push(name);
-        }
-    }
-
-    if real_dirs.is_empty() {
-        return Ok(Vec::new());
-    }
-
+    // It's a real directory — rename it wholesale.
     if previous_dir.exists() {
         return Err(PrepareError::Write(std::io::Error::new(
             std::io::ErrorKind::AlreadyExists,
@@ -102,17 +86,8 @@ fn adopt_previous_skills(
         )));
     }
 
-    std::fs::create_dir_all(previous_dir).map_err(PrepareError::Write)?;
-
-    let mut moved = Vec::new();
-    for name in real_dirs {
-        let src = project_skills.join(&name);
-        let dst = previous_dir.join(&name);
-        std::fs::rename(&src, &dst).map_err(PrepareError::Write)?;
-        moved.push(name.to_string_lossy().into_owned());
-    }
-
-    Ok(moved)
+    std::fs::rename(project_skills, previous_dir).map_err(PrepareError::Write)?;
+    Ok(true)
 }
 
 fn is_symlink(path: &Path) -> bool {
@@ -197,7 +172,7 @@ mod tests {
         let fix = TestFixture::new("ace-test-link-no-skills");
         let result = fix.link().expect("should succeed");
         assert!(!result.linked);
-        assert!(result.moved.is_empty());
+        assert!(!result.adopted);
     }
 
     #[test]
@@ -256,31 +231,35 @@ mod tests {
     }
 
     #[test]
-    fn link_replaces_empty_dir() {
+    fn link_adopts_empty_dir() {
         let fix = TestFixture::new("ace-test-link-replace-empty");
         fix.add_school_skill("my-skill");
 
-        // Create empty project skills dir
+        // Create empty project skills dir — adoption renames it away, then symlink is created
         std::fs::create_dir_all(fix.project_skills()).expect("mkdir");
 
-        let result = fix.link().expect("should replace empty dir");
+        let result = fix.link().expect("should adopt and link");
+        assert!(result.adopted);
         assert!(result.linked);
 
         let target = std::fs::read_link(fix.project_skills()).expect("read link");
         assert_eq!(target, fix.school_skills());
+
+        // Empty dir was renamed to previous-skills/
+        assert!(fix.previous_skills().exists());
     }
 
     #[test]
-    fn adopt_moves_real_dirs_on_first_setup() {
+    fn adopt_renames_dir_on_first_setup() {
         let fix = TestFixture::new("ace-test-link-adopt");
         fix.add_school_skill("school-skill");
         fix.add_real_skill("my-skill", "SKILL.md", "# My Skill");
 
         let result = fix.link().expect("should adopt and link");
         assert!(result.linked, "school skills linked");
-        assert_eq!(result.moved, vec!["my-skill"]);
+        assert!(result.adopted, "skills dir adopted");
 
-        // Previous skills at sibling level
+        // Entire dir was renamed — skill content preserved inside previous-skills/
         let prev = fix.previous_skills().join("my-skill").join("SKILL.md");
         let content = std::fs::read_to_string(prev).expect("moved skill should exist");
         assert_eq!(content, "# My Skill");
@@ -319,7 +298,7 @@ mod tests {
             .expect("create symlink");
 
         let result = fix.link().expect("should succeed");
-        assert!(result.moved.is_empty(), "no adoption when already symlinked");
+        assert!(!result.adopted, "no adoption when already symlinked");
     }
 
     /// Helper to test symlink logic without needing full specifier resolution.
@@ -332,9 +311,9 @@ mod tests {
         let project_skills = project_dir.join(".claude").join("skills");
         let previous_skills_dir = project_dir.join(".claude").join(PREVIOUS_SKILLS_DIR);
 
-        let moved = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
+        let adopted = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
         let linked = ensure_symlink(&project_skills, &school_skills)?;
 
-        Ok(LinkResult { linked, moved })
+        Ok(LinkResult { linked, adopted })
     }
 }

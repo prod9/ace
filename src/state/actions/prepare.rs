@@ -62,12 +62,8 @@ impl Prepare<'_> {
         }
         .run(ace)?;
 
-        if !result.moved.is_empty() {
-            ace.done(&format!(
-                "Moved {} previous skill(s) to previous-skills/: {}",
-                result.moved.len(),
-                result.moved.join(", ")
-            ));
+        if result.adopted {
+            ace.done("Moved previous skills to previous-skills/");
         }
 
         if result.linked {

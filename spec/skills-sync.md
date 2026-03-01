@@ -38,9 +38,10 @@ set of skills. To change a skill, edit through symlinks and propose changes back
 
 ### First-time adoption
 
-When a project has existing real skill directories (pre-ACE or hand-written), ACE moves them
-to `previous-skills/` before creating the folder symlink. This is a one-time migration to
-allow bringing existing skills into the school. After adoption, the symlink takes over and
+When a project has an existing real skills directory (pre-ACE or hand-written), ACE renames the
+entire directory to `previous-skills/` before creating the folder symlink. This is a single
+bulk rename, not per-skill — the whole folder is the management unit. This is a one-time
+migration to allow bringing existing skills into the school. After adoption, the symlink takes over and
 `previous-skills/` remains as a prompt for the user to consolidate them into the school.
 The session prompt nudges the LLM to help merge `previous-skills/` into the school's skills
 folder and propose the changes upstream.
