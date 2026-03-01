@@ -16,8 +16,6 @@ pub enum PrepareError {
     Clone(String),
     #[error("write failed: {0}")]
     Write(std::io::Error),
-    #[error("school cache has uncommitted changes")]
-    DirtyCache,
 }
 
 /// Ensure school is ready: install if not cached, update if cached, link into project.
@@ -34,17 +32,13 @@ pub struct PrepareResult {
 
 impl Prepare<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
-        let (changes, dirty) = if is_cached(self.specifier)? {
-            match (Update {
+        let changes = if is_cached(self.specifier)? {
+            (Update {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             })
-            .run(ace)
-            {
-                Ok(result) => (result.changes, false),
-                Err(PrepareError::DirtyCache) => (Vec::new(), true),
-                Err(e) => return Err(e),
-            }
+            .run(ace)?
+            .changes
         } else {
             Install {
                 specifier: self.specifier,
@@ -52,7 +46,7 @@ impl Prepare<'_> {
             }
             .run(ace)
             .await?;
-            (Vec::new(), false)
+            Vec::new()
         };
 
         let result = Link {
@@ -68,10 +62,6 @@ impl Prepare<'_> {
 
         if result.linked {
             ace.done("Linked skills");
-        }
-
-        if dirty {
-            return Err(PrepareError::DirtyCache);
         }
 
         Ok(PrepareResult { changes })

@@ -103,6 +103,10 @@ impl Ace {
         self.sink.error(msg);
     }
 
+    pub fn hint(&mut self, msg: &str) {
+        self.sink.hint(msg);
+    }
+
     pub fn data(&mut self, msg: &str) {
         self.sink.data(msg);
     }

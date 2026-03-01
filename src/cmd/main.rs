@@ -1,8 +1,8 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
 use crate::state::actions::exec::Exec;
-use crate::state::actions::prepare::{Prepare, PrepareError, PrepareResult};
-use crate::prompts::session::build_session_prompt;
+use crate::state::actions::prepare::Prepare;
+use crate::templates::session::build_session_prompt;
 
 use super::CmdError;
 
@@ -22,24 +22,13 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
     let preliminary_backend = ace.state().backend;
     let project_dir = ace.project_dir().to_path_buf();
 
-    let prepare_result = match (Prepare {
+    let prepare_result = (Prepare {
         specifier: &specifier,
         project_dir: &project_dir,
         skills_dir: preliminary_backend.skills_dir(),
     })
     .run(ace)
-    .await
-    {
-        Ok(r) => r,
-        Err(PrepareError::DirtyCache) => {
-            ace.warn(
-                "school cache has uncommitted changes, skipping update \
-                 (propose changes when ready)",
-            );
-            PrepareResult::default()
-        }
-        Err(e) => return Err(e.into()),
-    };
+    .await?;
 
     // Pass 2: reload with fresh school.toml after Prepare.
     ace.reload_state()?;

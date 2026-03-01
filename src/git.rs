@@ -30,8 +30,17 @@ impl<'a> Git<'a> {
         self.run(&["fetch", "--depth", "1", "--no-tags", remote, branch])
     }
 
-    pub fn reset_hard(&self, target: &str) -> Result<(), GitError> {
-        self.run(&["reset", "--hard", target])
+    pub fn rev_parse(&self, refspec: &str) -> Result<String, GitError> {
+        Ok(self.output(&["rev-parse", refspec])?.trim().to_string())
+    }
+
+    pub fn merge_ff_only(&self, target: &str) -> Result<(), GitError> {
+        self.run(&["merge", "--ff-only", target])
+    }
+
+    pub fn is_ahead_of(&self, remote_ref: &str) -> Result<bool, GitError> {
+        let out = self.output(&["rev-list", "--count", &format!("{remote_ref}..HEAD")])?;
+        Ok(out.trim() != "0")
     }
 
     pub fn diff_name_status(

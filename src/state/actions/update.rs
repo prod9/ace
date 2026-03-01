@@ -26,8 +26,8 @@ pub struct UpdateResult {
     pub changes: Vec<SkillChange>,
 }
 
-/// Git fetch + reset school cache to latest origin/main.
-/// Returns `PrepareError::DirtyCache` if cache has uncommitted changes.
+/// Git fetch + ff-only merge school cache to latest origin/main.
+/// Dirty, ahead, or diverged caches are warned but not errors — update is skipped.
 pub struct Update<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
@@ -49,31 +49,49 @@ impl Update<'_> {
         }
 
         let git = ace.git(cache);
-
         if git.is_dirty().map_err(|e| PrepareError::Clone(e.to_string()))? {
-            return Err(PrepareError::DirtyCache);
+            ace.warn(&format!("school has local changes at {}", cache.display()));
+            ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
+            return Ok(UpdateResult::default());
         }
 
         if !is_stale(cache) {
             return Ok(UpdateResult::default());
         }
 
+        let old_head = ace.git(cache).rev_parse("HEAD")
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
+
         ace.progress(&format!("Fetching {}", self.specifier));
-        let git = ace.git(cache);
-        git.fetch_shallow("origin", "main")
+        ace.git(cache).fetch_shallow("origin", "main")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
         ace.done(&format!("Fetched {}", self.specifier));
 
-        let changes = {
-            let git = ace.git(cache);
-            match git.diff_name_status("HEAD", "origin/main", Some("skills/")) {
+        if ace.git(cache).is_ahead_of("origin/main")
+            .map_err(|e| PrepareError::Clone(e.to_string()))?
+        {
+            ace.warn(&format!("school has local commits at {}", cache.display()));
+            ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
+            return Ok(UpdateResult::default());
+        }
+
+        if let Err(_) = ace.git(cache).merge_ff_only("origin/main") {
+            ace.warn("school has diverged from origin/main");
+            ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
+            return Ok(UpdateResult::default());
+        }
+
+        let new_head = ace.git(cache).rev_parse("HEAD")
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
+
+        let changes = if old_head != new_head {
+            match ace.git(cache).diff_name_status(&old_head, &new_head, Some("skills/")) {
                 Ok(stdout) => parse_diff_output(&stdout),
                 Err(_) => Vec::new(),
             }
+        } else {
+            Vec::new()
         };
-
-        ace.git(cache).reset_hard("origin/main")
-            .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         Ok(UpdateResult { changes })
     }

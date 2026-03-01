@@ -56,6 +56,15 @@ impl EventSink {
         }
     }
 
+    pub fn hint(&mut self, msg: &str) {
+        self.clear_spinner();
+        match self.mode {
+            OutputMode::Human => eprintln!("  {} {msg}", style("→").dim()),
+            OutputMode::Porcelain => eprintln!("hint: {msg}"),
+            OutputMode::Silent => {}
+        }
+    }
+
     pub fn data(&mut self, msg: &str) {
         self.clear_spinner();
         if self.mode == OutputMode::Silent {
