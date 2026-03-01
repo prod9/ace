@@ -42,6 +42,30 @@ Entrypoint. Orchestrates the lifecycle:
 2. Actions run, mutating the state tree
 3. Ace calls State to persist changes (State uses Config internally)
 
+## Ace Instance Contract
+
+A single `Ace` instance is created in `main()` and passed to all commands. It starts with
+empty state — functioning only as an output sink.
+
+Commands declare what they need by calling `require_*` methods on the existing instance:
+
+- **`require_state()`** — lazily loads the config tree and resolves State. No-op if already
+  loaded. Gives access to `school_specifier`, `backend`, `session_prompt`, `env`, etc.
+- **`require_school()`** — resolves school context (root, cache, specifier). Handles
+  dual-context detection: `school.toml` in cwd (school repo) vs `ace.toml` specifier (app
+  repo). Calls `require_state()` internally when in app repo context.
+
+Commands fall into three tiers:
+
+1. **No state** — `setup`, `auth`, `fmt`, `school init`. Ace is purely an output sink.
+2. **Partial state** — `paths`, `diff`, `propose`, `import`, `update`. Call `require_state()`
+   or `require_school()` for what they need.
+3. **Full orchestration** — bare `ace` (no subcommand). Runs Prepare, loads school.toml,
+   builds session prompt, execs backend.
+
+Never create new Ace instances inside commands. The single instance is the context — extend
+it with lazy loading rather than bypassing it.
+
 ## Data Flow
 
 ```
