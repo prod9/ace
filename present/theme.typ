@@ -2,9 +2,9 @@
 #import themes.metropolis: *
 
 #let ace-theme(body) = {
-  set text(font: "Kanit", weight: "light", size: 20pt)
-  show heading: set text(font: "Space Grotesk", weight: "medium")
-  show strong: set text(weight: "regular")
+  set text(font: "Kanit", weight: "light", size: 20pt, fill: rgb("#e0e0e0"))
+  show heading: set text(font: "Space Grotesk", weight: "medium", fill: rgb("#00ffff"))
+  show strong: set text(weight: "regular", fill: rgb("#00ffff"))
   set par(justify: false)
 
   show: metropolis-theme.with(
@@ -18,10 +18,10 @@
       institution: [prodigy9.co],
     ),
     config-colors(
-      primary: rgb("#1a1a1a"),
-      secondary: rgb("#00ffff"),
-      neutral-lightest: rgb("#fafafa"),
-      neutral-darkest: rgb("#1a1a1a"),
+      primary: rgb("#00ffff"),
+      secondary: rgb("#1a1a1a"),
+      neutral-lightest: rgb("#1a1a1a"),
+      neutral-darkest: rgb("#e0e0e0"),
     ),
     config-page(margin: (x: 3em, y: 2em)),
   )
