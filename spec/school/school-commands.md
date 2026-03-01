@@ -24,59 +24,38 @@ Steps:
    [school]
    name = "<name>"
    ```
-4. Done. User commits and pushes to their school repo.
+4. Create `CLAUDE.md` if missing.
+5. Create `skills/ace-school/SKILL.md` from built-in template if missing.
+6. Done. User commits and pushes to their school repo.
 
 Prerequisites: create and clone a git repo first (e.g. `gh repo create org/school --private`).
-
-## `ace school propose`
-
-Propose local school changes back to the upstream school repo. Users edit skill files
-in-place (through symlinks into the cache) during their coding session, then call
-`school propose` when ready to submit.
-
-### Flow
-
-1. Resolve school cache path from `ace.toml` specifier.
-2. Check for uncommitted changes in cache (`git status --porcelain`). If clean, error:
-   `no changes to propose`.
-3. Create branch: `git checkout -b ace/propose-<timestamp>`.
-4. Stage and commit: `git add -A && git commit`.
-5. Push: `git push -u origin <branch>`.
-6. Create PR via GitHub API against `main`.
-7. Reset cache back to main: `git checkout main && git reset --hard origin/main`.
-8. Return PR URL to user.
-
-### Important
-
-- Edits happen through symlinks — modifying a linked skill file modifies the cache directly.
-- The PR is based on wherever `main` was at clone/last-update time. GitHub shows conflicts
-  if upstream has diverged. User resolves in GitHub.
-- After propose, the cache is reset to `origin/main` so subsequent updates work cleanly.
 
 ## Update and Edit Safety
 
 The school cache is a live working copy. Users may have uncommitted edits (skills modified
 through symlinks). The **Update** action must check for dirty state before resetting:
 
-1. `git status --porcelain` — if dirty, warn and abort. Tell user to `school propose` or
-   discard changes first.
+1. `git status --porcelain` — if dirty, warn and abort. Tell user to propose changes when
+   ready.
 2. `git fetch origin`
-3. `git reset --hard origin/main`
+3. Fast-forward to `origin/main` (or hard reset only when the cache is confirmed clean).
 
-This ensures updates always track latest `main` and handle force pushes, but never
-silently discard user edits.
+The dirty guard in step 1 ensures user edits are never silently discarded.
 
-## Skill Modification Prompt
+## Skill Modification Workflow
 
-When ACE execs into Claude Code or OpenCode (lifecycle step 12), it injects a system prompt
+When ACE execs into Claude Code or OpenCode (lifecycle step 12), it injects a session prompt
 that:
 
 1. Tells the AI that skills are loaded from the linked school and are editable.
-2. Instructs it that if any skill files are modified during the session, the user should run
-   `ace school propose` afterward to propose changes back to the school repo.
+2. Instructs it to propose changes back to the school repo when skills are modified.
 
-This enables a natural workflow: developers use skills, notice improvements, edit them
-in-place, and propose changes — all without leaving their coding session.
+The AI backend handles the full PR workflow: `ace diff` to review, branch in the school
+cache, commit, push, create PR via GitHub MCP. No dedicated `ace` command needed — the AI
+has all the tools (git + GitHub MCP).
+
+The `ace-school` skill (created by `ace school init`) provides detailed instructions for
+this workflow.
 
 ## `ace import <source> [--skill <name>]`
 
@@ -128,7 +107,8 @@ Re-fetch all imported skills from their sources.
 
 Show uncommitted changes in the school cache. Runs `git diff` in the cached school repo.
 
+- Prints `# school-cache\t<path>` as the first line (metadata, tab-separated).
 - Resolves school specifier from `ace.toml`.
 - Errors if no school configured or school is embedded (no cache directory).
 - Passes raw diff output through to stdout (human-readable, not tab-separated).
-- Prints nothing if the cache is clean.
+- Prints metadata line even if the cache is clean (diff output may be empty).

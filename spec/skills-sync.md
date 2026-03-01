@@ -34,15 +34,16 @@ project/.claude/skills/ → ~/.cache/ace/repos/{school}/skills/
 ```
 
 No per-skill linking, no local overrides. Everyone on the same school works against the same
-set of skills. To change a skill, change it in the school repo and `ace school propose`.
+set of skills. To change a skill, edit through symlinks and propose changes back to the school.
 
 ### First-time adoption
 
 When a project has existing real skill directories (pre-ACE or hand-written), ACE moves them
 to `previous-skills/` before creating the folder symlink. This is a one-time migration to
-allow bringing existing skills into the school via `ace school propose`. After adoption, the symlink takes over and `previous-skills/` remains as a prompt for the
-user to consolidate them into the school. The session prompt nudges the LLM to help merge
-`previous-skills/` into the school's skills folder via `ace school propose`.
+allow bringing existing skills into the school. After adoption, the symlink takes over and
+`previous-skills/` remains as a prompt for the user to consolidate them into the school.
+The session prompt nudges the LLM to help merge `previous-skills/` into the school's skills
+folder and propose the changes upstream.
 
 ## Cache
 

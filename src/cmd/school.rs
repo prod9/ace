@@ -2,7 +2,6 @@ use clap::Subcommand;
 
 use crate::ace::Ace;
 use crate::state::actions::school_init::SchoolInit;
-use crate::state::actions::school_propose::SchoolPropose;
 use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateResult};
 use crate::term_ui::{Tui, Workflow};
 
@@ -19,9 +18,6 @@ pub enum Command {
         #[arg(long)]
         force: bool,
     },
-    /// Propose local school changes back to upstream
-    #[clap(alias = "pr")]
-    Propose,
     /// Re-fetch all imported skills from their sources
     Update,
 }
@@ -30,10 +26,6 @@ pub async fn run(ace: &mut Ace, command: Command) {
     match command {
         Command::Init { name, force } => {
             let result = run_init(ace, name, force);
-            super::exit_on_err(ace, result);
-        }
-        Command::Propose => {
-            let result = run_propose(ace);
             super::exit_on_err(ace, result);
         }
         Command::Update => {
@@ -58,27 +50,6 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
             Tui::new(ace).run(Workflow::SchoolInit { force })?;
         }
     }
-    Ok(())
-}
-
-fn run_propose(ace: &mut Ace) -> Result<(), CmdError> {
-    let project_dir = std::env::current_dir()?;
-    let mode = ace.output_mode();
-    let mut ace = Ace::load(&project_dir, mode)?;
-
-    let specifier = ace.state.school_specifier.clone()
-        .ok_or(CmdError::NoSchool)?;
-
-    let repo_key = specifier.split_once(':').map_or(specifier.as_str(), |(repo, _)| repo);
-    let token = load_github_token(repo_key).map_err(CmdError::Other)?;
-
-    let url = SchoolPropose {
-        project_dir: &project_dir,
-        token: &token,
-    }
-    .run(&mut ace)?;
-
-    ace.data(&format!("PR created: {url}"));
     Ok(())
 }
 
@@ -111,24 +82,4 @@ fn resolve_school_root() -> Result<std::path::PathBuf, CmdError> {
     }
 
     Err(CmdError::NoSchool)
-}
-
-fn load_github_token(repo_key: &str) -> Result<String, String> {
-    let path = crate::config::user_config::default_path()
-        .ok_or("cannot determine config dir")?;
-    let config = crate::config::user_config::load(&path)
-        .map_err(|e| format!("load config: {e}"))?;
-
-    let school = config
-        .get(repo_key)
-        .ok_or(format!("no config for school {repo_key}, run ace setup"))?;
-    let github = school
-        .services
-        .get("github")
-        .ok_or(format!("no github token for {repo_key}, run ace auth"))?;
-
-    github
-        .token
-        .clone()
-        .ok_or(format!("github token empty for {repo_key}"))
 }

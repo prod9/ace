@@ -78,5 +78,5 @@ full details on specifiers, structure, and relationship to projects.
 9. **Check tooling** — required CLI tools, language runtimes, etc.
 10. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
 11. **Select backend** — Claude Code or OpenCode
-12. **Inject prompt** — prepend system context about skills and `ace school propose` workflow
+12. **Inject prompt** — prepend system context about skills and school workflow
 13. **Exec** — replace process with the chosen tool

@@ -100,7 +100,7 @@ mod tests {
         let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
         assert!(prompt.contains("School: Acme"));
         assert!(prompt.contains("ACE (AI Coding Environment)"));
-        assert!(prompt.contains("ace school propose"));
+        assert!(prompt.contains("propose changes back to the school repo"));
     }
 
     #[test]

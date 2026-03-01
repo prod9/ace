@@ -41,7 +41,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         Err(PrepareError::DirtyCache) => {
             preliminary_ace.warn(
                 "school cache has uncommitted changes, skipping update \
-                 (run `ace school propose` or discard when ready)",
+                 (propose changes when ready)",
             );
             PrepareResult::default()
         }

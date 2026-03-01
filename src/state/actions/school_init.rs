@@ -41,6 +41,14 @@ impl SchoolInit<'_> {
             ace.done("Created CLAUDE.md");
         }
 
+        let skill_dir = self.project_dir.join("skills").join("ace-school");
+        let skill_path = skill_dir.join("SKILL.md");
+        if !skill_path.exists() {
+            std::fs::create_dir_all(&skill_dir)?;
+            std::fs::write(&skill_path, prompts::ACE_SCHOOL_SKILL)?;
+            ace.done("Created skills/ace-school/SKILL.md");
+        }
+
         Ok(())
     }
 }

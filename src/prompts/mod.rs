@@ -6,6 +6,7 @@ pub const CHANGES_HEADER: &str = include_str!("changes_header.md");
 pub const CHANGES_FOOTER: &str = include_str!("changes_footer.md");
 pub const PROJECT_CLAUDE_MD: &str = include_str!("project_claude_md.md");
 pub const SCHOOL_CLAUDE_MD: &str = include_str!("school_claude_md.md");
+pub const ACE_SCHOOL_SKILL: &str = include_str!("ace_school_skill.md");
 
 use std::path::Path;
 

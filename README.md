@@ -34,8 +34,8 @@ ace school update                            # re-fetch all imported skills
 | `ace paths` | Print resolved filesystem paths |
 | `ace import <source> [--skill <name>]` | Import a skill from an external repository |
 | `ace school init` | Initialize a new school repository |
-| `ace school propose` | Propose local school changes back to upstream |
 | `ace school update` | Re-fetch all imported skills from their sources |
+| `ace diff` | Show uncommitted changes in the school cache |
 
 ## How it works
 
@@ -54,10 +54,10 @@ into your project — everyone on the same school works against the same skills.
 
 **First-time setup with existing skills:** If your project already has hand-written skills in
 `.claude/skills/`, ACE moves them to `previous-skills/` on first run. The LLM will then help
-you merge them into the school's skills folder via `ace school propose`.
+you merge them into the school's skills folder.
 
-**Changing skills:** Edit skills in the school repo, not in your project. Use `ace school propose`
-to push changes back to the shared school.
+**Changing skills:** Edit skills through symlinks (edits go to the school cache directly). The
+AI backend handles proposing changes back — branch, commit, push, create PR via GitHub MCP.
 
 ## Configuration
 

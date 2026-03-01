@@ -15,7 +15,6 @@ use crate::config::ConfigError;
 use crate::state::actions::import_skill::ImportError;
 use crate::state::actions::prepare::PrepareError;
 use crate::state::actions::school_init::SchoolInitError;
-use crate::state::actions::school_propose::SchoolProposeError;
 use crate::state::actions::school_update::SchoolUpdateError;
 use crate::state::actions::setup::SetupError;
 use crate::git::GitError;
@@ -91,8 +90,6 @@ pub(crate) enum CmdError {
     Import(#[from] ImportError),
     #[error("{0}")]
     SchoolInit(#[from] SchoolInitError),
-    #[error("{0}")]
-    SchoolPropose(#[from] SchoolProposeError),
     #[error("{0}")]
     SchoolUpdate(#[from] SchoolUpdateError),
     #[error("{0}")]

@@ -19,6 +19,8 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     let sp = school_paths::resolve(&cwd, spec)?;
     let cache = sp.cache.ok_or(CmdError::NoSchool)?;
 
+    ace.data(&format!("# school-cache\t{}", cache.display()));
+
     let out = ace.git(&cache).diff()?;
     if !out.is_empty() {
         ace.data(&out);

@@ -52,7 +52,7 @@ Metrics:
 - See `rust-coding` skill for general Rust conventions (error handling, serde, Option/Result)
 - Error enums: `ConfigError` for `src/config/`, `SetupError`/`PrepareError` for
   `src/state/actions/`, `CmdError` for `src/cmd/`. Action-specific errors
-  (`SchoolInitError`, `SchoolProposeError`, `ImportError`) are fine when well-scoped.
+  (`SchoolInitError`, `ImportError`) are fine when well-scoped.
 - Actions that only produce I/O errors return `std::io::Error` directly — no wrapping.
 - See `spec/configuration.md` for config validation details.
 
