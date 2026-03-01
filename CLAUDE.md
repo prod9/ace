@@ -22,10 +22,10 @@ Tone:
 - Code comments: essential only
 
 Workflow:
-- **NEVER assume intent — ASK.** When the user flags something, do not guess what they mean
-  and silently re-plan or re-implement. Ask one clarifying question. Re-planning loops burn
-  tokens and time for nothing. One question beats six wrong iterations. This is the single
-  most expensive failure mode — treat ambiguous feedback as a hard stop until clarified.
+- **NEVER assume — ASK.** When unsure about intent, behavior, or how code works, ask or
+  verify by reading source/specs before stating it as fact. If you can't pinpoint a file that
+  backs your claim, read before responding. One question beats six wrong iterations. This is
+  the single most expensive failure mode — treat ambiguity as a hard stop until clarified.
 - Ask permission before editing files (group related files)
 - Run commands/tests only after asking
 - **When a command or build fails, report the failure immediately.** Do not silently substitute
