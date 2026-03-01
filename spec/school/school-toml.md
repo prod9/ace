@@ -94,16 +94,19 @@ flow and token lifecycle.
 
 ### `[[mcp]]`
 
-Array of MCP server declarations. Each entry defines a containerized MCP tool server. ACE uses
-Dagger to spin up the containers and connects them to Claude Code or OpenCode.
+Array of MCP server declarations. Each entry defines a containerized MCP tool server. ACE
+templates these into the active backend's native MCP config format (see
+[backend.md](../backend.md#mcp-config-differences)). The backend manages Docker container
+lifecycle — ACE does not run or manage containers directly.
 
 MCP servers are packaged as container images. This eliminates host dependency management — no
-need to install runtimes, packages, or tools required by individual MCP servers.
+need to install runtimes, packages, or tools required by individual MCP servers. All backends
+spawn `docker run -i --rm <image>` as a stdio child process.
 
 - `name` — Identifier for the MCP server.
 - `image` — Container image reference (e.g. `ghcr.io/acme-corp/mcp-jira:latest`).
-- `env` — Optional. Environment variables passed into the container. Supports template syntax
-  for secrets (see below).
+- `env` — Optional. Environment variables passed into the container (via `-e` flags). Supports
+  template syntax for secrets (see below).
 
 ### Template Syntax
 

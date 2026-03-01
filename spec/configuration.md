@@ -17,7 +17,7 @@ Resolved by merging (later overrides earlier):
 Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
-- `backend` — `"claude"` or `"opencode"` (last `Some` wins, fallback `claude`). See [backend.md](backend.md).
+- `backend` — `"claude"`, `"opencode"`, or `"codex"` (first `Some` wins in priority order, fallback `claude`). See [backend.md](backend.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
 
