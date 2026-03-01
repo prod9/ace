@@ -6,14 +6,15 @@ use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill
 use super::CmdError;
 
 pub fn run(ace: &mut Ace, source: &str, skill: Option<&str>) {
-    let result = run_inner(source, skill);
+    let result = run_inner(ace, source, skill);
     super::exit_on_err(ace, result);
 }
 
-fn run_inner(source: &str, skill: Option<&str>) -> Result<(), CmdError> {
+fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>) -> Result<(), CmdError> {
     let school_root = resolve_school_root()?;
 
-    let mut ace = crate::ace::Ace::new(crate::ace::Ace::term_sink());
+    let mode = ace.output_mode();
+    let mut ace = Ace::new(mode);
 
     let result = ImportSkill {
         source,

@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use crate::ace::Ace;
 use crate::config;
-use crate::git;
 use super::prepare::PrepareError;
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
@@ -49,7 +48,9 @@ impl Update<'_> {
             )));
         }
 
-        if is_dirty(cache)? {
+        let git = ace.git(cache);
+
+        if git.is_dirty().map_err(|e| PrepareError::Clone(e.to_string()))? {
             return Err(PrepareError::DirtyCache);
         }
 
@@ -58,11 +59,21 @@ impl Update<'_> {
         }
 
         ace.progress(&format!("Fetching {}", self.specifier));
-        git_fetch(cache)?;
+        let git = ace.git(cache);
+        git.fetch_shallow("origin", "main")
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
         ace.done(&format!("Fetched {}", self.specifier));
 
-        let changes = detect_skill_changes(cache)?;
-        git_reset_to_origin_main(cache)?;
+        let changes = {
+            let git = ace.git(cache);
+            match git.diff_name_status("HEAD", "origin/main", Some("skills/")) {
+                Ok(stdout) => parse_diff_output(&stdout),
+                Err(_) => Vec::new(),
+            }
+        };
+
+        ace.git(cache).reset_hard("origin/main")
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         Ok(UpdateResult { changes })
     }
@@ -81,28 +92,6 @@ fn is_stale(repo: &Path) -> bool {
         Some(d) => d > FETCH_COOLDOWN,
         None => true,
     }
-}
-
-fn is_dirty(repo: &Path) -> Result<bool, PrepareError> {
-    git::is_dirty(repo).map_err(|e| PrepareError::Clone(e.to_string()))
-}
-
-fn git_fetch(repo: &Path) -> Result<(), PrepareError> {
-    git::fetch_shallow(repo, "origin", "main")
-        .map_err(|e| PrepareError::Clone(e.to_string()))
-}
-
-fn git_reset_to_origin_main(repo: &Path) -> Result<(), PrepareError> {
-    git::reset_hard(repo, "origin/main")
-        .map_err(|e| PrepareError::Clone(e.to_string()))
-}
-
-fn detect_skill_changes(repo: &Path) -> Result<Vec<SkillChange>, PrepareError> {
-    let stdout = match git::diff_name_status(repo, "HEAD", "origin/main", Some("skills/")) {
-        Ok(s) => s,
-        Err(_) => return Ok(Vec::new()),
-    };
-    Ok(parse_diff_output(&stdout))
 }
 
 fn parse_diff_output(output: &str) -> Vec<SkillChange> {

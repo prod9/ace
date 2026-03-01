@@ -3,7 +3,6 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::ace::Ace;
-use crate::git;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SchoolProposeError {
@@ -46,21 +45,32 @@ impl SchoolPropose<'_> {
             return Err(SchoolProposeError::NoCacheDir(cache.display().to_string()));
         }
 
-        if !has_changes(cache)? {
+        let git = ace.git(cache);
+        if !git.is_dirty().map_err(|e| SchoolProposeError::Git(e.to_string()))? {
             return Err(SchoolProposeError::NoChanges);
         }
 
         let (owner, repo) = parse_owner_repo(specifier)?;
 
         let branch = format!("ace/propose-{}", timestamp());
-        create_branch(cache, &branch)?;
-        stage_and_commit(cache)?;
-        push_branch(cache, &branch)?;
+        let git = ace.git(cache);
+        git.checkout_new_branch(&branch)
+            .map_err(|e| SchoolProposeError::Git(e.to_string()))?;
+        git.add_all()
+            .map_err(|e| SchoolProposeError::Git(e.to_string()))?;
+        git.commit("Propose school changes from ace")
+            .map_err(|e| SchoolProposeError::Git(e.to_string()))?;
+        git.push_new_branch("origin", &branch)
+            .map_err(|e| SchoolProposeError::Git(e.to_string()))?;
 
         let pr_url = create_pr(owner, repo, &branch, self.token)?;
 
         // Reset cache back to origin/main so future updates work cleanly
-        reset_to_main(cache)?;
+        let git = ace.git(cache);
+        git.checkout("main")
+            .map_err(|e| SchoolProposeError::Git(e.to_string()))?;
+        git.reset_hard("origin/main")
+            .map_err(|e| SchoolProposeError::Git(e.to_string()))?;
 
         Ok(pr_url)
     }
@@ -71,26 +81,6 @@ fn parse_owner_repo(specifier: &str) -> Result<(&str, &str), SchoolProposeError>
     repo_part
         .split_once('/')
         .ok_or_else(|| SchoolProposeError::Git(format!("invalid specifier: {specifier}")))
-}
-
-fn has_changes(repo: &Path) -> Result<bool, SchoolProposeError> {
-    git::is_dirty(repo).map_err(|e| SchoolProposeError::Git(e.to_string()))
-}
-
-fn create_branch(repo: &Path, branch: &str) -> Result<(), SchoolProposeError> {
-    git::checkout_new_branch(repo, branch)
-        .map_err(|e| SchoolProposeError::Git(e.to_string()))
-}
-
-fn stage_and_commit(repo: &Path) -> Result<(), SchoolProposeError> {
-    git::add_all(repo).map_err(|e| SchoolProposeError::Git(e.to_string()))?;
-    git::commit(repo, "Propose school changes from ace")
-        .map_err(|e| SchoolProposeError::Git(e.to_string()))
-}
-
-fn push_branch(repo: &Path, branch: &str) -> Result<(), SchoolProposeError> {
-    git::push_new_branch(repo, "origin", branch)
-        .map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 #[derive(Serialize)]
@@ -127,11 +117,6 @@ fn create_pr(owner: &str, repo: &str, branch: &str, token: &str) -> Result<Strin
         .map_err(|e| SchoolProposeError::Api(format!("parse response: {e}")))?;
 
     Ok(response.html_url)
-}
-
-fn reset_to_main(repo: &Path) -> Result<(), SchoolProposeError> {
-    git::checkout(repo, "main").map_err(|e| SchoolProposeError::Git(e.to_string()))?;
-    git::reset_hard(repo, "origin/main").map_err(|e| SchoolProposeError::Git(e.to_string()))
 }
 
 fn timestamp() -> String {

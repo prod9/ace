@@ -1,12 +1,26 @@
 pub mod sink;
 
 use crate::ace::Ace;
+use crate::events::OutputMode;
 use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
 
+#[allow(dead_code)]
 pub const LOGO: &str = r"
 ░█▀█░█▀▀░█▀▀
 ░█▀█░█░░░█▀▀
 ░▀░▀░▀▀▀░▀▀▀";
+
+pub const LOGO_COLOR: &str = "\x1b[36m
+░█▀█░█▀▀░█▀▀
+░█▀█░█░░░█▀▀
+░▀░▀░▀▀▀░▀▀▀\x1b[0m";
+
+pub fn logo(mode: OutputMode) -> &'static str {
+    match mode {
+        OutputMode::Human => LOGO_COLOR,
+        _ => "",
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum TermError {

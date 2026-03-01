@@ -31,6 +31,10 @@ pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
+    /// Machine-readable output (no colors, no spinners, no logo)
+    #[arg(long, global = true)]
+    pub porcelain: bool,
+
     /// Extra arguments passed through to the backend (claude/opencode), after --
     #[arg(last = true)]
     backend_args: Vec<String>,

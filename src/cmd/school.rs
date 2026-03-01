@@ -33,11 +33,11 @@ pub async fn run(ace: &mut Ace, command: Command) {
             super::exit_on_err(ace, result);
         }
         Command::Propose => {
-            let result = run_propose();
+            let result = run_propose(ace);
             super::exit_on_err(ace, result);
         }
         Command::Update => {
-            let result = run_update();
+            let result = run_update(ace);
             super::exit_on_err(ace, result);
         }
     }
@@ -61,9 +61,10 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
     Ok(())
 }
 
-fn run_propose() -> Result<(), CmdError> {
+fn run_propose(ace: &mut Ace) -> Result<(), CmdError> {
     let project_dir = std::env::current_dir()?;
-    let mut ace = Ace::load(&project_dir, Ace::term_sink())?;
+    let mode = ace.output_mode();
+    let mut ace = Ace::load(&project_dir, mode)?;
 
     let specifier = ace.state.school_specifier.clone()
         .ok_or(CmdError::NoSchool)?;
@@ -81,10 +82,11 @@ fn run_propose() -> Result<(), CmdError> {
     Ok(())
 }
 
-fn run_update() -> Result<(), CmdError> {
+fn run_update(ace: &mut Ace) -> Result<(), CmdError> {
     let school_root = resolve_school_root()?;
 
-    let mut ace = Ace::new(Ace::term_sink());
+    let mode = ace.output_mode();
+    let mut ace = Ace::new(mode);
 
     let result = SchoolUpdate { school_root: &school_root }.run(&mut ace)?;
     match result {

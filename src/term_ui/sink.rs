@@ -1,52 +1,70 @@
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::events::{Event, EventSink};
+use crate::events::OutputMode;
 
-pub struct TermSink {
+pub struct EventSink {
+    mode: OutputMode,
     spinner: Option<ProgressBar>,
 }
 
-impl TermSink {
-    pub fn new() -> Self {
-        Self { spinner: None }
+impl EventSink {
+    pub fn new(mode: OutputMode) -> Self {
+        Self { mode, spinner: None }
     }
-}
 
-impl EventSink for TermSink {
-    fn handle(&mut self, event: Event) {
-        if let Some(sp) = self.spinner.take() {
-            sp.finish_and_clear();
+    pub fn progress(&mut self, msg: &str) {
+        self.clear_spinner();
+        if self.mode != OutputMode::Human {
+            return;
         }
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner} {msg}")
+                .expect("valid template"),
+        );
+        pb.set_message(msg.to_string());
+        pb.enable_steady_tick(std::time::Duration::from_millis(80));
+        self.spinner = Some(pb);
+    }
 
-        match event {
-            Event::Progress(msg) => {
-                let pb = ProgressBar::new_spinner();
-                pb.set_style(
-                    ProgressStyle::default_spinner()
-                        .template("{spinner} {msg}")
-                        .expect("valid template"),
-                );
-                pb.set_message(msg);
-                pb.enable_steady_tick(std::time::Duration::from_millis(80));
-                self.spinner = Some(pb);
-            }
-            Event::Done(msg) => {
-                eprintln!("{} {msg}", style("✓").green());
-            }
-            Event::Warn(msg) => {
-                eprintln!("{} {msg}", style("⚠").yellow());
-            }
-            Event::Error(msg) => {
-                eprintln!("{} {msg}", style("✗").red());
-            }
-            Event::Data(msg) => {
-                println!("{msg}");
-            }
+    pub fn done(&mut self, msg: &str) {
+        self.clear_spinner();
+        match self.mode {
+            OutputMode::Human => eprintln!("{} {msg}", style("✓").green()),
+            OutputMode::Porcelain => eprintln!("{msg}"),
+            OutputMode::Silent => {}
         }
     }
 
-    fn finish(&mut self) {
+    pub fn warn(&mut self, msg: &str) {
+        self.clear_spinner();
+        match self.mode {
+            OutputMode::Human => eprintln!("{} {msg}", style("⚠").yellow()),
+            OutputMode::Porcelain => eprintln!("{msg}"),
+            OutputMode::Silent => {}
+        }
+    }
+
+    pub fn error(&mut self, msg: &str) {
+        self.clear_spinner();
+        match self.mode {
+            OutputMode::Human => eprintln!("{} {msg}", style("✗").red()),
+            OutputMode::Porcelain => eprintln!("{msg}"),
+            OutputMode::Silent => {}
+        }
+    }
+
+    pub fn data(&mut self, msg: &str) {
+        self.clear_spinner();
+        if self.mode == OutputMode::Silent {
+            return;
+        }
+        println!("{msg}");
+    }
+
+    fn clear_spinner(&mut self) {
         if let Some(sp) = self.spinner.take() {
             sp.finish_and_clear();
         }
