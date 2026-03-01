@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::config::index_toml;
+use crate::config::school_paths;
 use crate::config::ConfigError;
 
 use super::install::Install;
@@ -49,8 +50,10 @@ impl Prepare<'_> {
             Vec::new()
         };
 
+        let school_paths = school_paths::resolve(self.project_dir, self.specifier)?;
+
         let result = Link {
-            specifier: self.specifier,
+            school_root: &school_paths.root,
             project_dir: self.project_dir,
             skills_dir: self.skills_dir,
         }

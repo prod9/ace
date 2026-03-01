@@ -1,22 +1,20 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::config;
 use super::prepare::PrepareError;
 
 const PREVIOUS_SKILLS_DIR: &str = "previous-skills";
 
 /// Symlink school skills folder from cache into the project.
 pub struct Link<'a> {
-    pub specifier: &'a str,
+    pub school_root: &'a Path,
     pub project_dir: &'a Path,
     pub skills_dir: &'a str,
 }
 
 impl Link<'_> {
     pub fn run(&self, _ace: &mut Ace) -> Result<LinkResult, PrepareError> {
-        let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
-        let school_skills = school_paths.root.join("skills");
+        let school_skills = self.school_root.join("skills");
         if !school_skills.exists() {
             return Ok(LinkResult::default());
         }
