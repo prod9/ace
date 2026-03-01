@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use super::paths::cache_dir;
 use super::ConfigError;
 
+#[derive(Clone)]
 pub struct SchoolPaths {
     pub source: String,
     pub cache: Option<PathBuf>,

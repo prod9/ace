@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use crate::config::ace_toml::AceToml;
 use crate::config::backend::Backend;
-use crate::config::school_toml::SchoolToml;
 use crate::config::tree::Tree;
 
 /// Resolved effective state, computed from config::Tree.
@@ -24,41 +23,30 @@ pub struct State {
 }
 
 impl State {
-    /// First pass: resolve school specifier from ace.toml layers only.
-    /// Call this before loading school.toml to know which school to load.
-    pub fn resolve_specifier(tree: &Tree) -> Option<String> {
-        if !tree.local.school.is_empty() {
-            Some(tree.local.school.clone())
-        } else if !tree.project.school.is_empty() {
-            Some(tree.project.school.clone())
-        } else if !tree.user.school.is_empty() {
-            Some(tree.user.school.clone())
-        } else {
-            None
-        }
-    }
-
     /// Full resolution: resolve all effective values from config layers.
-    /// Set tree.school_backend before calling if school.toml is available.
-    pub fn resolve(tree: Tree, school_toml: Option<SchoolToml>) -> Self {
+    /// Tree must have `load_school()` called first if school.toml is needed.
+    pub fn resolve(tree: Tree) -> Self {
         let resolved = resolve_layers(&tree);
+        let school = tree.school_toml.as_ref().map(|st| School::from(st.clone()));
         Self {
-            config: tree,
             school_specifier: resolved.school_specifier,
             backend: resolved.backend,
             session_prompt: resolved.session_prompt,
             env: resolved.env,
-            school: school_toml.map(School::from),
+            school,
+            config: tree,
         }
     }
 
     pub fn empty() -> Self {
         Self {
             config: Tree {
-                user: AceToml::default(),
-                project: AceToml::default(),
-                local: AceToml::default(),
+                ace_user: AceToml::default(),
+                ace_project: AceToml::default(),
+                ace_local: AceToml::default(),
                 school_backend: None,
+                school_toml: None,
+                school_paths: None,
             },
             school_specifier: None,
             backend: Backend::default(),
@@ -82,7 +70,7 @@ struct Resolved {
 
 /// Resolve effective values from layers. Order: user → project → local (last wins).
 fn resolve_layers(tree: &Tree) -> Resolved {
-    let layers = [&tree.user, &tree.project, &tree.local];
+    let layers = [&tree.ace_user, &tree.ace_project, &tree.ace_local];
 
     // school: last non-empty wins
     let school_specifier = layers
@@ -92,10 +80,10 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         .map(|l| l.school.clone());
 
     // backend: local > project > school > user > fallback Claude
-    let backend = tree.local.backend
-        .or(tree.project.backend)
+    let backend = tree.ace_local.backend
+        .or(tree.ace_project.backend)
         .or(tree.school_backend)
-        .or(tree.user.backend)
+        .or(tree.ace_user.backend)
         .unwrap_or_default();
 
     // session_prompt: last Some wins (Some("") is a valid override to empty)
@@ -134,8 +122,15 @@ mod tests {
         }
     }
 
-    fn tree(user: AceToml, project: AceToml, local: AceToml) -> Tree {
-        Tree { user, project, local, school_backend: None }
+    fn tree(ace_user: AceToml, ace_project: AceToml, ace_local: AceToml) -> Tree {
+        Tree {
+            ace_user,
+            ace_project,
+            ace_local,
+            school_backend: None,
+            school_toml: None,
+            school_paths: None,
+        }
     }
 
     #[test]

@@ -3,23 +3,27 @@ use std::path::Path;
 use super::ace_toml::{self, AceToml};
 use super::backend::Backend;
 use super::paths::AcePaths;
+use super::school_paths::{self, SchoolPaths};
+use super::school_toml::{self, SchoolToml};
 use super::ConfigError;
 
 /// Raw config layers, preserved for write-back and inspection.
 #[derive(Clone)]
 pub struct Tree {
-    pub user: AceToml,
-    pub project: AceToml,
-    pub local: AceToml,
+    pub ace_user: AceToml,
+    pub ace_project: AceToml,
+    pub ace_local: AceToml,
     /// Backend from school.toml, applied after load when school is known.
     pub school_backend: Option<Backend>,
+    pub school_toml: Option<SchoolToml>,
+    pub school_paths: Option<SchoolPaths>,
 }
 
 impl Tree {
     pub fn load(paths: &AcePaths) -> Result<Self, ConfigError> {
-        let user = load_or_default(&paths.user)?;
-        let project = load_or_default(&paths.project)?;
-        let local = load_or_default(&paths.local)?;
+        let ace_user = load_or_default(&paths.user)?;
+        let ace_project = load_or_default(&paths.project)?;
+        let ace_local = load_or_default(&paths.local)?;
 
         let any_found = [&paths.user, &paths.project, &paths.local]
             .iter()
@@ -28,7 +32,41 @@ impl Tree {
             return Err(ConfigError::NoConfig);
         }
 
-        Ok(Tree { user, project, local, school_backend: None })
+        Ok(Tree {
+            ace_user,
+            ace_project,
+            ace_local,
+            school_backend: None,
+            school_toml: None,
+            school_paths: None,
+        })
+    }
+
+    /// Resolve school specifier from ace.toml layers (last non-empty wins).
+    pub fn specifier(&self) -> Option<String> {
+        [&self.ace_local, &self.ace_project, &self.ace_user]
+            .iter()
+            .find(|l| !l.school.is_empty())
+            .map(|l| l.school.clone())
+    }
+
+    /// Second pass: load school.toml + school_paths from the resolved specifier.
+    pub fn load_school(&mut self, project_dir: &Path) -> Result<(), ConfigError> {
+        let spec = match self.specifier() {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+
+        let sp = school_paths::resolve(project_dir, &spec)?;
+        let school_toml_path = sp.root.join("school.toml");
+        if school_toml_path.exists() {
+            if let Ok(st) = school_toml::load(&school_toml_path) {
+                self.school_backend = st.backend;
+                self.school_toml = Some(st);
+            }
+        }
+        self.school_paths = Some(sp);
+        Ok(())
     }
 }
 

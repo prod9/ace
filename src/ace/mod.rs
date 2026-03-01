@@ -12,7 +12,6 @@ use crate::term_ui::sink::EventSink;
 pub struct Ace {
     project_dir: PathBuf,
     state: Option<State>,
-    tree: Option<Tree>,
     school: Option<SchoolPaths>,
     sink: EventSink,
     mode: OutputMode,
@@ -23,7 +22,6 @@ impl Ace {
         Self {
             project_dir,
             state: None,
-            tree: None,
             school: None,
             sink: EventSink::new(mode),
             mode,
@@ -38,25 +36,12 @@ impl Ace {
     pub fn require_state(&mut self) -> Result<&State, ConfigError> {
         if self.state.is_none() {
             let paths = config::paths::resolve(&self.project_dir)?;
-            let mut tree = config::tree::Tree::load(&paths)?;
-
-            let mut school_toml_opt = None;
-            if let Some(spec) = State::resolve_specifier(&tree) {
-                let sp = config::school_paths::resolve(&self.project_dir, &spec)?;
-                let school_toml_path = sp.root.join("school.toml");
-                if school_toml_path.exists() {
-                    if let Ok(school) = config::school_toml::load(&school_toml_path) {
-                        tree.school_backend = school.backend;
-                        school_toml_opt = Some(school);
-                    }
-                }
-                self.school = Some(sp);
-            }
-
-            self.tree = Some(tree.clone());
-            self.state = Some(State::resolve(tree, school_toml_opt));
+            let mut tree = Tree::load(&paths)?;
+            tree.load_school(&self.project_dir)?;
+            self.school = tree.school_paths.take();
+            self.state = Some(State::resolve(tree));
         }
-        Ok(self.state.as_ref().unwrap())
+        Ok(self.state.as_ref().expect("state was just set"))
     }
 
     /// Panicking accessor — only after require_state succeeds.
@@ -84,30 +69,18 @@ impl Ace {
                 }
             }
         }
-        Ok(self.school.as_ref().unwrap())
+        Ok(self.school.as_ref().expect("school was just confirmed present"))
     }
 
     /// Re-read school.toml, feed school_backend, re-resolve from stored tree.
     /// Does NOT re-read ace.toml. Also refreshes cached school paths.
     pub fn reload_state(&mut self) -> Result<&State, ConfigError> {
-        let mut tree = self.tree.clone().ok_or(ConfigError::NoConfig)?;
-
-        let mut school_toml_opt = None;
-        if let Some(spec) = State::resolve_specifier(&tree) {
-            let sp = config::school_paths::resolve(&self.project_dir, &spec)?;
-            let school_toml_path = sp.root.join("school.toml");
-            if school_toml_path.exists() {
-                if let Ok(school) = config::school_toml::load(&school_toml_path) {
-                    tree.school_backend = school.backend;
-                    school_toml_opt = Some(school);
-                }
-            }
-            self.school = Some(sp);
-        }
-
-        self.tree = Some(tree.clone());
-        self.state = Some(State::resolve(tree, school_toml_opt));
-        Ok(self.state.as_ref().unwrap())
+        let prev = self.state.as_ref().ok_or(ConfigError::NoConfig)?;
+        let mut tree = prev.config.clone();
+        tree.load_school(&self.project_dir)?;
+        self.school = tree.school_paths.take();
+        self.state = Some(State::resolve(tree));
+        Ok(self.state.as_ref().expect("state was just set"))
     }
 
     pub fn output_mode(&self) -> OutputMode {

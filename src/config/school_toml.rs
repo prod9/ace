@@ -5,7 +5,7 @@ use std::path::Path;
 use super::backend::Backend;
 use super::{is_empty_str, is_empty_map, is_empty_vec, ConfigError};
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SchoolToml {
     pub name: String,
@@ -32,7 +32,7 @@ pub struct ImportDecl {
     pub source: String,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ServiceDecl {
     pub name: String,
@@ -43,7 +43,7 @@ pub struct ServiceDecl {
     pub scopes: Vec<String>,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct McpDecl {
     pub name: String,
@@ -52,7 +52,7 @@ pub struct McpDecl {
     pub env: HashMap<String, String>,
 }
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct Project {
     pub name: String,
