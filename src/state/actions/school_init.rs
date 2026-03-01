@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::prompts;
+use crate::templates;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SchoolInitError {
@@ -35,17 +35,25 @@ impl SchoolInit<'_> {
 
         let instructions = self.project_dir.join("CLAUDE.md");
         if !instructions.exists() {
-            let ctx = prompts::PromptCtx::new(Path::new(".claude"), self.name);
-            let content = prompts::render(prompts::SCHOOL_CLAUDE_MD, &ctx);
+            let ctx = templates::PromptCtx::new(Path::new(".claude"), self.name);
+            let content = templates::render(templates::SCHOOL_CLAUDE_MD, &ctx);
             std::fs::write(&instructions, content)?;
             ace.done("Created CLAUDE.md");
+        }
+
+        let readme = self.project_dir.join("README.md");
+        if !readme.exists() {
+            let ctx = templates::PromptCtx::new(Path::new(".claude"), self.name);
+            let content = templates::render(templates::SCHOOL_README, &ctx);
+            std::fs::write(&readme, content)?;
+            ace.done("Created README.md");
         }
 
         let skill_dir = self.project_dir.join("skills").join("ace-school");
         let skill_path = skill_dir.join("SKILL.md");
         if !skill_path.exists() {
             std::fs::create_dir_all(&skill_dir)?;
-            std::fs::write(&skill_path, prompts::ACE_SCHOOL_SKILL)?;
+            std::fs::write(&skill_path, templates::ACE_SCHOOL_SKILL)?;
             ace.done("Created skills/ace-school/SKILL.md");
         }
 

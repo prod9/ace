@@ -3,7 +3,7 @@ mod cmd;
 mod config;
 mod events;
 mod git;
-mod prompts;
+mod templates;
 mod state;
 mod term_ui;
 

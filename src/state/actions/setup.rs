@@ -4,7 +4,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::config::backend::Backend;
 use crate::config::ConfigError;
-use crate::prompts;
+use crate::templates;
 
 use super::prepare::{Prepare, PrepareError};
 use super::write_config::WriteConfig;
@@ -58,8 +58,8 @@ impl Setup<'_> {
                 .name.clone();
 
             let skills_dir = self.project_dir.join(backend.skills_dir());
-            let ctx = prompts::PromptCtx::new(&skills_dir, &school_name);
-            let content = prompts::render(prompts::PROJECT_CLAUDE_MD, &ctx);
+            let ctx = templates::PromptCtx::new(&skills_dir, &school_name);
+            let content = templates::render(templates::PROJECT_CLAUDE_MD, &ctx);
 
             std::fs::write(&instructions, content)
                 .map_err(SetupError::Write)?;
