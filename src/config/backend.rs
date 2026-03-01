@@ -6,6 +6,7 @@ pub enum Backend {
     #[default]
     Claude,
     OpenCode,
+    Codex,
 }
 
 impl Backend {
@@ -13,6 +14,7 @@ impl Backend {
         match self {
             Backend::Claude => "claude",
             Backend::OpenCode => "opencode",
+            Backend::Codex => "codex",
         }
     }
 
@@ -20,6 +22,7 @@ impl Backend {
         match self {
             Backend::Claude => ".claude",
             Backend::OpenCode => ".opencode",
+            Backend::Codex => ".agents",
         }
     }
 
@@ -27,6 +30,7 @@ impl Backend {
         match self {
             Backend::Claude => "CLAUDE.md",
             Backend::OpenCode => "AGENTS.md",
+            Backend::Codex => "AGENTS.md",
         }
     }
 }
