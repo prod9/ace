@@ -54,7 +54,7 @@ Right side: what happens behind the scenes (clone school, auth, symlink, exec)
 
 ### S09 — The Backend
 ACE is not the AI — it's the launcher.
-- Backends: Claude Code, OpenCode (pluggable)
+- Backends: Claude Code, OpenCode, Codex (pluggable)
 - ACE prepares the environment, then `exec`s the backend
 - Session prompt injected with school context
 - After exec, ACE is gone — the backend runs the show.

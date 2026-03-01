@@ -92,7 +92,7 @@ ACE is the *launcher*.
 
 #v(0.3em)
 
-- Backends are pluggable: *Claude Code*, *OpenCode*, more to come
+- Backends are pluggable: *Claude Code*, *OpenCode*, *Codex*
 - ACE prepares the environment, then calls `exec`
 - After exec — ACE is gone from memory
 

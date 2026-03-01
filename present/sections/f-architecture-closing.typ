@@ -93,7 +93,7 @@
 
 #pause
 
-*More backends* — OpenCode, Aider, Cursor. Same school, any tool.
+*More backends* — Aider, Cursor, and beyond. Same school, any tool.
 
 #pause
 
