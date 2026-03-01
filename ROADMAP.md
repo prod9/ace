@@ -8,12 +8,10 @@
 
 ## Features
 
-- [ ] **MCP templating** — template `[[mcp]]` from school.toml into backend-native MCP config.
-      Claude: `.mcp.json` (`"command"` + `"args"` + `"env"`, type `"stdio"`/`"http"`)
-      OpenCode: `opencode.json` (`"command": [array]` + `"environment"`, type `"local"`/`"remote"`)
-      Codex: `config.toml` (`command` + `args` + `[env]` table, TOML format)
-      Don't manage Docker lifecycle — all three backends spawn `docker run` as stdio child.
-      Always add `--rm` + `-i` flags. Document orphan container caveat (Claude bug #29058).
+- [ ] **MCP registration** — register `[[mcp]]` from school.toml into the active backend.
+      Claude (first): `claude mcp add-json -s project` per entry. CLI handles merging.
+      OpenCode/Codex: deferred until those backends ship (requires direct file writes).
+      All backends spawn `docker run -i --rm` as stdio child — ACE doesn't manage containers.
 - [ ] **Codex backend** — third Backend variant. See research notes in MEMORY.md.
       Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
       Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).

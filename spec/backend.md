@@ -35,11 +35,11 @@ Fallback if no layer specifies backend: `claude`.
 - **Skills directory**: `backend.skills_dir()` — skills are linked into `{skills_dir}/skills/`.
 - **Instructions file**: `backend.instructions_file()` — generated per-project by ACE during setup.
 
-## MCP Config Differences
+## MCP Server Registration
 
-ACE templates `[[mcp]]` entries from `school.toml` into backend-native MCP config. The `image`
-field is not a native concept in any backend — ACE constructs a `docker run -i --rm` command
-with the image as the final argument, and env entries become `-e KEY=VALUE` flags.
+ACE registers `[[mcp]]` entries from `school.toml` into the active backend. The `image` field
+is not a native concept in any backend — ACE constructs a `docker run -i --rm` command with
+the image as the final argument, and env entries become `-e KEY=VALUE` flags.
 
 Given this school.toml entry:
 
@@ -50,45 +50,47 @@ image = "ghcr.io/acme-corp/mcp-jira:latest"
 env = { JIRA_URL = "https://acme.atlassian.net", JIRA_TOKEN = "{{ services.jira.token }}" }
 ```
 
-ACE generates:
+ACE resolves templates, builds the docker command, and delegates to the backend's own mechanism
+to register the server.
 
-**Claude** (`.mcp.json`):
-```json
-{
-  "mcpServers": {
-    "jira": {
-      "type": "stdio",
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "JIRA_URL=https://acme.atlassian.net",
-               "-e", "JIRA_TOKEN=gho_...", "ghcr.io/acme-corp/mcp-jira:latest"],
-      "env": {}
-    }
-  }
-}
+### Strategy: CLI-First
+
+Prefer invoking the backend's CLI to add MCP servers. Only fall back to writing config files
+when the CLI lacks non-interactive or project-scoped support.
+
+| Backend  | Method | Reason |
+|----------|--------|--------|
+| Claude   | `claude mcp add-json -s project <name> '<json>'` | Non-interactive, project-scoped, handles merging |
+| OpenCode | Write `opencode.json` directly | No non-interactive CLI for adding servers |
+| Codex    | Write `.codex/config.toml` directly | CLI only writes user-scope, no `--scope` flag |
+
+**Claude example** — ACE runs:
+
+```sh
+claude mcp add-json -s project jira '{
+  "type": "stdio",
+  "command": "docker",
+  "args": ["run", "-i", "--rm", "-e", "JIRA_URL=https://acme.atlassian.net",
+           "-e", "JIRA_TOKEN=gho_...", "ghcr.io/acme-corp/mcp-jira:latest"]
+}'
 ```
 
-**OpenCode** (`opencode.json`):
-```jsonc
-{
-  "mcp": {
-    "jira": {
-      "type": "local",
-      "command": ["docker", "run", "-i", "--rm", "-e", "JIRA_URL=https://acme.atlassian.net",
-                  "-e", "JIRA_TOKEN=gho_...", "ghcr.io/acme-corp/mcp-jira:latest"]
-    }
-  }
-}
-```
+The CLI writes `.mcp.json` and merges with any existing entries. ACE never touches `.mcp.json`
+directly for the Claude backend.
 
-**Codex** (`.codex/config.toml`):
-```toml
-[mcp_servers.jira]
-command = "docker"
-args = ["run", "-i", "--rm", "-e", "JIRA_URL=https://acme.atlassian.net",
-        "-e", "JIRA_TOKEN=gho_...", "ghcr.io/acme-corp/mcp-jira:latest"]
-```
+For OpenCode and Codex, ACE writes the config file directly — merging into existing content
+(preserving manually-added entries) rather than overwriting. These are deferred until those
+backends are fully implemented.
 
-Key format differences summary:
+### Implementation Order
+
+1. **Claude** — implement first. Single `std::process::Command` call per MCP entry.
+2. **OpenCode / Codex** — implement when those backends ship. Requires JSON/TOML
+   serialization and merge logic.
+
+### Per-Backend Config Formats (Reference)
+
+For backends that require direct file writes:
 
 | Field   | Claude                          | OpenCode                        | Codex                           |
 |---------|---------------------------------|---------------------------------|---------------------------------|
@@ -98,19 +100,6 @@ Key format differences summary:
 
 Note: `env`/`environment` fields set host-process env vars, not container env. Container env
 must be passed via `-e` flags in args. ACE always uses `-e` flags for `[[mcp]]` env entries.
-
-### Write Strategy
-
-ACE uses the best available method per backend to write project-scoped MCP config:
-
-| Backend  | Method | Reason |
-|----------|--------|--------|
-| Claude   | `claude mcp add-json -s project <name> '<json>'` | Designed for programmatic use, handles merging |
-| OpenCode | Write `opencode.json` directly | No non-interactive CLI for adding servers |
-| Codex    | Write `.codex/config.toml` directly | CLI only writes user-scope, no `--scope` flag |
-
-For OpenCode and Codex, ACE merges into the existing config file (preserving manually-added
-entries) rather than overwriting.
 
 ## Session Prompt
 

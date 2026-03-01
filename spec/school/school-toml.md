@@ -95,8 +95,8 @@ flow and token lifecycle.
 ### `[[mcp]]`
 
 Array of MCP server declarations. Each entry defines a containerized MCP tool server. ACE
-templates these into the active backend's native MCP config format (see
-[backend.md](../backend.md#mcp-config-differences)). The backend manages Docker container
+registers these with the active backend via its CLI or config file (see
+[backend.md](../backend.md#mcp-server-registration)). The backend manages Docker container
 lifecycle — ACE does not run or manage containers directly.
 
 MCP servers are packaged as container images. This eliminates host dependency management — no
