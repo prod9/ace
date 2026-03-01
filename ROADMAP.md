@@ -23,9 +23,8 @@
 
 ## School
 
-- [ ] **Service entry instructions** — school CLAUDE.md guidance for AI to add `[[services]]`
-      entries to school.toml with enough info for PKCE auth. Start with GitHub OAuth.
-      Entries need: name, oauth authorize URL, token URL, client_id, scopes, PKCE method.
+- [x] **Service entry instructions** — school CLAUDE.md guidance for AI to add `[[services]]`
+      entries to school.toml. Covers CLI, TOML format, GitHub/Linear providers, scope guidance.
 - [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills) — blocked on auth
 - [ ] Update school CLAUDE.md template: commit messages should be detailed (PR-description level)
 
