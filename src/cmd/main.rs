@@ -64,6 +64,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         &ace.state.session_prompt,
         &skills_dir,
         &prepare_result.changes,
+        school_paths.cache.as_deref(),
     );
 
     Exec {

@@ -123,3 +123,12 @@ Re-fetch all imported skills from their sources.
 
 - Only updates skills listed in `[[imports]]` — does not discover or import new skills.
 - If a skill is no longer found in the source repo, prints a warning and skips it.
+
+## `ace diff`
+
+Show uncommitted changes in the school cache. Runs `git diff` in the cached school repo.
+
+- Resolves school specifier from `ace.toml`.
+- Errors if no school configured or school is embedded (no cache directory).
+- Passes raw diff output through to stdout (human-readable, not tab-separated).
+- Prints nothing if the cache is clean.

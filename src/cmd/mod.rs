@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod diff;
 mod fmt;
 mod import;
 mod main;
@@ -17,6 +18,7 @@ use crate::state::actions::school_init::SchoolInitError;
 use crate::state::actions::school_propose::SchoolProposeError;
 use crate::state::actions::school_update::SchoolUpdateError;
 use crate::state::actions::setup::SetupError;
+use crate::git::GitError;
 use crate::term_ui::TermError;
 
 #[derive(Parser)]
@@ -46,6 +48,8 @@ enum Command {
         /// Service name to authenticate
         name: String,
     },
+    /// Show uncommitted changes in the school cache
+    Diff,
     /// Format ace.toml / school.toml (pretty-print, strip empties)
     Fmt,
     /// Format ace.toml / school.toml (alias for fmt)
@@ -88,6 +92,8 @@ pub(crate) enum CmdError {
     #[error("{0}")]
     SchoolUpdate(#[from] SchoolUpdateError),
     #[error("{0}")]
+    Git(#[from] GitError),
+    #[error("{0}")]
     Tui(#[from] TermError),
     #[error("no school configured, run `ace setup`")]
     NoSchool,
@@ -100,6 +106,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
         Some(Command::Auth { name }) => auth::run(ace, &name).await,
         Some(Command::Import { source, skill }) => import::run(ace, &source, skill.as_deref()),
+        Some(Command::Diff) => diff::run(ace).await,
         Some(Command::Fmt) | Some(Command::Format) => fmt::run(ace),
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths) => paths::run(ace).await,

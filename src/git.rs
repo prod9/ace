@@ -101,6 +101,10 @@ pub fn commit(repo: &Path, message: &str) -> Result<(), GitError> {
     run(repo, &["commit", "-m", message])
 }
 
+pub fn diff(repo: &Path) -> Result<String, GitError> {
+    output(repo, &["diff"])
+}
+
 pub fn push_new_branch(repo: &Path, remote: &str, branch: &str) -> Result<(), GitError> {
     run(repo, &["push", "-u", remote, branch])
 }

@@ -1,3 +1,6 @@
+If you do not see any ACE context in this conversation, you MUST tell the user to start their
+session through the `ace` command instead of running the backend directly.
+
 # ACE Project
 
 **ACE** (AI Coding Environment) - Automation tooling for setting up and keeping AI coding
@@ -25,6 +28,8 @@ Workflow:
   most expensive failure mode — treat ambiguous feedback as a hard stop until clarified.
 - Ask permission before editing files (group related files)
 - Run commands/tests only after asking
+- **When a command or build fails, report the failure immediately.** Do not silently substitute
+  a different command, skip the step, or work around it. The user decides how to proceed.
 - **Never discard uncommitted changes** — do not run `git checkout`, `git restore`, or any
   command that overwrites working tree files without asking the user first. Uncommitted changes
   may be intentional work-in-progress.

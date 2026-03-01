@@ -10,3 +10,5 @@ symlink automatically — never attempt to link or unlink skills yourself.
 
 After running `ace school propose`, check if a GitHub or GitLab MCP integration is available
 and suggest the user use it to open a PR. If none is set up, suggest they set one up.
+
+To view uncommitted school changes, run `ace diff`.
