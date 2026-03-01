@@ -60,7 +60,10 @@ enum Command {
     /// Print effective configuration
     Config,
     /// Print resolved filesystem paths ACE uses
-    Paths,
+    Paths {
+        /// Print only this key (e.g. "school", "config.user")
+        key: Option<String>,
+    },
     /// Import a skill from an external repository into the school
     Import {
         /// Skill source (owner/repo or URL)
@@ -110,7 +113,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Diff) => diff::run(ace).await,
         Some(Command::Fmt) | Some(Command::Format) => fmt::run(ace),
         Some(Command::Config) => config::run(ace).await,
-        Some(Command::Paths) => paths::run(ace).await,
+        Some(Command::Paths { key }) => paths::run(ace, key.as_deref()).await,
         Some(Command::School { command }) => school::run(ace, command).await,
         None => main::run(ace, cli.backend_args).await,
     }

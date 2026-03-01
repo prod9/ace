@@ -9,3 +9,7 @@ Do not create, remove, or modify symlinks in the skills directory. ACE manages t
 symlink automatically — never attempt to link or unlink skills yourself.
 
 To view uncommitted school changes, run `ace diff`.
+
+When debugging configuration issues, use `ace config` to print the effective configuration or
+`ace paths` to print resolved filesystem paths (e.g. `ace paths school` for the school cache
+directory).

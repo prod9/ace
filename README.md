@@ -31,7 +31,7 @@ ace school update                            # re-fetch all imported skills
 | `ace setup [specifier]` | Clone a school, authenticate services, write config |
 | `ace auth <service>` | Re-authenticate a service |
 | `ace config` | Print effective configuration |
-| `ace paths` | Print resolved filesystem paths |
+| `ace paths [key]` | Print resolved filesystem paths (e.g. `ace paths school`) |
 | `ace import <source> [--skill <name>]` | Import a skill from an external repository |
 | `ace school init` | Initialize a new school repository |
 | `ace school update` | Re-fetch all imported skills from their sources |

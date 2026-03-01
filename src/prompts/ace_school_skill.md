@@ -24,8 +24,8 @@ this is intentional. The school cache is a real git working copy.
 
 When skill edits need to go upstream:
 
-1. Run `ace diff` to review changes (prints the cache path as the first line).
-2. `cd` into the school cache directory.
+1. Run `ace diff` to review changes.
+2. `cd $(ace paths school)` to enter the school cache directory.
 3. `git checkout -b ace/{short-description}` — create a feature branch.
 4. Stage and commit with a descriptive message.
 5. `git push -u origin {branch}` — push to the school remote.

@@ -15,6 +15,8 @@
 
 ## Future Ideas
 
+- **Self-update** — transparent auto-update mechanism for the ace binary. Check for new versions
+  on run, download and replace in-place. Should be as seamless as possible — no manual steps.
 - **Skill diff tool** — compare code changes between different versions of skills (e.g. after
   `ace setup` pulls a newer school). Show what changed so users can review before accepting updates.
 
