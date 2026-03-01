@@ -1,6 +1,8 @@
 use std::path::Path;
 
 use crate::ace::Ace;
+use crate::config::school_toml;
+use crate::config::ConfigError;
 use crate::templates;
 
 #[derive(Debug, thiserror::Error)]
@@ -9,8 +11,10 @@ pub enum SchoolInitError {
     NotInGitRepo,
     #[error("school.toml already exists")]
     AlreadyExists,
+    #[error("{0}")]
+    Config(#[from] ConfigError),
     #[error("write failed: {0}")]
-    Write(#[from] std::io::Error),
+    Write(std::io::Error),
 }
 
 pub struct SchoolInit<'a> {
@@ -30,14 +34,23 @@ impl SchoolInit<'_> {
             return Err(SchoolInitError::AlreadyExists);
         }
 
-        let content = format!("name = \"{}\"\n", self.name);
-        std::fs::write(&toml_path, content)?;
+        if self.force && toml_path.exists() {
+            let mut toml = school_toml::load(&toml_path)?;
+            toml.name = self.name.to_string();
+            school_toml::save(&toml_path, &toml)?;
+        } else {
+            let toml = school_toml::SchoolToml {
+                name: self.name.to_string(),
+                ..Default::default()
+            };
+            school_toml::save(&toml_path, &toml)?;
+        }
 
         let instructions = self.project_dir.join("CLAUDE.md");
         if !instructions.exists() {
             let ctx = templates::PromptCtx::new(Path::new(".claude"), self.name);
             let content = templates::render(templates::SCHOOL_CLAUDE_MD, &ctx);
-            std::fs::write(&instructions, content)?;
+            std::fs::write(&instructions, content).map_err(SchoolInitError::Write)?;
             ace.done("Created CLAUDE.md");
         }
 
@@ -45,15 +58,16 @@ impl SchoolInit<'_> {
         if !readme.exists() {
             let ctx = templates::PromptCtx::new(Path::new(".claude"), self.name);
             let content = templates::render(templates::SCHOOL_README, &ctx);
-            std::fs::write(&readme, content)?;
+            std::fs::write(&readme, content).map_err(SchoolInitError::Write)?;
             ace.done("Created README.md");
         }
 
         let skill_dir = self.project_dir.join("skills").join("ace-school");
         let skill_path = skill_dir.join("SKILL.md");
         if !skill_path.exists() {
-            std::fs::create_dir_all(&skill_dir)?;
-            std::fs::write(&skill_path, templates::ACE_SCHOOL_SKILL)?;
+            std::fs::create_dir_all(&skill_dir).map_err(SchoolInitError::Write)?;
+            std::fs::write(&skill_path, templates::ACE_SCHOOL_SKILL)
+                .map_err(SchoolInitError::Write)?;
             ace.done("Created skills/ace-school/SKILL.md");
         }
 
