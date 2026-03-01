@@ -8,10 +8,16 @@
 
 ## Features
 
-- [ ] **MCP templating** — template `[[mcp]]` from school.toml into Claude's native MCP config.
-      Don't reimplement Docker lifecycle — Claude manages containers natively.
-      Check OpenCode MCP support for parity.
-- [ ] **Codex backend** — investigate OpenAI Codex CLI. Third Backend variant?
+- [ ] **MCP templating** — template `[[mcp]]` from school.toml into backend-native MCP config.
+      Claude: `.mcp.json` (`"command"` + `"args"` + `"env"`, type `"stdio"`/`"http"`)
+      OpenCode: `opencode.json` (`"command": [array]` + `"environment"`, type `"local"`/`"remote"`)
+      Codex: `config.toml` (`command` + `args` + `[env]` table, TOML format)
+      Don't manage Docker lifecycle — all three backends spawn `docker run` as stdio child.
+      Always add `--rm` + `-i` flags. Document orphan container caveat (Claude bug #29058).
+- [ ] **Codex backend** — third Backend variant. See research notes in MEMORY.md.
+      Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
+      Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).
+      LiteLLM: native via `OPENAI_BASE_URL` or `model_providers` config.
 - [ ] **TUI school picker** — multi-school selection when multiple cached schools exist
 - [ ] Add `tool` field to AceToml so Link knows backend-specific target dir
 - [ ] `role` and `description` fields in ace_toml.rs for non-dev roles (PM, requirements-only)
@@ -19,6 +25,9 @@
 
 ## School
 
+- [ ] **Service entry instructions** — school CLAUDE.md guidance for AI to add `[[services]]`
+      entries to school.toml with enough info for PKCE auth. Start with GitHub OAuth.
+      Entries need: name, oauth authorize URL, token URL, client_id, scopes, PKCE method.
 - [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills) — blocked on auth
 - [ ] Update school CLAUDE.md template: commit messages should be detailed (PR-description level)
 
@@ -30,4 +39,3 @@
 - [ ] Release workflow — blocked on [github-mcp-server#1012](https://github.com/github/github-mcp-server/issues/1012)
 - [ ] Self-update — transparent auto-update for the ace binary
 - [ ] Skill diff tool — compare skill versions after update
-- [ ] Dagger integration tests — containers for isolated filesystem/git scenarios
