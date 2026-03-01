@@ -17,7 +17,7 @@ Before calling the Setup action, the CLI layer resolves which school to use:
 - **`ace setup <owner/repo>`** — specifier is the argument.
 - **`ace setup`** (no argument) — resolve from cache:
   - **One cached school** — use it automatically.
-  - **Multiple cached schools** — TUI picker (TODO).
+  - **Multiple cached schools** — TUI picker.
   - **No cached schools** — error: `no schools cached, ace setup <owner/repo>?`
 
 This logic lives in the cmd/TUI layer. The Setup action always receives a resolved specifier.

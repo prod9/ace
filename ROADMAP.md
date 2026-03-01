@@ -18,7 +18,7 @@
       Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
       Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).
       LiteLLM: native via `OPENAI_BASE_URL` or `model_providers` config.
-- [ ] **TUI school picker** — multi-school selection when multiple cached schools exist
+- [x] **TUI school picker** — multi-school selection when multiple cached schools exist
 - [ ] Add `tool` field to AceToml so Link knows backend-specific target dir
 - [ ] `role` and `description` fields in ace_toml.rs for non-dev roles (PM, requirements-only)
 - [ ] Dogfood — embed ACE's own school into this repo
