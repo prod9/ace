@@ -19,7 +19,6 @@
 - [x] **TUI school picker** — multi-school selection when multiple cached schools exist
 - [ ] Add `tool` field to AceToml so Link knows backend-specific target dir
 - [ ] `role` and `description` fields in ace_toml.rs for non-dev roles (PM, requirements-only)
-- [ ] Dogfood — embed ACE's own school into this repo
 
 ## School
 

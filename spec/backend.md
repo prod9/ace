@@ -101,6 +101,28 @@ For backends that require direct file writes:
 Note: `env`/`environment` fields set host-process env vars, not container env. Container env
 must be passed via `-e` flags in args. ACE always uses `-e` flags for `[[mcp]]` env entries.
 
+## Backend Readiness Check
+
+Before exec, ACE should verify the backend is **ready to use** — not just installed. A backend
+binary may exist on `$PATH` but the user may never have logged in or completed first-run setup.
+
+Detection heuristic (per backend):
+
+| Backend  | Check | Rationale |
+|----------|-------|-----------|
+| Claude   | `~/.claude.json` exists with auth data | Created on first successful login |
+| OpenCode | `~/.local/share/opencode/auth.json` exists and is non-empty | Stores provider auth tokens; missing/empty `{}` = no providers authenticated |
+| Codex    | `~/.codex/auth.json` exists, **or** `OPENAI_API_KEY`/`CODEX_API_KEY` env var set | Created on first login; env vars bypass file entirely |
+
+Notes:
+- OpenCode: `OPENCODE_HOME` overrides `~/.local/share/opencode`. The DB file (`opencode.db`)
+  is created on first command run, but auth is the meaningful readiness signal.
+- Codex: `CODEX_HOME` overrides `~/.codex`.
+
+If the backend is installed but not initialized, ACE should **prompt the user** to run the
+backend's login/init flow (e.g. `claude login`) rather than launching into a session that will
+immediately fail.
+
 ## Session Prompt
 
 All backends receive the session prompt via `--system-prompt` CLI flag.
