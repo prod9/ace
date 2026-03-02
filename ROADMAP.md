@@ -2,9 +2,11 @@
 
 ## Priority
 
-- [ ] **PKCE auth flow** — blocker for multi-user rollout. `authenticate.rs` is a stub.
-      `ace auth` command removed; fold auth into setup flow when implemented.
-      Also blocks `ace school propose` and proposing pending school cache changes.
+- [x] **~~PKCE auth flow~~** — superseded by remote MCP + OAuth. All three backends (Claude,
+      OpenCode, Codex) handle OAuth discovery natively for remote MCP servers. ACE delegates
+      auth entirely to the backend. `authenticate.rs` stub can be removed.
+      `ace school propose` remains blocked on GitHub token — consider `gh auth token` or
+      remote GitHub MCP OAuth for that.
 
 ## Features
 

@@ -37,11 +37,24 @@ Fallback if no layer specifies backend: `claude`.
 
 ## MCP Server Registration
 
-ACE registers `[[mcp]]` entries from `school.toml` into the active backend. The `image` field
-is not a native concept in any backend — ACE constructs a `docker run -i --rm` command with
-the image as the final argument, and env entries become `-e KEY=VALUE` flags.
+ACE registers `[[mcp]]` entries from `school.toml` into the active backend. Two modes:
 
-Given this school.toml entry:
+### Remote MCP (Preferred)
+
+For services with remote MCP endpoints (GitHub, Linear, etc.), the school declares a URL.
+The backend handles OAuth discovery, token acquisition, and storage — ACE just registers the
+endpoint.
+
+```toml
+[[mcp]]
+name = "linear"
+url = "https://mcp.linear.app/sse"
+```
+
+### Docker MCP (Fallback)
+
+For services without remote MCP endpoints, `image` field constructs a `docker run -i --rm`
+command. Env entries become `-e KEY=VALUE` flags. Template values resolve from user config.
 
 ```toml
 [[mcp]]

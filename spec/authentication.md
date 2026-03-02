@@ -1,72 +1,40 @@
 # Authentication
 
-ACE handles OAuth token acquisition for services declared in the school's `[[services]]` config.
-All flows use PKCE (Proof Key for Code Exchange) exclusively.
+## Service Authentication (MCP OAuth)
 
-## Why PKCE
+ACE delegates service authentication entirely to the backend. All three supported backends
+(Claude Code, OpenCode, Codex) support remote MCP servers with OAuth 2.0 discovery — the
+backend handles token acquisition, storage, and refresh.
 
-Standard OAuth authorization code flow requires a `client_secret` on the token exchange. For a
-CLI tool distributed to developer machines, there is no safe place to store that secret — it
-would be embedded in the binary or config and trivially extractable.
+### Backend OAuth Support
 
-PKCE eliminates the client secret. Instead, each auth session generates a one-time
-cryptographic proof that binds the token exchange to the same client that initiated the request.
+| Backend  | Auth Command                    | Token Storage                              |
+|----------|---------------------------------|--------------------------------------------|
+| Claude   | `/mcp` (interactive)            | System keychain (macOS)                     |
+| OpenCode | `opencode mcp auth <name>`      | `~/.local/share/opencode/mcp-auth.json`     |
+| Codex    | `codex mcp login <name>`        | `~/.codex/auth.json` or OS keyring          |
 
-## What PKCE Protects Against
+### Flow
 
-PKCE prevents **authorization code interception**: a malicious app on the same machine
-intercepts the redirect callback and steals the authorization code. Without the `code_verifier`
-(which never leaves the original client), the stolen code is useless.
+1. School declares `[[mcp]]` entries with remote URLs (not Docker images) for services that
+   support remote MCP with OAuth.
+2. ACE registers the remote MCP endpoint into the backend via CLI or config file.
+3. The backend detects the server requires auth (HTTP 401) and initiates OAuth discovery.
+4. User authorizes in the browser. Backend stores the token.
+5. On subsequent sessions, the backend injects stored tokens automatically.
 
-PKCE does **not** protect against a full MITM that can intercept both the outgoing authorization
-request and the incoming callback. TLS on all endpoints is assumed.
+### What ACE Does NOT Do
 
-## Flow
+- ACE does not implement PKCE or any OAuth flow itself.
+- ACE does not store service tokens.
+- ACE does not manage token refresh or expiry.
 
-1. ACE generates a random `code_verifier` (high-entropy string).
-2. ACE computes `code_challenge = BASE64URL(SHA256(code_verifier))`.
-3. ACE opens the browser to the service's `authorize_url` with:
-   - `client_id`
-   - `code_challenge`
-   - `code_challenge_method=S256`
-   - `scope` (from `[[services]]` config)
-   - `redirect_uri=http://localhost:{port}/callback`
-   - `state` (random, to prevent CSRF)
-4. ACE starts a temporary HTTP server on localhost to receive the callback.
-5. User authorizes in the browser. Service redirects to the localhost callback with an
-   `authorization_code` and `state`.
-6. ACE verifies `state` matches, then exchanges the `authorization_code` + `code_verifier` at
-   the service's `token_url` for an access token.
-7. ACE stores the token in `~/.config/ace/config.toml` under `<owner/repo>.services.<name>.token`.
-8. Localhost server shuts down.
+### Docker-Based MCP (Non-OAuth)
 
-## When It Runs
-
-Authentication is part of the setup flow, not a standalone command.
-
-- **During setup** — after Install/Update/Link, ACE checks for services declared in `[[services]]`
-  that have no stored token and prompts for each.
-- **Re-setup** — running `ace setup` again re-runs the full flow including auth. This is how users
-  re-authenticate expired tokens.
-- **On template resolution failure** — if `{{ services.<name>.token }}` cannot resolve, ACE offers to
-  re-authenticate. If the user declines, ACE warns and skips the MCP server that needed it.
-
-## Token Storage
-
-Tokens are stored in the user-level config (`~/.config/ace/config.toml`) under the school's
-`owner/repo` key, where `<name>` matches the `[[services]]` entry's `name` field.
-
-```toml
-["acme-corp/school".services.github]
-token = "gho_..."
-
-["acme-corp/school".services.jira]
-token = "eyJ..."
-```
-
-Tokens must never appear in git-committed files (`ace.toml`, `school.toml`). ACE will error and
-refuse to start if it detects token values in committed config. The school declares *which*
-services exist and their OAuth endpoints; the user's machine holds the actual credentials.
+For MCP servers distributed as Docker images (no remote endpoint), authentication is handled
+via environment variables in the `[[mcp]]` entry's `env` field. These values may reference
+user config via `{{ services.<name>.token }}` templates — the user sets the token manually in
+`~/.config/ace/config.toml`.
 
 ## School Repository Authentication
 

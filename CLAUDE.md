@@ -105,6 +105,11 @@ Metrics:
 - Index: `~/.cache/ace/index.toml` — tracks downloaded schools (specifier, repo, path)
 - Git operations use `std::process::Command`, no sqlite or git crate
 
+## Linear
+
+- Project: ACE (team: PRODIGY9, key: PROD9)
+- Always scope Linear queries to `project:"ACE"`
+
 ## Roadmap
 
 See `ROADMAP.md` for the consolidated task list (priority, features, backlog).
