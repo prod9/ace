@@ -59,12 +59,17 @@ impl Prepare<'_> {
         }
         .run(ace)?;
 
-        if result.adopted {
+        if result.skills_adopted {
             ace.done("Moved previous skills to previous-skills/");
         }
-
-        if result.linked {
+        if result.rules_adopted {
+            ace.done("Moved previous rules to previous-rules/");
+        }
+        if result.skills_linked {
             ace.done("Linked skills");
+        }
+        if result.rules_linked {
+            ace.done("Linked rules");
         }
 
         Ok(PrepareResult { changes })

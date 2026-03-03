@@ -7,6 +7,7 @@
       auth entirely to the backend. `authenticate.rs` stub can be removed.
       `ace school propose` remains blocked on GitHub token — consider `gh auth token` or
       remote GitHub MCP OAuth for that.
+- [ ] Investigate adding rules() to school as well (already manually impl in link.rs)
 
 ## Features
 

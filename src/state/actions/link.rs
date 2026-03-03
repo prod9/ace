@@ -4,36 +4,49 @@ use crate::ace::Ace;
 use super::prepare::PrepareError;
 
 const PREVIOUS_SKILLS_DIR: &str = "previous-skills";
+const PREVIOUS_RULES_DIR: &str = "previous-rules";
 
 /// Symlink school skills folder from cache into the project.
 pub struct Link<'a> {
     pub school_root: &'a Path,
     pub project_dir: &'a Path,
-    pub skills_dir: &'a str,
+    pub skills_dir: &'a str, // TODO: This should not be named skills_dir, it's .claude we need to
+                             // .join("skills") again
 }
 
 impl Link<'_> {
     pub fn run(&self, _ace: &mut Ace) -> Result<LinkResult, PrepareError> {
         let school_skills = self.school_root.join("skills");
-        if !school_skills.exists() {
+        let school_rules = self.school_root.join("rules");
+        if !school_skills.exists() && !school_rules.exists() {
             return Ok(LinkResult::default());
         }
 
-        let project_skills = self.project_dir.join(self.skills_dir).join("skills");
-        let previous_skills_dir = self.project_dir.join(self.skills_dir).join(PREVIOUS_SKILLS_DIR);
+        let mut result = LinkResult::default();
+        if school_skills.exists() {
+            let project_skills = self.project_dir.join(self.skills_dir).join("skills");
+            let previous_skills_dir = self.project_dir.join(self.skills_dir).join(PREVIOUS_SKILLS_DIR);
+            result.skills_adopted = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
+            result.skills_linked = ensure_symlink(&project_skills, &school_skills)?;
+        }
 
-        let adopted = adopt_previous_skills(&project_skills, &previous_skills_dir)?;
+        if school_rules.exists() {
+            let project_rules = self.project_dir.join(self.skills_dir).join("rules");
+            let previous_rules_dir = self.project_dir.join(self.skills_dir).join(PREVIOUS_RULES_DIR);
+            result.rules_adopted = adopt_previous_skills(&project_rules, &previous_rules_dir)?;
+            result.rules_linked =  ensure_symlink(&project_rules, &school_rules)?;
+        }
 
-        let linked = ensure_symlink(&project_skills, &school_skills)?;
-
-        Ok(LinkResult { linked, adopted })
+        Ok(result)
     }
 }
 
 #[derive(Debug, Default)]
 pub struct LinkResult {
-    pub linked: bool,
-    pub adopted: bool,
+    pub skills_linked: bool,
+    pub skills_adopted: bool,
+    pub rules_linked: bool,
+    pub rules_adopted: bool,
 }
 
 /// Create or update the folder-level symlink from `link_path` to `target`.
