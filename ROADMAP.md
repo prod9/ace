@@ -17,7 +17,7 @@
       Claude (first): `claude mcp add-json -s project` per entry. CLI handles merging.
       OpenCode/Codex: deferred until those backends ship (requires direct file writes).
       All entries are remote URLs — no Docker/stdio.
-- [ ] **Codex backend** — third Backend variant. See research notes in MEMORY.md.
+- [ ] **Codex backend** — third Backend variant.
       Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
       Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).
       LiteLLM: native via `OPENAI_BASE_URL` or `model_providers` config.
