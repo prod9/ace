@@ -28,7 +28,7 @@
 ## School
 
 - [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills)
-- [ ] Update school CLAUDE.md template: commit messages should be detailed (PR-description level)
+- [x] ~~Update school CLAUDE.md template~~: commit messages as policy memos (see `spec/school/overview.md`)
 
 ## Backlog
 
