@@ -15,6 +15,7 @@ underlying AI coding tool.
 - [school/overview.md](school/overview.md) — School repository structure.
 - [school/school-toml.md](school/school-toml.md) — `school.toml` format reference.
 - [school/school-commands.md](school/school-commands.md) — `ace school` subcommands.
+- [testing.md](testing.md) — Integration test strategy, TestEnv pattern.
 
 ## Philosophy
 

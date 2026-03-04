@@ -71,9 +71,11 @@ Metrics:
 ## Testing
 
 - See `rust-coding` skill for general Rust test conventions
-- Longer integration tests will go in an external `tests/` crate later
-- **Future**: Use Dagger for integration tests — spin up test containers for isolated
-  filesystem/git scenarios instead of temp dirs
+- See `spec/testing.md` for integration test strategy and TestEnv pattern
+- Pure-logic unit tests: `#[cfg(test)]` in `src/` — no filesystem
+- Integration tests (filesystem/git/symlinks): `tests/` directory, using `TestEnv`
+- `tempfile` crate for sandbox isolation — Dagger/testcontainers only if multi-distro
+  or network-dependent testing becomes necessary
 
 ## Spec Compliance
 
