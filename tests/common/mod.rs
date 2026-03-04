@@ -96,6 +96,38 @@ impl TestEnv {
         );
     }
 
+    pub fn assert_not_contains(&self, rel: &str, needle: &str) {
+        let content = self.read_file(rel);
+        assert!(
+            !content.contains(needle),
+            "{rel} should NOT contain {needle:?}, got:\n{content}"
+        );
+    }
+
+    pub fn git_commit(&self, message: &str) {
+        let status = std::process::Command::new("git")
+            .args(["add", "-A"])
+            .env_clear()
+            .env("PATH", std::env::var("PATH").unwrap_or_default())
+            .current_dir(&self.root)
+            .status()
+            .expect("git add");
+        assert!(status.success(), "git add failed");
+
+        let status = std::process::Command::new("git")
+            .args([
+                "-c", "user.email=test@test.com",
+                "-c", "user.name=Test",
+                "commit", "-m", message, "--allow-empty",
+            ])
+            .env_clear()
+            .env("PATH", std::env::var("PATH").unwrap_or_default())
+            .current_dir(&self.root)
+            .status()
+            .expect("git commit");
+        assert!(status.success(), "git commit failed");
+    }
+
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured
     /// with a clean environment and sandbox paths.
     pub fn ace(&self) -> Command {

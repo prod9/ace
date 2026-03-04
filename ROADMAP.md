@@ -30,6 +30,16 @@
 - [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills)
 - [x] ~~Update school CLAUDE.md template~~: commit messages as policy memos (see `spec/school/overview.md`)
 
+## Testing
+
+- [ ] **Network-dependent tests** — find a strategy to enable integration tests that require
+      networking (e.g. `ace setup owner/repo`, `ace import`, `ace school update` which clone
+      from GitHub). Options: conditional `#[ignore]` with CI-only flag, mock git server,
+      pre-seeded fixture repos, or record/replay HTTP layer.
+- [ ] **DRY up test code** — extract common patterns from integration tests (e.g. "setup
+      embedded school" fixture, repeated school.toml + skills/ boilerplate) into TestEnv
+      builder methods or shared helpers.
+
 ## Backlog
 
 - [ ] Setup modes discussion — see `spec/` notes

@@ -71,10 +71,13 @@ Metrics:
 
 ## Testing
 
+- Run all tests: `cargo test`
+- Run one test file: `cargo test --test setup_test`
 - See `rust-coding` skill for general Rust test conventions
 - See `spec/testing.md` for integration test strategy and TestEnv pattern
 - Pure-logic unit tests: `#[cfg(test)]` in `src/` — no filesystem
 - Integration tests (filesystem/git/symlinks): `tests/` directory, using `TestEnv`
+- Each integration test file covers one CLI command (`setup_test`, `fmt_test`, etc.)
 - `tempfile` crate for sandbox isolation — Dagger/testcontainers only if multi-distro
   or network-dependent testing becomes necessary
 

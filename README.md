@@ -66,6 +66,17 @@ AI backend handles proposing changes back — branch, commit, push, create PR vi
 - `~/.config/ace/config.toml` — user-level config (credentials)
 - `school.toml` — school metadata (name, MCP servers, projects)
 
+## Development
+
+```sh
+cargo test              # unit tests + integration tests (no network required)
+cargo test --test setup_test  # run a single test file
+```
+
+Integration tests live in `tests/` and use `TestEnv` (tempdir sandbox + `assert_cmd`). Each
+test file covers one CLI command. Tests that require network (clone) are not yet supported —
+see ROADMAP.
+
 ## Cross-build
 
 Builds for linux/mac × arm64/amd64. Host-native target uses `cargo`, everything else uses

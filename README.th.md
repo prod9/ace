@@ -53,6 +53,16 @@ ACE จัดการ **schools** — repository ที่แชร์ร่ว
 - `~/.config/ace/config.toml` — config ระดับผู้ใช้ (credentials)
 - `school.toml` — ข้อมูล school (ชื่อ, MCP servers, projects)
 
+## Development
+
+```sh
+cargo test              # unit tests + integration tests (ไม่ต้องใช้ network)
+cargo test --test setup_test  # รันไฟล์ test เดียว
+```
+
+Integration tests อยู่ใน `tests/` ใช้ `TestEnv` (tempdir sandbox + `assert_cmd`) แต่ละไฟล์
+ทดสอบ CLI command เดียว Tests ที่ต้องใช้ network (clone) ยังไม่รองรับ — ดู ROADMAP
+
 ## Cross-build
 
 Build สำหรับ linux/mac × arm64/amd64 โดย target ของเครื่องใช้ `cargo` ส่วน target อื่นใช้
