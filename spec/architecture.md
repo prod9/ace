@@ -57,8 +57,8 @@ Commands declare what they need by calling `require_*` methods on the existing i
 
 Commands fall into three tiers:
 
-1. **No state** — `setup`, `auth`, `fmt`, `school init`. Ace is purely an output sink.
-2. **Partial state** — `paths`, `diff`, `propose`, `import`, `update`. Call `require_state()`
+1. **No state** — `setup`, `fmt`, `school init`. Ace is purely an output sink.
+2. **Partial state** — `paths`, `diff`, `import`, `update`. Call `require_state()`
    or `require_school()` for what they need.
 3. **Full orchestration** — bare `ace` (no subcommand). Runs Prepare, loads school.toml,
    builds session prompt, execs backend.
