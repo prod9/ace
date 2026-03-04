@@ -42,6 +42,19 @@ Sandboxed filesystem root backed by `tempfile::TempDir`. RAII cleanup on drop.
 | `assert_not_exists(rel)`               | Assert path does not exist                                                       |
 | `assert_symlink(link, expected_target)` | Assert symlink points to expected target                                         |
 | `assert_contains(rel, needle)`         | Assert file contains string                                                      |
+| `ace()` → `assert_cmd::Command`       | Pre-configured command for running the `ace` binary in the sandbox               |
+
+### Binary Runner
+
+Integration tests run the compiled `ace` binary via `assert_cmd`. The `ace()` helper returns
+a `Command` with:
+
+- `env_clear()` — no leaking of host environment
+- `HOME` set to sandbox root
+- `XDG_CONFIG_HOME` / `XDG_CACHE_HOME` set to sandbox subdirs
+- `current_dir` set to sandbox root
+
+This ensures tests never touch real user config, cache, or project files.
 
 ### Escape Prevention
 
