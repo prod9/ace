@@ -56,3 +56,13 @@ projects see identical skill versions from a single local clone.
 
 A user can have multiple schools configured (e.g. `acme`, `personal`), each pointing to a
 different source repository.
+
+## Commit Messages
+
+A school repo is not application code — it is **policy**. Every commit changes how an entire
+team writes code. School changes propagate to every developer on the team, so commits must
+carry enough context for someone reading `git log` months later to understand the decision
+without asking around. A diff alone doesn't convey intent — the commit body is the
+institutional memory.
+
+Format and examples are in `src/templates/tpl_school_claude_md.md`.
