@@ -65,8 +65,9 @@ Metrics:
 ## Action Pattern
 
 - Actions follow the unit-of-work pattern (see `general-coding` skill)
-- ACE-specific: `run(&self, session: &mut Session)`, all actions in `state/actions/`
-- Session bundles `&mut State` — passed to every action
+- ACE-specific: `run(&self, ace: &mut Ace)`, all actions in `state/actions/`
+- `Ace` is the session/context object — it carries state, output sink, and lazy-loaded
+  resources. Actions receive it as the single context parameter.
 
 ## Testing
 
