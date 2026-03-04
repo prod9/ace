@@ -26,6 +26,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         specifier: &specifier,
         project_dir: &project_dir,
         skills_dir: preliminary_backend.skills_dir(),
+        backend: preliminary_backend,
     })
     .run(ace)
     .await?;

@@ -7,7 +7,8 @@
       auth entirely to the backend. `authenticate.rs` stub can be removed.
       `ace school propose` remains blocked on GitHub token — consider `gh auth token` or
       remote GitHub MCP OAuth for that.
-- [ ] Investigate adding rules() to school as well (already manually impl in link.rs)
+- [x] ~~Investigate adding rules() to school~~ — generalized to link all 4 school folders
+      (skills, rules, commands, agents) with backend compatibility warnings
 
 ## Features
 
@@ -37,4 +38,5 @@
 - [ ] Cross-build script (`cargo` native, `cross` for cross-platform)
 - [ ] Release workflow — blocked on [github-mcp-server#1012](https://github.com/github/github-mcp-server/issues/1012)
 - [ ] Self-update — transparent auto-update for the ace binary
+- [ ] `ace switch` — switch between backends (re-link folders, regenerate instructions file)
 - [ ] Skill diff tool — compare skill versions after update

@@ -136,6 +136,21 @@ If the backend is installed but not initialized, ACE should **prompt the user** 
 backend's login/init flow (e.g. `claude login`) rather than launching into a session that will
 immediately fail.
 
+## Linked Folders
+
+ACE links school folders (`skills/`, `rules/`, `commands/`, `agents/`) into the project's
+backend directory. Not all backends natively support every folder:
+
+| Folder     | Claude | OpenCode | Codex |
+|------------|--------|----------|-------|
+| `skills/`  | ✓      | ✓        | ✓     |
+| `rules/`   | ✓      | ✗        | ✗     |
+| `commands/`| ✓      | ✓        | ✗     |
+| `agents/`  | ✓      | ✓        | ✗     |
+
+ACE links all folders regardless and warns for unsupported combos (linked for future
+compatibility).
+
 ## Session Prompt
 
 All backends receive the session prompt via `--system-prompt` CLI flag.

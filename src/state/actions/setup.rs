@@ -46,6 +46,7 @@ impl Setup<'_> {
             specifier: self.specifier,
             project_dir: self.project_dir,
             skills_dir: backend.skills_dir(),
+            backend,
         }
         .run(ace)
         .await?;

@@ -1,6 +1,35 @@
-# Skills Sync
+# School Folder Sync
 
-Covers lifecycle steps 6–7: fetching the school and syncing skills into the project.
+Covers lifecycle steps 6–7: fetching the school and syncing school folders into the project.
+
+## Linkable Folders
+
+ACE links four folder types from the school into the project:
+
+| Folder     | Purpose                                    |
+|------------|--------------------------------------------|
+| `skills/`  | Skill definitions (SKILL.md per skill)     |
+| `rules/`   | Convention/rule files                      |
+| `commands/`| Slash commands for the backend             |
+| `agents/`  | Agent configurations                       |
+
+All four use the same symlink + adoption pattern. Only folders that exist in the school are
+linked — absent folders are silently skipped.
+
+### Backend support matrix
+
+Not all backends natively support every folder. ACE links regardless and warns for unsupported
+combos:
+
+| Folder     | Claude | OpenCode | Codex |
+|------------|--------|----------|-------|
+| `skills/`  | ✓      | ✓        | ✓     |
+| `rules/`   | ✓      | ✗        | ✗     |
+| `commands/`| ✓      | ✓        | ✗     |
+| `agents/`  | ✓      | ✓        | ✗     |
+
+Linking still happens for unsupported combos — the warning is informational only (linked for
+future compatibility).
 
 ## Fetch and Sync
 
@@ -8,7 +37,7 @@ On every run:
 
 1. `git fetch` the school
 2. Compare local HEAD SHA against remote HEAD SHA
-3. If changed, `git pull` and symlink skills/conventions into the project
+3. If changed, `git pull` and symlink school folders into the project
 4. If unchanged, skip — cached state is current
 
 Always sync. No user prompt, no opt-out. Consistency across the team is more important than
@@ -26,23 +55,26 @@ Sync into projects using symlinks, not file copies. Multiple projects sharing th
 (e.g. frontend and backend repos in the same org) all point to the same local clone. This avoids
 redundant data and ensures all projects see the same skill versions immediately after a pull.
 
-**One folder-level symlink**, not per-skill symlinks. The project's `skills/` directory is a
-single symlink pointing to the school cache's `skills/` directory:
+**One folder-level symlink per folder**, not per-entry symlinks. Each project folder is a
+single symlink pointing to the school cache's corresponding directory:
 
 ```
-project/.claude/skills/ → ~/.cache/ace/repos/{school}/skills/
+project/.claude/skills/   → ~/.cache/ace/repos/{school}/skills/
+project/.claude/rules/    → ~/.cache/ace/repos/{school}/rules/
+project/.claude/commands/ → ~/.cache/ace/repos/{school}/commands/
+project/.claude/agents/   → ~/.cache/ace/repos/{school}/agents/
 ```
 
-No per-skill linking, no local overrides. Everyone on the same school works against the same
-set of skills. To change a skill, edit through symlinks and propose changes back to the school.
+No per-entry linking, no local overrides. Everyone on the same school works against the same
+set of files. To change a skill, edit through symlinks and propose changes back to the school.
 
 ### First-time adoption
 
-When a project has an existing real skills directory (pre-ACE or hand-written), ACE renames the
-entire directory to `previous-skills/` before creating the folder symlink. This is a single
-bulk rename, not per-skill — the whole folder is the management unit. This is a one-time
-migration to allow bringing existing skills into the school. After adoption, the symlink takes over and
-`previous-skills/` remains as a prompt for the user to consolidate them into the school.
+When a project has an existing real directory for any of the four folders (pre-ACE or
+hand-written), ACE renames it to `previous-{name}/` before creating the symlink. This is a
+single bulk rename — the whole folder is the management unit. This is a one-time migration to
+allow bringing existing content into the school. After adoption, the symlink takes over and
+`previous-{name}/` remains as a prompt for the user to consolidate them into the school.
 The session prompt nudges the LLM to help merge `previous-skills/` into the school's skills
 folder and propose the changes upstream.
 

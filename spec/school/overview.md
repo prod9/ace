@@ -38,7 +38,15 @@ school.toml              # School metadata and configuration (see 01-school-toml
 skills/
   <name>/
     SKILL.md             # Skill definition (standard Claude/OpenCode skill format)
+rules/
+  <name>.md              # Convention/rule files
+commands/
+  <name>.md              # Slash commands for the backend
+agents/
+  <name>.md              # Agent configurations
 ```
+
+All four folders are optional. Only folders present in the school are linked into projects.
 
 ## Relationship to Projects
 

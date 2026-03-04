@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
+use crate::config::backend::Backend;
 use crate::config::index_toml;
 use crate::config::school_paths;
 use crate::config::ConfigError;
@@ -24,11 +25,25 @@ pub struct Prepare<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
     pub skills_dir: &'a str,
+    pub backend: Backend,
 }
 
 #[derive(Debug, Default)]
 pub struct PrepareResult {
     pub changes: Vec<SkillChange>,
+}
+
+// Backend support matrix — which folders each backend natively supports.
+//   claude:   skills ✓  rules ✓  commands ✓  agents ✓
+//   opencode: skills ✓  rules ✗  commands ✓  agents ✓
+//   codex:    skills ✓  rules ✗  commands ✗  agents ✗
+fn is_supported(backend: Backend, folder: &str) -> bool {
+    match (backend, folder) {
+        (_, "skills") => true,
+        (Backend::Claude, _) => true,
+        (Backend::OpenCode, "commands" | "agents") => true,
+        _ => false,
+    }
 }
 
 impl Prepare<'_> {
@@ -59,17 +74,21 @@ impl Prepare<'_> {
         }
         .run(ace)?;
 
-        if result.skills_adopted {
-            ace.done("Moved previous skills to previous-skills/");
-        }
-        if result.rules_adopted {
-            ace.done("Moved previous rules to previous-rules/");
-        }
-        if result.skills_linked {
-            ace.done("Linked skills");
-        }
-        if result.rules_linked {
-            ace.done("Linked rules");
+        for folder in &result.folders {
+            if folder.adopted {
+                ace.done(&format!("Moved previous {0} to previous-{0}/", folder.name));
+            }
+            if folder.linked {
+                if is_supported(self.backend, folder.name) {
+                    ace.done(&format!("Linked {}", folder.name));
+                } else {
+                    ace.warn(&format!(
+                        "Linked {0}/ — not natively supported by {1} (linked for future compatibility)",
+                        folder.name,
+                        self.backend.binary(),
+                    ));
+                }
+            }
         }
 
         Ok(PrepareResult { changes })

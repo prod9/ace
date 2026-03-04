@@ -75,7 +75,7 @@ full details on specifiers, structure, and relationship to projects.
 3. **Parse and merge** — layer configs together
 4. **Authenticate** — validate tokens for the active school
 5. **Fetch school** — `git fetch` the school's repo (clone on first run)
-7. **Sync skills/conventions** — pull latest and sync all skills from the school into the project
+7. **Sync school folders** — pull latest and link school folders (skills, rules, commands, agents) into the project
 9. **Check tooling** — required CLI tools, language runtimes, etc.
 10. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
 11. **Select backend** — Claude Code or OpenCode
