@@ -37,11 +37,12 @@ runs.
 
 1. **Is school cached?** (check `index.toml` for matching specifier)
    - **No** → **Install**: `git clone --depth 1` into `~/.cache/ace/repos/<owner>/<repo>/`, write
-     `index.toml` entry, parse `school.toml`, authenticate services, write user config.
+     `index.toml` entry, parse `school.toml`, register MCP servers, write user config.
    - **Yes** → **Update**: `git pull` on the cached repo.
-2. **Link**: symlink each skill directory from `<cache>/skills/<name>/` into
-   `<project>/.claude/skills/<name>/`. Skips matching symlinks, replaces stale symlinks, never
-   clobbers real directories.
+2. **Link**: symlink school folders (`skills/`, `rules/`, `commands/`, `agents/`) from
+   `<cache>/<folder>/` into `<project>/<skills_dir>/<folder>/`. One symlink per folder. Skips
+   folders absent from the school. Preserves existing real directories by renaming them to
+   `previous-<folder>/` before creating the symlink (first-time adoption).
 
 ## Normal `ace` Run
 
@@ -58,9 +59,9 @@ When the user runs `ace` (no subcommand) in a project that already has `ace.toml
 |-----------|---------------------------------------------------------|--------------------------|
 | Setup     | Guard checks, write `ace.toml`, call Prepare            | `ace setup <spec>`       |
 | Prepare   | Orchestrate Install/Update + Link                       | Setup and normal `ace`   |
-| Install   | `git clone`, index, auth, user config                   | School not in cache      |
+| Install   | `git clone`, index, register MCP, user config            | School not in cache      |
 | Update    | `git pull --ff-only` on cached repo                     | School already cached    |
-| Link      | Symlink skills from cache into project                  | Always (after install/update) |
+| Link      | Symlink school folders from cache into project          | Always (after install/update) |
 
 ## Error Cases
 
@@ -68,5 +69,5 @@ When the user runs `ace` (no subcommand) in a project that already has `ace.toml
 - **Already set up** — hard error, use `ace` to run.
 - **No network** — Install/Update fail with clear message.
 - **Invalid school** — fail if not git-cloneable or `school.toml` missing/invalid.
-- **Auth failure** — warn per service, continue. User can re-auth with `ace auth <name>`.
+- **MCP registration failure** — warn per server, continue. Backend handles auth on first use.
 - **No cached schools (no-arg setup)** — error, suggest `ace setup <owner/repo>`.

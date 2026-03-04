@@ -4,11 +4,11 @@
 
 Three supported backends:
 
-| Value      | Binary     | Skills Dir  | Instructions File | MCP Config           |
-|------------|------------|-------------|-------------------|----------------------|
-| `claude`   | `claude`   | `.claude`   | `CLAUDE.md`       | `.mcp.json` (JSON)   |
+| Value      | Binary     | Skills Dir  | Instructions File | MCP Config              |
+|------------|------------|-------------|-------------------|-------------------------|
+| `claude`   | `claude`   | `.claude`   | `CLAUDE.md`       | `.mcp.json` (JSON)      |
 | `opencode` | `opencode` | `.opencode` | `AGENTS.md`       | `opencode.json` (JSONC) |
-| `codex`    | `codex`    | `.agents`   | `AGENTS.md`       | `.codex/config.toml` (TOML) |
+| `codex`    | `codex`    | `.agents`   | `AGENTS.md`       | `.codex/config.toml`    |
 
 ## TOML Syntax
 
@@ -37,54 +37,26 @@ Fallback if no layer specifies backend: `claude`.
 
 ## MCP Server Registration
 
-ACE registers `[[mcp]]` entries from `school.toml` into the active backend. Two modes:
-
-### Remote MCP (Preferred)
-
-For services with remote MCP endpoints (GitHub, Linear, etc.), the school declares a URL.
-The backend handles OAuth discovery, token acquisition, and storage — ACE just registers the
-endpoint.
-
-```toml
-[[mcp]]
-name = "linear"
-url = "https://mcp.linear.app/sse"
-```
-
-### Docker MCP (Fallback)
-
-For services without remote MCP endpoints, `image` field constructs a `docker run -i --rm`
-command. Env entries become `-e KEY=VALUE` flags. Template values resolve from user config.
-
-```toml
-[[mcp]]
-name = "jira"
-image = "ghcr.io/acme-corp/mcp-jira:latest"
-env = { JIRA_URL = "https://acme.atlassian.net", JIRA_TOKEN = "{{ services.jira.token }}" }
-```
-
-ACE resolves templates, builds the docker command, and delegates to the backend's own mechanism
-to register the server.
+ACE registers `[[mcp]]` entries from `school.toml` into the active backend. All entries are
+remote MCP endpoints — see [mcp.md](mcp.md) for the remote-only design rationale.
 
 ### Strategy: CLI-First
 
 Prefer invoking the backend's CLI to add MCP servers. Only fall back to writing config files
 when the CLI lacks non-interactive or project-scoped support.
 
-| Backend  | Method | Reason |
-|----------|--------|--------|
-| Claude   | `claude mcp add-json -s project <name> '<json>'` | Non-interactive, project-scoped, handles merging |
-| OpenCode | Write `opencode.json` directly | No non-interactive CLI for adding servers |
-| Codex    | Write `.codex/config.toml` directly | CLI only writes user-scope, no `--scope` flag |
+| Backend  | Method                                              | Reason                                                   |
+|----------|-----------------------------------------------------|----------------------------------------------------------|
+| Claude   | `claude mcp add-json -s project <name> '<json>'`    | Non-interactive, project-scoped, handles merging         |
+| OpenCode | Write `opencode.json` directly                      | No non-interactive CLI for adding servers                |
+| Codex    | Write `.codex/config.toml` directly                 | CLI only writes user-scope, no `--scope` flag            |
 
 **Claude example** — ACE runs:
 
 ```sh
-claude mcp add-json -s project jira '{
-  "type": "stdio",
-  "command": "docker",
-  "args": ["run", "-i", "--rm", "-e", "JIRA_URL=https://acme.atlassian.net",
-           "-e", "JIRA_TOKEN=gho_...", "ghcr.io/acme-corp/mcp-jira:latest"]
+claude mcp add-json -s project linear '{
+  "type": "url",
+  "url": "https://mcp.linear.app/sse"
 }'
 ```
 
@@ -101,19 +73,6 @@ backends are fully implemented.
 2. **OpenCode / Codex** — implement when those backends ship. Requires JSON/TOML
    serialization and merge logic.
 
-### Per-Backend Config Formats (Reference)
-
-For backends that require direct file writes:
-
-| Field   | Claude                          | OpenCode                        | Codex                           |
-|---------|---------------------------------|---------------------------------|---------------------------------|
-| command | `"command": "x", "args": [...]` | `"command": ["x", ...]`         | `command = "x"`, `args = [...]` |
-| env     | `"env": { ... }`                | `"environment": { ... }`        | `[mcp_servers.name.env]`        |
-| type    | `"type": "stdio"`               | `"type": "local"`               | (implicit stdio)                |
-
-Note: `env`/`environment` fields set host-process env vars, not container env. Container env
-must be passed via `-e` flags in args. ACE always uses `-e` flags for `[[mcp]]` env entries.
-
 ## Backend Readiness Check
 
 Before exec, ACE should verify the backend is **ready to use** — not just installed. A backend
@@ -121,11 +80,11 @@ binary may exist on `$PATH` but the user may never have logged in or completed f
 
 Detection heuristic (per backend):
 
-| Backend  | Check | Rationale |
-|----------|-------|-----------|
-| Claude   | `~/.claude.json` exists with auth data | Created on first successful login |
-| OpenCode | `~/.local/share/opencode/auth.json` exists and is non-empty | Stores provider auth tokens; missing/empty `{}` = no providers authenticated |
-| Codex    | `~/.codex/auth.json` exists, **or** `OPENAI_API_KEY`/`CODEX_API_KEY` env var set | Created on first login; env vars bypass file entirely |
+| Backend  | Check                                                                             | Rationale                                                                        |
+|----------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| Claude   | `~/.claude.json` exists with auth data                                            | Created on first successful login                                                |
+| OpenCode | `~/.local/share/opencode/auth.json` exists and is non-empty                       | Stores provider auth tokens; missing/empty `{}` = no providers authenticated     |
+| Codex    | `~/.codex/auth.json` exists, **or** `OPENAI_API_KEY`/`CODEX_API_KEY` env var set  | Created on first login; env vars bypass file entirely                            |
 
 Notes:
 - OpenCode: `OPENCODE_HOME` overrides `~/.local/share/opencode`. The DB file (`opencode.db`)
@@ -141,12 +100,12 @@ immediately fail.
 ACE links school folders (`skills/`, `rules/`, `commands/`, `agents/`) into the project's
 backend directory. Not all backends natively support every folder:
 
-| Folder     | Claude | OpenCode | Codex |
-|------------|--------|----------|-------|
-| `skills/`  | ✓      | ✓        | ✓     |
-| `rules/`   | ✓      | ✗        | ✗     |
-| `commands/`| ✓      | ✓        | ✗     |
-| `agents/`  | ✓      | ✓        | ✗     |
+| Folder      | Claude | OpenCode | Codex |
+|-------------|--------|----------|-------|
+| `skills/`   | ✓      | ✓        | ✓     |
+| `rules/`    | ✓      | ✗        | ✗     |
+| `commands/` | ✓      | ✓        | ✗     |
+| `agents/`   | ✓      | ✓        | ✗     |
 
 ACE links all folders regardless and warns for unsupported combos (linked for future
 compatibility).

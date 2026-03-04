@@ -1,40 +1,18 @@
 # Authentication
 
-## Service Authentication (MCP OAuth)
+## MCP Server Authentication
 
-ACE delegates service authentication entirely to the backend. All three supported backends
-(Claude Code, OpenCode, Codex) support remote MCP servers with OAuth 2.0 discovery — the
-backend handles token acquisition, storage, and refresh.
+ACE delegates MCP authentication entirely to the backend. All three supported backends
+(Claude Code, OpenCode, Codex) handle OAuth discovery, token acquisition, storage, and refresh
+for remote MCP servers. See [mcp.md](mcp.md) for full details on the remote-only MCP design.
 
-### Backend OAuth Support
+| Backend  | Auth behavior                              | Token storage                             |
+|----------|--------------------------------------------|-------------------------------------------|
+| Claude   | Auto-prompts on 401                        | System keychain                           |
+| OpenCode | Auto-prompts on 401                        | `~/.local/share/opencode/mcp-auth.json`   |
+| Codex    | Requires explicit `codex mcp login <name>` | `~/.codex/auth.json` or OS keyring        |
 
-| Backend  | Auth Command                    | Token Storage                              |
-|----------|---------------------------------|--------------------------------------------|
-| Claude   | `/mcp` (interactive)            | System keychain (macOS)                     |
-| OpenCode | `opencode mcp auth <name>`      | `~/.local/share/opencode/mcp-auth.json`     |
-| Codex    | `codex mcp login <name>`        | `~/.codex/auth.json` or OS keyring          |
-
-### Flow
-
-1. School declares `[[mcp]]` entries with remote URLs (not Docker images) for services that
-   support remote MCP with OAuth.
-2. ACE registers the remote MCP endpoint into the backend via CLI or config file.
-3. The backend detects the server requires auth (HTTP 401) and initiates OAuth discovery.
-4. User authorizes in the browser. Backend stores the token.
-5. On subsequent sessions, the backend injects stored tokens automatically.
-
-### What ACE Does NOT Do
-
-- ACE does not implement PKCE or any OAuth flow itself.
-- ACE does not store service tokens.
-- ACE does not manage token refresh or expiry.
-
-### Docker-Based MCP (Non-OAuth)
-
-For MCP servers distributed as Docker images (no remote endpoint), authentication is handled
-via environment variables in the `[[mcp]]` entry's `env` field. These values may reference
-user config via `{{ services.<name>.token }}` templates — the user sets the token manually in
-`~/.config/ace/config.toml`.
+ACE does not implement OAuth, store tokens, or manage token refresh.
 
 ## School Repository Authentication
 

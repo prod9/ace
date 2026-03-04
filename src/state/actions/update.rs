@@ -51,7 +51,7 @@ impl Update<'_> {
         let git = ace.git(cache);
         if git.is_dirty().map_err(|e| PrepareError::Clone(e.to_string()))? {
             ace.warn(&format!("school has local changes at {}", cache.display()));
-            ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
+            ace.hint("Propose changes back to the school repo, or resolve manually.");
             return Ok(UpdateResult::default());
         }
 
@@ -71,13 +71,13 @@ impl Update<'_> {
             .map_err(|e| PrepareError::Clone(e.to_string()))?
         {
             ace.warn(&format!("school has local commits at {}", cache.display()));
-            ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
+            ace.hint("Propose changes back to the school repo, or resolve manually.");
             return Ok(UpdateResult::default());
         }
 
         if let Err(_) = git.merge_ff_only("origin/main") {
             ace.warn("school has diverged from origin/main");
-            ace.hint("Run `ace school propose` to submit upstream, or resolve manually.");
+            ace.hint("Propose changes back to the school repo, or resolve manually.");
             return Ok(UpdateResult::default());
         }
 

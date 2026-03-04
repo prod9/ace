@@ -33,19 +33,18 @@ Prerequisites: create and clone a git repo first (e.g. `gh repo create org/schoo
 ## Update and Edit Safety
 
 The school cache is a live working copy. Users may have uncommitted edits (skills modified
-through symlinks). The **Update** action must check for dirty state before resetting:
+through symlinks). The **Update** action must check for dirty state before pulling:
 
 1. `git status --porcelain` — if dirty, warn and abort. Tell user to propose changes when
    ready.
 2. `git fetch origin`
-3. Fast-forward to `origin/main` (or hard reset only when the cache is confirmed clean).
+3. Fast-forward to `origin/main` (only when the cache is confirmed clean).
 
 The dirty guard in step 1 ensures user edits are never silently discarded.
 
 ## Skill Modification Workflow
 
-When ACE execs into Claude Code or OpenCode (lifecycle step 12), it injects a session prompt
-that:
+When ACE execs into the backend (lifecycle step 13), it injects a session prompt that:
 
 1. Tells the AI that skills are loaded from the linked school and are editable.
 2. Instructs it to propose changes back to the school repo when skills are modified.
@@ -102,40 +101,6 @@ Re-fetch all imported skills from their sources.
 
 - Only updates skills listed in `[[imports]]` — does not discover or import new skills.
 - If a skill is no longer found in the source repo, prints a warning and skips it.
-
-## `ace school add-service`
-
-Add an OAuth service declaration to `school.toml`. Services define external providers that
-developers need credentials for — ACE uses them to acquire tokens via PKCE and template them
-into MCP server env vars (see [authentication.md](../authentication.md)).
-
-### Flags
-
-All optional. If any required field is missing, falls back to interactive TUI prompts.
-
-- `--name` — Service identifier (e.g. `github`, `jira`). Referenced as `{{ services.<name>.token }}`.
-- `--authorize-url` — OAuth authorization endpoint.
-- `--token-url` — OAuth token exchange endpoint.
-- `--client-id` — OAuth app client ID.
-- `--scopes` — Comma-separated list of OAuth scopes.
-
-### Flow
-
-1. Resolve school root (school repo context or linked school cache).
-2. Load `school.toml`.
-3. Check for duplicate — error if a service with the same name already exists.
-4. Append `[[services]]` entry to `school.toml` and save.
-
-### Example
-
-```
-ace school add-service \
-  --name github \
-  --authorize-url https://github.com/login/oauth/authorize \
-  --token-url https://github.com/login/oauth/access_token \
-  --client-id Iv1.abc123 \
-  --scopes repo,read:org
-```
 
 ## `ace diff`
 

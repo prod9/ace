@@ -1,6 +1,6 @@
 # ACE Overview
 
-ACE (AI Coding Environment) is a CLI gateway into Claude Code or OpenCode. It ensures the
+ACE (AI Coding Environment) is a CLI gateway into Claude Code, OpenCode, or Codex. It ensures the
 development environment is properly configured and up-to-date before handing off to the
 underlying AI coding tool.
 
@@ -10,8 +10,10 @@ underlying AI coding tool.
 - [configuration.md](configuration.md) — Config file locations, layering, format.
 - [architecture.md](architecture.md) — Layers, data flow, dependency direction.
 - [setup.md](setup.md) — `ace setup` first-run flow.
-- [skills-sync.md](skills-sync.md) — Skill installation and sync.
-- [authentication.md](authentication.md) — OAuth PKCE flow for services.
+- [skills-sync.md](skills-sync.md) — School folder sync (skills, rules, commands, agents).
+- [prompt-templating.md](prompt-templating.md) — Session prompt composition and template rendering.
+- [mcp.md](mcp.md) — MCP server design (remote-only, OAuth delegation).
+- [authentication.md](authentication.md) — Authentication (MCP OAuth, school repo access).
 - [school/overview.md](school/overview.md) — School repository structure.
 - [school/school-toml.md](school/school-toml.md) — `school.toml` format reference.
 - [school/school-commands.md](school/school-commands.md) — `ace school` subcommands.
@@ -33,34 +35,25 @@ Get the user into coding as fast as possible. Never block on operations that can
 
 ## Versioning Philosophy
 
-Skills are versioned in their own repository (the school), but projects never pin to a specific
-version — they always track latest main.
+Skills always track latest main — projects never pin to a specific version.
 
-Traditional dependency management assumes a dumb consumer that breaks on any interface change, so
-it locks versions to prevent compatibility problems. But an LLM is not a dumb consumer. It reads
-the skill, understands what changed, and adapts. When a skill update causes a regression, the LLM
-can fix it. This fundamentally changes the cost calculus: always-latest is cheap because the
-consumer is intelligent; version-pinning is expensive and provides no real guarantee — even with
-identical specs on the same model, LLM outputs are non-deterministic. The same prompt produces
-different code on different runs. Pinning skill versions cannot make a non-reproducible execution
-engine reproducible.
+Version-pinning assumes a dumb consumer that breaks on interface changes. An LLM reads the skill,
+adapts, and can fix regressions itself. The execution engine is non-deterministic at every level:
+same prompt + same model produces different code on different runs, model versions change
+underneath you, and prompts evolve independently of code. Pinning skill versions cannot make a
+non-reproducible pipeline reproducible.
 
-A school evolves on its own timeline, independently of the projects that consume it. Skills and
-their companion tools should be written to work across as many project versions as possible — a
-skill can be deployed into any project at any point in its history, so targeting a specific version
-makes no sense. When compatibility issues do arise, the LLM understands both the tool and the
-project code, and can resolve the incompatibility itself.
+Schools evolve independently of projects. Skills should work across as many project versions as
+possible — deploying into any project at any point in its history. When compatibility issues arise,
+the LLM understands both the skill and the project code, and resolves the gap itself.
 
-Skills that ship companion scripts or binaries make version-pinning especially harmful. Once
-committed into a project's git history, the tool version is locked to that commit. Updating the
-skill means the new tool runs against old code; checking out old code forces the old tool. The
-version matrix is unwinnable. Keeping skills outside the project repo as symlinks to an
-always-latest cache sidesteps this entirely.
+Skills that ship companion scripts or binaries make version-pinning especially harmful — new
+prompts against old code, old tools against new code, new models interpreting old prompts
+differently. The combinatorial matrix is unwinnable. Symlinks to an always-latest cache sidestep
+this entirely.
 
-Bundling a versioned suite of context into the project (à la Tessel) is a non-goal. The skills
-folder optimizes for the LLM to work with, not for reproducible builds. What matters is capturing
-intent and preferences, not locking versions. This is a deliberate departure from traditional
-package management — we are not replicating lockfile-and-pin paradigms in the LLM era.
+This is a deliberate departure from lockfile-and-pin paradigms. The skills folder captures intent
+and preferences, not reproducible builds.
 
 ## School
 
@@ -73,11 +66,11 @@ full details on specifiers, structure, and relationship to projects.
 1. **Discover config files** — find user-global, project-local, project-committed
 2. **Setup check** — if no config found, error and tell the user to run `ace setup` (see [setup.md](setup.md))
 3. **Parse and merge** — layer configs together
-4. **Authenticate** — validate tokens for the active school
+4. **Register MCP servers** — register `[[mcp]]` entries into the backend
 5. **Fetch school** — `git fetch` the school's repo (clone on first run)
 7. **Sync school folders** — pull latest and link school folders (skills, rules, commands, agents) into the project
 9. **Check tooling** — required CLI tools, language runtimes, etc.
 10. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
-11. **Select backend** — Claude Code or OpenCode
+11. **Select backend** — Claude Code, OpenCode, or Codex
 12. **Inject prompt** — prepend system context about skills and school workflow
 13. **Exec** — replace process with the chosen tool

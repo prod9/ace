@@ -1,7 +1,7 @@
 # school.toml
 
 The `school.toml` file lives at the root of a school repository. It declares metadata,
-configuration, MCP tools, environment, and project catalog for the school.
+configuration, MCP servers, environment, and project catalog for the school.
 
 ## Example
 
@@ -12,31 +12,18 @@ name = "Acme Corp"
 NODE_VERSION = "22"
 PYTHON_VERSION = "3.12"
 LITELLM_BASE_URL = "https://llm.acme.corp/v1"
-DOCKER_REGISTRY = "registry.acme.corp"
 
-[[services]]
+[[mcp]]
 name = "github"
-authorize_url = "https://github.com/login/oauth/authorize"
-token_url = "https://github.com/login/oauth/access_token"
-client_id = "Iv1.abc123"
-scopes = ["repo", "read:org"]
-
-[[services]]
-name = "jira"
-authorize_url = "https://auth.atlassian.com/authorize"
-token_url = "https://auth.atlassian.com/oauth/token"
-client_id = "xyz789"
-scopes = ["read:jira-work", "write:jira-work"]
+url = "https://api.githubcopilot.com/mcp/"
 
 [[mcp]]
 name = "jira"
-image = "ghcr.io/acme-corp/mcp-jira:latest"
-env = { JIRA_URL = "https://acme.atlassian.net", JIRA_TOKEN = "{{ services.jira.token }}" }
+url = "https://mcp.atlassian.com/v1/sse"
 
 [[mcp]]
-name = "db"
-image = "ghcr.io/acme-corp/mcp-db:latest"
-env = { DB_HOST = "localhost" }
+name = "sentry"
+url = "https://mcp.sentry.dev/sse"
 
 [[projects]]
 name = "backend"
@@ -45,11 +32,6 @@ description = "Go API server. Handles auth, billing, and core business logic."
 
 [projects.env]
 SERVICE_NAME = "backend"
-
-[[projects.mcp]]
-name = "migrations"
-image = "ghcr.io/acme-corp/mcp-migrations:latest"
-env = { DB_TOKEN = "{{ services.db.token }}" }
 
 [[projects]]
 name = "frontend"
@@ -74,52 +56,20 @@ the school is identified by its GitHub `owner/repo` shorthand.
 
 ### `[env]`
 
-Key-value pairs of environment variables. Set in the shell before exec-ing Claude Code or
-OpenCode. Use for shared endpoints, API base URLs, feature flags, etc.
+Key-value pairs of environment variables. Set in the shell before exec-ing the backend.
+Use for shared endpoints, API base URLs, feature flags, etc.
 
-These are not secrets. Tokens and credentials belong in the user-level config
-(`~/.config/ace/config.toml` under `<school>.services.<name>`).
-
-### `[[services]]`
-
-Array of service declarations. Each entry defines an external service that developers need
-credentials for. See [authentication.md](../authentication.md) for the full PKCE
-flow and token lifecycle.
-
-- `name` — Service identifier. Referenced in templates as `{{ services.<name>.token }}`.
-- `authorize_url` — OAuth authorization endpoint.
-- `token_url` — OAuth token exchange endpoint.
-- `client_id` — OAuth app client ID. Not a secret — safe to commit.
-- `scopes` — List of OAuth scopes to request.
+These are not secrets — secrets are managed by the backend's own OAuth flow when connecting
+to remote MCP servers.
 
 ### `[[mcp]]`
 
-Array of MCP server declarations. Each entry defines a containerized MCP tool server. ACE
-registers these with the active backend via its CLI or config file (see
-[backend.md](../backend.md#mcp-server-registration)). The backend manages Docker container
-lifecycle — ACE does not run or manage containers directly.
-
-MCP servers are packaged as container images. This eliminates host dependency management — no
-need to install runtimes, packages, or tools required by individual MCP servers. All backends
-spawn `docker run -i --rm <image>` as a stdio child process.
+Array of MCP server declarations. Each entry defines a remote MCP endpoint. ACE registers
+these with the active backend (see [backend.md](../backend.md#mcp-server-registration) and
+[mcp.md](../mcp.md) for design rationale).
 
 - `name` — Identifier for the MCP server.
-- `image` — Container image reference (e.g. `ghcr.io/acme-corp/mcp-jira:latest`).
-- `env` — Optional. Environment variables passed into the container (via `-e` flags). Supports
-  template syntax for secrets (see below).
-
-### Template Syntax
-
-Values in `env` fields can reference service credentials from the user's local config using
-`{{ services.<name>.token }}`. At runtime, ACE resolves these against `<school>.services` in
-`~/.config/ace/config.toml`. The `<name>` matches the `name` field in `[[services]]`.
-
-```toml
-env = { JIRA_TOKEN = "{{ services.jira.token }}" }
-```
-
-If a token cannot be resolved (not yet authorized by the user), ACE warns and skips that MCP
-server. It does not block.
+- `url` — Remote MCP endpoint URL. The backend discovers OAuth metadata via `.well-known`.
 
 ### `[[projects]]`
 
@@ -132,8 +82,6 @@ what they do, enabling better cross-project reasoning and navigation.
   about tech stack, domain, and responsibilities.
 - `env` — Optional. Project-specific environment variables. Merged with top-level `[env]`
   (project values override).
-- `mcp` — Optional. Project-specific MCP servers. Added alongside top-level `[[mcp]]` servers.
-  Same schema as top-level `[[mcp]]`.
 
 ### `[[imports]]`
 

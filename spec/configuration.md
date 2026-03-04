@@ -17,33 +17,9 @@ Resolved by merging (later overrides earlier):
 Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
-- `backend` — `"claude"`, `"opencode"`, or `"codex"` (first `Some` wins in priority order, fallback `claude`). See [backend.md](backend.md).
+- `backend` — `"claude"`, `"opencode"`, or `"codex"` (highest-priority `Some` wins: local → project → user; fallback `claude`). See [backend.md](backend.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
-
-## Schools
-
-Schools are identified by a specifier in `ace.toml` (see [school/overview.md](school/overview.md#specifier)).
-Credentials are keyed by the source portion (`owner/repo` or `.`) in config and cache paths.
-
-```toml
-["acme-corp/school"]
-
-["acme-corp/school".services.github]
-token = "ghp_..."
-
-["acme-corp/school".services.jira]
-token = "jira_..."
-username = "alice"
-
-["myuser/school"]
-
-["myuser/school".services.github]
-token = "ghp_..."
-```
-
-- `services.<name>.token` -- Access token for the service.
-- `services.<name>.*` -- Additional service-specific fields (e.g. `username`).
 
 ## Loading vs Validation
 
@@ -67,14 +43,11 @@ Validation runs on the merged config (after all three layers are combined), not 
 Rules are expressed in code, not via serde attributes. Examples:
 
 - `name` (top-level) must be non-empty.
-- `services[].authorize_url` and `services[].token_url` must be valid URLs.
-- `services[].client_id` must be non-empty.
-- No duplicate `services[].name` entries.
 - No duplicate `mcp[].name` entries.
 - `projects[].repo` must be a valid specifier.
 
 Validation errors reference the offending key path: e.g. `name: must not be empty`,
-`services[0].authorize_url: not a valid URL`.
+`mcp[0].name: duplicate entry`.
 
 ### Why
 
@@ -83,4 +56,3 @@ Validation errors reference the offending key path: e.g. `name: must not be empt
 - Validation on the merged config catches cross-layer issues (e.g. a layer overrides a field to
   an invalid value).
 - Richer checks (URL format, uniqueness, non-empty) cannot be expressed through serde alone.
-

@@ -1,5 +1,3 @@
-pub mod add_service;
-pub mod authenticate;
 pub mod exec;
 pub mod import_skill;
 pub mod install;

@@ -16,8 +16,6 @@ pub struct SchoolToml {
     #[serde(skip_serializing_if = "is_empty_map")]
     pub env: HashMap<String, String>,
     #[serde(skip_serializing_if = "is_empty_vec")]
-    pub services: Vec<ServiceDecl>,
-    #[serde(skip_serializing_if = "is_empty_vec")]
     pub mcp: Vec<McpDecl>,
     #[serde(skip_serializing_if = "is_empty_vec")]
     pub projects: Vec<Project>,
@@ -34,22 +32,9 @@ pub struct ImportDecl {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
-pub struct ServiceDecl {
-    pub name: String,
-    pub authorize_url: String,
-    pub token_url: String,
-    pub client_id: String,
-    #[serde(skip_serializing_if = "is_empty_vec")]
-    pub scopes: Vec<String>,
-}
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[serde(default)]
 pub struct McpDecl {
     pub name: String,
-    pub image: String,
-    #[serde(skip_serializing_if = "is_empty_map")]
-    pub env: HashMap<String, String>,
+    pub url: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -61,8 +46,6 @@ pub struct Project {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "is_empty_map")]
     pub env: HashMap<String, String>,
-    #[serde(skip_serializing_if = "is_empty_vec")]
-    pub mcp: Vec<McpDecl>,
 }
 
 pub fn load(path: &Path) -> Result<SchoolToml, ConfigError> {

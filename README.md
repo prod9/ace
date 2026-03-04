@@ -17,7 +17,7 @@ cargo install --path .
 ## Usage
 
 ```sh
-ace setup prod9/school                       # clone a school, auth services, write config
+ace setup prod9/school                       # clone a school, register MCP, write config
 ace                                          # launch backend (claude/opencode)
 ace -- --continue                            # pass flags through to the backend
 ace import anthropics/skills --skill commit  # import a skill from an external repo
@@ -28,8 +28,7 @@ ace school update                            # re-fetch all imported skills
 
 | Command | Description |
 |---------|-------------|
-| `ace setup [specifier]` | Clone a school, authenticate services, write config |
-| `ace auth <service>` | Re-authenticate a service |
+| `ace setup [specifier]` | Clone a school, register MCP servers, write config |
 | `ace config` | Print effective configuration |
 | `ace paths [key]` | Print resolved filesystem paths (e.g. `ace paths school`) |
 | `ace import <source> [--skill <name>]` | Import a skill from an external repository |
@@ -47,16 +46,17 @@ coding tools. When you run `ace`, it:
 3. Symlinks skills into your project
 4. Launches the configured backend with the school's session prompt
 
-## Skills workflow
+## School workflow
 
-Schools contain a shared `skills/` folder. When you run `ace`, the entire folder is symlinked
-into your project — everyone on the same school works against the same skills.
+Schools contain shared folders (`skills/`, `rules/`, `commands/`, `agents/`). When you run
+`ace`, each folder present in the school is symlinked into your project — everyone on the same
+school works against the same files.
 
-**First-time setup with existing skills:** If your project already has hand-written skills in
-`.claude/skills/`, ACE moves them to `previous-skills/` on first run. The LLM will then help
-you merge them into the school's skills folder.
+**First-time setup with existing folders:** If your project already has a real `skills/` (or
+any of the four folders), ACE moves it to `previous-skills/` on first run. The LLM will then
+help you merge the contents into the school.
 
-**Changing skills:** Edit skills through symlinks (edits go to the school cache directly). The
+**Changing school files:** Edit through symlinks (edits go to the school cache directly). The
 AI backend handles proposing changes back — branch, commit, push, create PR via GitHub MCP.
 
 ## Configuration
@@ -64,7 +64,7 @@ AI backend handles proposing changes back — branch, commit, push, create PR vi
 - `ace.toml` — project-level config (school specifier, backend, env)
 - `ace.local.toml` — local overrides (gitignored)
 - `~/.config/ace/config.toml` — user-level config (credentials)
-- `school.toml` — school metadata (name, services, MCP servers, projects)
+- `school.toml` — school metadata (name, MCP servers, projects)
 
 ## Cross-build
 

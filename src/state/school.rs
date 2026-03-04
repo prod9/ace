@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::collections::HashMap;
 
-use crate::config::school_toml::{ImportDecl, McpDecl, Project, SchoolToml, ServiceDecl};
+use crate::config::school_toml::{ImportDecl, McpDecl, Project, SchoolToml};
 
 #[derive(Debug, Default, Serialize)]
 pub struct School {
@@ -9,9 +9,6 @@ pub struct School {
     pub session_prompt: String,
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub env: HashMap<String, String>,
-    #[allow(dead_code)] // populated from school.toml, consumed when auth is implemented
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub services: Vec<ServiceDecl>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub mcp: Vec<McpDecl>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -26,7 +23,6 @@ impl From<SchoolToml> for School {
             name: st.name,
             session_prompt: st.session_prompt,
             env: st.env,
-            services: st.services,
             mcp: st.mcp,
             projects: st.projects,
             imports: st.imports,

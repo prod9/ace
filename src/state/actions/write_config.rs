@@ -3,7 +3,7 @@ use std::path::Path;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::config::ace_toml::AceToml;
-use crate::config::user_config::{SchoolCredentials, UserConfig};
+use crate::config::user_config::{SchoolEntry, UserConfig};
 use super::prepare::PrepareError;
 
 pub struct WriteConfig;
@@ -21,9 +21,7 @@ impl WriteConfig {
 
         config
             .entry(repo_key.to_string())
-            .or_insert_with(|| SchoolCredentials {
-                services: std::collections::HashMap::new(),
-            });
+            .or_insert_with(SchoolEntry::default);
 
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(PrepareError::Write)?;

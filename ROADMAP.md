@@ -5,17 +5,18 @@
 - [x] **~~PKCE auth flow~~** — superseded by remote MCP + OAuth. All three backends (Claude,
       OpenCode, Codex) handle OAuth discovery natively for remote MCP servers. ACE delegates
       auth entirely to the backend. `authenticate.rs` stub can be removed.
-      `ace school propose` remains blocked on GitHub token — consider `gh auth token` or
-      remote GitHub MCP OAuth for that.
 - [x] ~~Investigate adding rules() to school~~ — generalized to link all 4 school folders
       (skills, rules, commands, agents) with backend compatibility warnings
+- [x] **~~Services removal~~** — `[[services]]`, `ServiceDecl`, `authenticate.rs`,
+      `ace school add-service`, `{{ services.X.token }}` templating all removed. `[[mcp]]`
+      simplified to `name` + `url` (remote-only). See `spec/mcp.md`.
 
 ## Features
 
 - [ ] **MCP registration** — register `[[mcp]]` from school.toml into the active backend.
       Claude (first): `claude mcp add-json -s project` per entry. CLI handles merging.
       OpenCode/Codex: deferred until those backends ship (requires direct file writes).
-      All backends spawn `docker run -i --rm` as stdio child — ACE doesn't manage containers.
+      All entries are remote URLs — no Docker/stdio.
 - [ ] **Codex backend** — third Backend variant. See research notes in MEMORY.md.
       Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
       Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).
@@ -26,9 +27,7 @@
 
 ## School
 
-- [x] **Service entry instructions** — school CLAUDE.md guidance for AI to add `[[services]]`
-      entries to school.toml. Covers CLI, TOML format, GitHub/Linear providers, scope guidance.
-- [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills) — blocked on auth
+- [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills)
 - [ ] Update school CLAUDE.md template: commit messages should be detailed (PR-description level)
 
 ## Backlog
