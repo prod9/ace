@@ -32,6 +32,10 @@ impl Ace {
         &self.project_dir
     }
 
+    pub fn mode(&self) -> OutputMode {
+        self.mode
+    }
+
     /// Lazy-load tree + school.toml + resolve. No-op if already loaded.
     pub fn require_state(&mut self) -> Result<&State, ConfigError> {
         if self.state.is_none() {
