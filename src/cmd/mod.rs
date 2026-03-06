@@ -1,5 +1,6 @@
 mod config;
 mod diff;
+mod fly;
 mod fmt;
 mod import;
 mod main;
@@ -71,6 +72,9 @@ enum Command {
         #[command(subcommand)]
         command: school::Command,
     },
+    /// 🛩️
+    #[command(hide = true)]
+    Fly,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -106,6 +110,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths { key }) => paths::run(ace, key.as_deref()).await,
         Some(Command::School { command }) => school::run(ace, command).await,
+        Some(Command::Fly) => fly::run(ace.mode()),
         None => main::run(ace, cli.backend_args).await,
     }
 }
