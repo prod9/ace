@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACE - AI Coding Environment</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #c0c0c0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 20px; }
+  nav {
+    padding: 12px 0;
+    margin-bottom: 40px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+  }
+  nav a { color: #00ff88; text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  nav .sep { color: #555; margin: 0 8px; }
+  h1, h2, h3 { color: #ffaa00; font-weight: normal; }
+  h2 { margin: 32px 0 12px; font-size: 15px; }
+  a { color: #00ff88; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .logo { color: #00ff88; font-size: 16px; line-height: 1.2; margin-bottom: 8px; }
+  .subtitle { color: #ffaa00; font-size: 16px; margin-bottom: 24px; }
+  ul { list-style: none; padding: 0; }
+  ul li::before { content: "> "; color: #00ff88; }
+  ul li { margin: 4px 0; }
+  .code-block {
+    background: #111;
+    border: 1px solid #333;
+    padding: 12px 16px;
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+  .code-block .prompt { color: #00ff88; }
+  .code-block .comment { color: #555; }
+  .backends { margin: 12px 0; }
+  .backends span { display: inline-block; border: 1px solid #333; padding: 4px 10px; margin: 4px 4px 4px 0; color: #c0c0c0; font-size: 13px; }
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #333;
+    font-size: 12px;
+    color: #555;
+  }
+  footer a { color: #555; }
+  footer a:hover { color: #00ff88; }
+  .line { border-top: 1px solid #333; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<nav>
+  <a href="index.html">ACE</a>
+  <span class="sep">|</span>
+  <a href="schools.html">Schools</a>
+  <span class="sep">|</span>
+  <a href="commands.html">Commands</a>
+</nav>
+
+<pre class="logo">
+░█▀█░█▀▀░█▀▀
+░█▀█░█░░░█▀▀
+░▀░▀░▀▀▀░▀▀▀
+</pre>
+<div class="subtitle">AI Coding Environment</div>
+
+<h2>// what it does</h2>
+<ul>
+  <li>Sets up AI coding tools in one command</li>
+  <li>Manages shared skills &amp; conventions via schools</li>
+  <li>Configures LLM backends (Claude Code, OpenCode, Codex)</li>
+  <li>Keeps environments in sync across your team</li>
+</ul>
+
+<h2>// quick start</h2>
+<div class="code-block">
+<span class="prompt">$</span> cargo install ace<br>
+<span class="prompt">$</span> ace setup prod9/school <span class="comment"># clone a school, write config</span><br>
+<span class="prompt">$</span> ace <span class="comment"># launch your AI backend</span>
+</div>
+
+<h2>// supported backends</h2>
+<div class="backends">
+  <span>Claude Code</span>
+  <span>OpenCode</span>
+  <span>Codex</span>
+</div>
+
+<h2>// how it works</h2>
+<ol style="list-style:none; padding:0; color:#888;">
+  <li><span style="color:#00ff88;">1.</span> Resolves which school to use (from ace.toml)</li>
+  <li><span style="color:#00ff88;">2.</span> Fetches/updates the school repository</li>
+  <li><span style="color:#00ff88;">3.</span> Symlinks skills into your project</li>
+  <li><span style="color:#00ff88;">4.</span> Launches the configured backend</li>
+</ol>
+
+<div class="line"></div>
+
+<footer>
+  PRODIGY9 &mdash; <a href="https://github.com/nicecai/ace">GitHub</a> &mdash; MIT License
+</footer>
+
+</div>
+</body>
+</html>

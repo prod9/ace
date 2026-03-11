@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACE - Schools</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #c0c0c0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 20px; }
+  nav {
+    padding: 12px 0;
+    margin-bottom: 40px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+  }
+  nav a { color: #00ff88; text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  nav .sep { color: #555; margin: 0 8px; }
+  h1, h2, h3 { color: #ffaa00; font-weight: normal; }
+  h1 { font-size: 18px; margin-bottom: 24px; }
+  h2 { margin: 32px 0 12px; font-size: 15px; }
+  a { color: #00ff88; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .code-block {
+    background: #111;
+    border: 1px solid #333;
+    padding: 12px 16px;
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+  .code-block .prompt { color: #00ff88; }
+  .code-block .comment { color: #555; }
+  .tree { color: #888; }
+  .tree .dir { color: #ffaa00; }
+  .tree .file { color: #c0c0c0; }
+  p { margin: 8px 0; color: #888; }
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #333;
+    font-size: 12px;
+    color: #555;
+  }
+  footer a { color: #555; }
+  footer a:hover { color: #00ff88; }
+  .line { border-top: 1px solid #333; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<nav>
+  <a href="index.html">ACE</a>
+  <span class="sep">|</span>
+  <a href="schools.html">Schools</a>
+  <span class="sep">|</span>
+  <a href="commands.html">Commands</a>
+</nav>
+
+<h1>// schools</h1>
+
+<p>
+Schools are curated repositories of skills, conventions, and configuration
+for AI coding tools. Everyone on the same school shares the same skill set.
+</p>
+
+<h2>// structure</h2>
+
+<div class="code-block"><pre class="tree"><span class="dir">my-school/</span>
+├── <span class="file">school.toml</span>      <span class="comment"># school metadata &amp; config</span>
+├── <span class="dir">skills/</span>          <span class="comment"># shared AI skills</span>
+│   ├── <span class="file">commit.md</span>
+│   ├── <span class="file">review.md</span>
+│   └── <span class="file">...</span>
+├── <span class="dir">rules/</span>           <span class="comment"># coding conventions</span>
+│   ├── <span class="file">rust-coding.md</span>
+│   └── <span class="file">...</span>
+└── <span class="file">CLAUDE.md</span>        <span class="comment"># session prompt template</span></pre></div>
+
+<p>
+<span style="color:#c0c0c0;">school.toml</span> defines the school name, services
+(GitHub, Linear), MCP servers, and project-specific overrides.
+</p>
+
+<h2>// create a school</h2>
+
+<div class="code-block">
+<span class="prompt">$</span> mkdir my-school && cd my-school<br>
+<span class="prompt">$</span> git init<br>
+<span class="prompt">$</span> ace school init<br>
+<span class="comment"># generates school.toml, skills/, rules/, CLAUDE.md</span>
+</div>
+
+<p>
+Add skills as markdown files in <span style="color:#c0c0c0;">skills/</span>.
+Add coding conventions in <span style="color:#c0c0c0;">rules/</span>.
+Push to a git remote.
+</p>
+
+<h2>// use a school</h2>
+
+<div class="code-block">
+<span class="prompt">$</span> ace setup org/school <span class="comment"># clone &amp; configure</span><br>
+<span class="prompt">$</span> ace <span class="comment"># skills are symlinked, backend launches</span>
+</div>
+
+<h2>// propose changes</h2>
+
+<p>
+Skills are symlinked from the school cache into your project. Edits go
+directly to the cached school repo. To propose changes back:
+</p>
+
+<div class="code-block">
+<span class="prompt">$</span> ace diff <span class="comment"># see what you changed</span><br>
+<span class="prompt">$</span> ace school propose <span class="comment"># branch, commit, push, open PR</span>
+</div>
+
+<div class="line"></div>
+
+<footer>
+  PRODIGY9 &mdash; <a href="https://github.com/nicecai/ace">GitHub</a> &mdash; MIT License
+</footer>
+
+</div>
+</body>
+</html>
