@@ -42,6 +42,7 @@
 
 ## Backlog
 
+- [ ] **Ctrl+C / signal handling** — general cleanup strategy for terminal state (cursor, alt screen, raw mode) on interrupt during ACE's own TUI phases (prompts, progress, `ace fly`). Must not interfere with the backend child process which handles its own signals after exec.
 - [ ] Setup modes discussion — see `spec/` notes
 - [ ] Auto `--continue` magic
 - [ ] Cross-build script (`cargo` native, `cross` for cross-platform)
