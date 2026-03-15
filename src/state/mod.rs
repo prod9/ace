@@ -16,6 +16,8 @@ pub struct State {
     // --- resolved fields ---
     pub school_specifier: Option<String>,
     pub backend: Backend,
+    pub role: String,
+    pub description: String,
     pub session_prompt: String,
     pub env: HashMap<String, String>,
     pub school: Option<School>,
@@ -30,6 +32,8 @@ impl State {
         Self {
             school_specifier: resolved.school_specifier,
             backend: resolved.backend,
+            role: resolved.role,
+            description: resolved.description,
             session_prompt: resolved.session_prompt,
             env: resolved.env,
             school,
@@ -50,6 +54,8 @@ impl State {
             },
             school_specifier: None,
             backend: Backend::default(),
+            role: String::new(),
+            description: String::new(),
             session_prompt: String::new(),
             env: HashMap::new(),
             school: None,
@@ -65,6 +71,8 @@ impl State {
 struct Resolved {
     school_specifier: Option<String>,
     backend: Backend,
+    role: String,
+    description: String,
     session_prompt: String,
     env: HashMap<String, String>,
 }
@@ -87,6 +95,20 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         .or(tree.ace_user.backend)
         .unwrap_or_default();
 
+    // role: last Some wins
+    let role = layers
+        .iter()
+        .rev()
+        .find_map(|l| l.role.clone())
+        .unwrap_or_default();
+
+    // description: last Some wins
+    let description = layers
+        .iter()
+        .rev()
+        .find_map(|l| l.description.clone())
+        .unwrap_or_default();
+
     // session_prompt: last Some wins (Some("") is a valid override to empty)
     let session_prompt = layers
         .iter()
@@ -105,6 +127,8 @@ fn resolve_layers(tree: &Tree) -> Resolved {
     Resolved {
         school_specifier,
         backend,
+        role,
+        description,
         session_prompt,
         env,
     }
@@ -118,6 +142,8 @@ mod tests {
         AceToml {
             school: school.to_string(),
             backend: None,
+            role: None,
+            description: None,
             session_prompt: None,
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
         }

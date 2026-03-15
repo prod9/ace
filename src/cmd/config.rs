@@ -15,6 +15,8 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     let effective = AceToml {
         school: state.school_specifier.clone().unwrap_or_default(),
         backend: Some(state.backend),
+        role: if state.role.is_empty() { None } else { Some(state.role.clone()) },
+        description: if state.description.is_empty() { None } else { Some(state.description.clone()) },
         session_prompt: if state.session_prompt.is_empty() {
             None
         } else {

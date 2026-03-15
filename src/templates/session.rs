@@ -11,11 +11,24 @@ pub fn build_session_prompt(
     skills_dir: &Path,
     changes: &[SkillChange],
     school_cache: Option<&Path>,
+    role: &str,
+    description: &str,
 ) -> String {
     let mut parts = Vec::new();
 
     let builtin = format!("School: {school_name}\n\n{}", templates::SESSION);
     parts.push(builtin);
+
+    if !role.is_empty() || !description.is_empty() {
+        let mut role_parts = Vec::new();
+        if !role.is_empty() {
+            role_parts.push(format!("Role: {role}"));
+        }
+        if !description.is_empty() {
+            role_parts.push(description.to_string());
+        }
+        parts.push(role_parts.join("\n"));
+    }
 
     if !school_session_prompt.is_empty() {
         parts.push(school_session_prompt.to_string());
@@ -97,7 +110,7 @@ mod tests {
     #[test]
     fn builtin_includes_session_base() {
         let dir = nonexistent_dir();
-        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None, "", "");
         assert!(prompt.contains("School: Acme"));
         assert!(prompt.contains("ACE (AI Coding Environment)"));
         assert!(prompt.contains("propose changes back to the school repo"));
@@ -106,7 +119,7 @@ mod tests {
     #[test]
     fn school_and_project_prompts() {
         let dir = nonexistent_dir();
-        let prompt = build_session_prompt("Acme", "Use Rust.", "PostgreSQL project.", &dir, &[], None);
+        let prompt = build_session_prompt("Acme", "Use Rust.", "PostgreSQL project.", &dir, &[], None, "", "");
         assert!(prompt.contains("Use Rust."));
         assert!(prompt.contains("PostgreSQL project."));
         let school_pos = prompt.find("Use Rust.").expect("school prompt present");
@@ -117,7 +130,7 @@ mod tests {
     #[test]
     fn skips_empty_layers() {
         let dir = nonexistent_dir();
-        let prompt = build_session_prompt("Acme", "", "Only project.", &dir, &[], None);
+        let prompt = build_session_prompt("Acme", "", "Only project.", &dir, &[], None, "", "");
         assert!(!prompt.contains("\n\n\n"), "no triple newlines from skipped school prompt");
         assert!(prompt.contains("Only project."));
     }
@@ -128,7 +141,7 @@ mod tests {
         let prev = fix.path().join("previous-skills");
         std::fs::create_dir_all(&prev).expect("create previous-skills dir");
 
-        let prompt = build_session_prompt("Acme", "", "", fix.path(), &[], None);
+        let prompt = build_session_prompt("Acme", "", "", fix.path(), &[], None, "", "");
         assert!(prompt.contains("unconsolidated skills"));
         assert!(prompt.contains("previous-skills"));
     }
@@ -140,7 +153,7 @@ mod tests {
         std::fs::create_dir_all(&skills).expect("create previous-skills dir");
 
         let skills_dir = fix.path().join(".opencode");
-        let prompt = build_session_prompt("Acme", "", "", &skills_dir, &[], None);
+        let prompt = build_session_prompt("Acme", "", "", &skills_dir, &[], None, "", "");
         assert!(prompt.contains(".opencode/previous-skills/"), "should use .opencode dir name");
         assert!(!prompt.contains(".claude/previous-skills/"), "should not contain .claude");
     }
@@ -150,7 +163,7 @@ mod tests {
         let fix = TempDir::new("ace-test-prompt-no-previous");
         std::fs::create_dir_all(fix.path().join("skills")).expect("create skills dir");
 
-        let prompt = build_session_prompt("Acme", "", "", fix.path(), &[], None);
+        let prompt = build_session_prompt("Acme", "", "", fix.path(), &[], None, "", "");
         assert!(!prompt.contains("unconsolidated"));
     }
 
@@ -163,7 +176,7 @@ mod tests {
             SkillChange { name: "old-skill".into(), kind: ChangeKind::Removed },
         ];
 
-        let prompt = build_session_prompt("Acme", "", "", &dir, &changes, None);
+        let prompt = build_session_prompt("Acme", "", "", &dir, &changes, None, "", "");
         assert!(prompt.contains("School skills were updated"));
         assert!(prompt.contains("- Added: `new-skill`"));
         assert!(prompt.contains("- Updated: `existing`"));
@@ -173,7 +186,7 @@ mod tests {
     #[test]
     fn no_changes_no_summary() {
         let dir = nonexistent_dir();
-        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None, "", "");
         assert!(!prompt.contains("updated since your last session"));
     }
 
@@ -181,14 +194,29 @@ mod tests {
     fn injects_school_cache_path() {
         let dir = nonexistent_dir();
         let cache = Path::new("/home/user/.cache/ace/repos/org/school");
-        let prompt = build_session_prompt("Acme", "", "", &dir, &[], Some(cache));
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], Some(cache), "", "");
         assert!(prompt.contains("School cache: /home/user/.cache/ace/repos/org/school"));
     }
 
     #[test]
     fn no_cache_no_injection() {
         let dir = nonexistent_dir();
-        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None, "", "");
         assert!(!prompt.contains("School cache:"));
+    }
+
+    #[test]
+    fn injects_role_and_description() {
+        let dir = nonexistent_dir();
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None, "PM", "Requirements-only workflow");
+        assert!(prompt.contains("Role: PM"));
+        assert!(prompt.contains("Requirements-only workflow"));
+    }
+
+    #[test]
+    fn no_role_no_injection() {
+        let dir = nonexistent_dir();
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None, "", "");
+        assert!(!prompt.contains("Role:"));
     }
 }
