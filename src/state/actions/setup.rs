@@ -58,9 +58,12 @@ impl Setup<'_> {
                 .ok_or(ConfigError::NoSchool)?
                 .name.clone();
 
-            let skills_dir = self.project_dir.join(backend.skills_dir());
-            let ctx = templates::PromptCtx::new(&skills_dir, &school_name);
-            let content = templates::render(templates::PROJECT_CLAUDE_MD, &ctx);
+            let skills_dir_name = backend.skills_dir();
+            let tpl = templates::Template::parse(templates::builtins::PROJECT_CLAUDE_MD);
+            let content = tpl.substitute(&std::collections::HashMap::from([
+                ("school_name".to_string(), school_name),
+                ("skills_dir".to_string(), skills_dir_name.to_string()),
+            ]));
 
             std::fs::write(&instructions, content)
                 .map_err(SetupError::Write)?;

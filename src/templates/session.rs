@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use crate::templates;
+use crate::templates::builtins;
 use crate::state::actions::update::{ChangeKind, SkillChange};
 
 /// Build the session prompt from built-in + school + project layers.
@@ -14,7 +14,7 @@ pub fn build_session_prompt(
 ) -> String {
     let mut parts = Vec::new();
 
-    let builtin = format!("School: {school_name}\n\n{}", templates::SESSION);
+    let builtin = format!("School: {school_name}\n\n{}", builtins::SESSION);
     parts.push(builtin);
 
     if !school_session_prompt.is_empty() {
@@ -35,8 +35,15 @@ pub fn build_session_prompt(
 
     let previous_skills = skills_dir.join("previous-skills");
     if previous_skills.exists() {
-        let ctx = templates::PromptCtx::from_skills_dir(skills_dir);
-        parts.push(templates::render(templates::PREVIOUS_SKILLS, &ctx));
+        let skills_dir_name = skills_dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(".claude");
+        let tpl = super::Template::parse(builtins::PREVIOUS_SKILLS);
+        let vals = std::collections::HashMap::from([
+            ("skills_dir".to_string(), skills_dir_name.to_string()),
+        ]);
+        parts.push(tpl.substitute(&vals));
     }
 
     parts.join("\n\n")
@@ -55,13 +62,13 @@ fn format_change_summary(changes: &[SkillChange]) -> String {
         }
     }
 
-    let mut lines = vec![templates::CHANGES_HEADER.to_string()];
+    let mut lines = vec![builtins::CHANGES_HEADER.to_string()];
     for (label, names) in [("Added", added), ("Updated", modified), ("Removed", removed)] {
         for name in names {
             lines.push(format!("- {label}: `{name}`"));
         }
     }
-    lines.push(format!("\n{}", templates::CHANGES_FOOTER));
+    lines.push(format!("\n{}", builtins::CHANGES_FOOTER));
 
     lines.join("\n")
 }

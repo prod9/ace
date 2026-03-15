@@ -1,4 +1,4 @@
-# {school_name} — School Repository
+# {{ school_name }} — School Repository
 
 This is an ACE school repository. It provides skills, conventions, and session prompts to
 projects that subscribe to it via `ace setup`.
