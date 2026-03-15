@@ -6,7 +6,7 @@ use crate::ace::Ace;
 use crate::config::skill_meta;
 use crate::config::school_toml;
 use crate::ace::OutputMode;
-use crate::state::actions::school_init::SchoolInit;
+use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
 use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateResult};
 
 use super::CmdError;
@@ -47,6 +47,10 @@ pub async fn run(ace: &mut Ace, command: Command) {
 
 fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdError> {
     let project_dir = ace.project_dir().to_path_buf();
+
+    if !crate::state::actions::is_git_repo(&project_dir) {
+        return Err(SchoolInitError::NotInGitRepo.into());
+    }
 
     let name = match name {
         Some(n) => n,
