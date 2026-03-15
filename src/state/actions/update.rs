@@ -75,8 +75,8 @@ impl Update<'_> {
             return Ok(UpdateResult::default());
         }
 
-        if let Err(_) = git.merge_ff_only("origin/main") {
-            ace.warn("school has diverged from origin/main");
+        if let Err(e) = git.merge_ff_only("origin/main") {
+            ace.warn(&format!("school has diverged from origin/main: {e}"));
             ace.hint("Propose changes back to the school repo, or resolve manually.");
             return Ok(UpdateResult::default());
         }
@@ -87,7 +87,10 @@ impl Update<'_> {
         let changes = if old_head != new_head {
             match git.diff_name_status(&old_head, &new_head, Some("skills/")) {
                 Ok(stdout) => parse_diff_output(&stdout),
-                Err(_) => Vec::new(),
+                Err(e) => {
+                    ace.warn(&format!("failed to diff skill changes: {e}"));
+                    Vec::new()
+                }
             }
         } else {
             Vec::new()

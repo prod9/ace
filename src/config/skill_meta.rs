@@ -67,7 +67,7 @@ mod tests {
     #[test]
     fn simple_frontmatter() {
         let content = "---\nname: test-skill\ndescription: A test skill.\n---\n# Body";
-        let meta = parse(content).unwrap();
+        let meta = parse(content).expect("should parse valid frontmatter");
         assert_eq!(meta.name, "test-skill");
         assert_eq!(meta.description, "A test skill.");
     }
@@ -82,7 +82,7 @@ description: >
   second line of description.
 ---
 # Body";
-        let meta = parse(content).unwrap();
+        let meta = parse(content).expect("should parse block scalar frontmatter");
         assert_eq!(meta.name, "multi-line");
         assert_eq!(meta.description, "First line of description second line of description.");
     }

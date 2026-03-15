@@ -39,6 +39,9 @@
 - [ ] **DRY up test code** — extract common patterns from integration tests (e.g. "setup
       embedded school" fixture, repeated school.toml + skills/ boilerplate) into TestEnv
       builder methods or shared helpers.
+- [ ] **Extract shared git/fs utilities** — `clone_repo`, `copy_dir_recursive`,
+      `discover_skills` live in `import_skill.rs` but are also used by `school_update.rs`.
+      Move to a shared module (e.g. `actions/utils.rs`) to reduce cross-action coupling.
 
 ## Backlog
 
