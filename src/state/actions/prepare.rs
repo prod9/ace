@@ -8,6 +8,7 @@ use crate::config::ConfigError;
 
 use super::install::Install;
 use super::link::Link;
+use super::register_mcp::RegisterMcp;
 use super::update::{SkillChange, Update};
 
 #[derive(Debug, thiserror::Error)]
@@ -89,6 +90,17 @@ impl Prepare<'_> {
                     ));
                 }
             }
+        }
+
+        // Register MCP servers from school.toml into the active backend.
+        let school_toml_path = school_paths.root.join("school.toml");
+        if let Ok(school_toml) = crate::config::school_toml::load(&school_toml_path) {
+            RegisterMcp {
+                backend: self.backend,
+                mcp: &school_toml.mcp,
+                project_dir: self.project_dir,
+            }
+            .run(ace);
         }
 
         Ok(PrepareResult { changes })
