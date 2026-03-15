@@ -1,69 +1,59 @@
 # MCP Servers
 
-## Design Decision: Remote-Only (2026-03-04)
-
-ACE supports remote MCP servers exclusively. Schools declare `[[mcp]]` entries with URLs pointing
-to hosted MCP endpoints. The backend handles OAuth discovery, token acquisition, storage, and
-refresh — ACE only registers the endpoint.
-
-Docker-based stdio MCP (container images with injected tokens) is not supported. This was a
-deliberate simplification based on the state of the MCP ecosystem.
-
-## Why Remote-Only
-
-As of early 2026, remote MCP with OAuth 2.1 is the dominant model. 80+ official vendor-hosted
-servers exist. Every major developer tool category has remote MCP coverage:
-
-| Category           | Services with remote MCP endpoints                    |
-|--------------------|-------------------------------------------------------|
-| Code hosting       | GitHub, GitLab, Buildkite                             |
-| Project management | Jira/Confluence (Atlassian), Linear, Notion, Asana    |
-| Observability      | Sentry, Datadog, PagerDuty, Cloudflare                |
-| Cloud              | AWS (60+ servers), GCP (preview)                      |
-| Databases          | Supabase, Neon, Prisma (managed Postgres)             |
-| Payments           | Stripe, PayPal, Square                                |
-| Design             | Figma, Canva, Webflow                                 |
-| Deployment         | Vercel, Netlify                                       |
-
-Raw database access (direct Postgres/MySQL/MongoDB) has no vendor-hosted remote endpoint, but
-managed providers (Supabase, Neon, Prisma, AlloyDB) cover this via their own MCP servers with
-OAuth. Internal services can be exposed through self-hosted MCP gateways (Cloudflare Workers,
-etc.) that implement OAuth.
-
-The Docker stdio model — where ACE injects tokens via env vars into containers — has no remaining
-use case that cannot be served by hosting a remote MCP endpoint with OAuth instead.
+Remote-only. See [decisions/002-remote-only-mcp.md](decisions/002-remote-only-mcp.md) for rationale.
 
 ## school.toml Format
 
 ```toml
-[[mcp]]
-name = "github"
-url = "https://api.githubcopilot.com/mcp/"
-
+# OAuth-based — backend handles auth automatically
 [[mcp]]
 name = "linear"
-url = "https://mcp.linear.app/sse"
-
-[[mcp]]
-name = "jira"
-url = "https://mcp.atlassian.com/v1/sse"
+url = "https://mcp.linear.app/mcp"
 
 [[mcp]]
 name = "sentry"
-url = "https://mcp.sentry.dev/sse"
+url = "https://mcp.sentry.dev/mcp"
+
+# PAT-based — requires user credential via placeholder
+[[mcp]]
+name = "github"
+url = "https://api.githubcopilot.com/mcp/"
+instructions = "Create a fine-grained PAT at https://github.com/settings/personal-access-tokens/new with repository permissions: Contents (Read and write), Pull requests (Read and write)."
+
+[mcp.headers]
+Authorization = "Bearer {{ github_pat }}"
 ```
 
 Fields:
 
 - `name` — Identifier for the MCP server.
 - `url` — Remote MCP endpoint URL. The backend discovers OAuth metadata via `.well-known`.
-
-No `image`, `env`, or token-related fields. No template syntax.
+- `headers` — (optional) HTTP headers to pass to the backend. Values may contain
+  `{{ placeholder }}` template syntax (see [configuration.md](configuration.md#placeholder-substitution)).
+  ACE prompts the user for each placeholder on first registration and passes the resolved headers
+  to the backend CLI. ACE does not store the values.
+- `instructions` — (optional) Human-readable setup instructions. Printed to the terminal before
+  prompting for placeholders. Also injected into the session prompt so the AI can guide the user
+  if auth issues arise mid-session.
 
 ## Registration
 
-ACE registers each `[[mcp]]` entry into the active backend. See
-[backend.md](backend.md#mcp-server-registration) for per-backend registration strategy.
+ACE registers each `[[mcp]]` entry into the active backend at **user scope** (not project scope),
+because users in a school typically share the same company infrastructure (GitHub org, Linear
+workspace, etc.) and MCP servers should be available across all their projects.
+
+Registration flow:
+
+1. **Check** — `claude mcp get <name>`. If already registered at any scope, print a warning
+   (same pattern as school update warnings) and skip. Do not overwrite existing config.
+2. **Prompt** — If `headers` contain `{{ placeholder }}` values, print `instructions` (if
+   present), then prompt the user for each placeholder value.
+3. **Substitute** — Replace placeholders with user-provided values.
+4. **Register** — Call the backend CLI to add the MCP server with resolved headers.
+5. **Inform** — Print auth guidance (OAuth servers: "you'll be prompted on first use";
+   PAT servers: confirm registration succeeded).
+
+See [backend.md](backend.md#mcp-server-registration) for per-backend CLI commands.
 
 ## Authentication
 

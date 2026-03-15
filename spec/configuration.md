@@ -56,3 +56,33 @@ Validation errors reference the offending key path: e.g. `name: must not be empt
 - Validation on the merged config catches cross-layer issues (e.g. a layer overrides a field to
   an invalid value).
 - Richer checks (URL format, uniqueness, non-empty) cannot be expressed through serde alone.
+
+## Placeholder Substitution
+
+Config string values may contain `{{ name }}` placeholders that are resolved at runtime by
+prompting the user. This is a general-purpose mechanism — currently used by MCP header values
+(see [mcp.md](mcp.md)) but available wherever user-specific values are needed.
+
+### Syntax
+
+- `{{ name }}` — placeholder, resolved by prompting the user.
+- Whitespace inside braces is flexible: `{{name}}`, `{{ name }}`, `{{  name  }}` all match.
+- Name must be `[a-zA-Z0-9_]+`.
+- Literal `{{` that should not be treated as placeholders: not supported yet (no escaping).
+
+### Engine
+
+Hand-rolled 4-state parser (Text → MaybeOpen → Name → MaybeClose). Two pure functions:
+
+- `extract_placeholders(input) -> Vec<String>` — returns unique placeholder names in
+  order of first appearance.
+- `substitute(input, values) -> String` — replaces each `{{ name }}` with the corresponding
+  value from the map. Missing keys resolve to empty string.
+
+No regex dependency. Lives in its own module (`src/template.rs` or similar), independent of
+config or MCP logic.
+
+### Future
+
+Current engine is intentionally minimal. May be replaced with a mature template engine
+(Jinja-compatible, Go template-compatible, etc.) if more complex substitution needs arise.

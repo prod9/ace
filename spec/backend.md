@@ -43,25 +43,31 @@ remote MCP endpoints — see [mcp.md](mcp.md) for the remote-only design rationa
 ### Strategy: CLI-First
 
 Prefer invoking the backend's CLI to add MCP servers. Only fall back to writing config files
-when the CLI lacks non-interactive or project-scoped support.
+when the CLI lacks non-interactive or user-scoped support.
 
-| Backend  | Method                                              | Reason                                                   |
-|----------|-----------------------------------------------------|----------------------------------------------------------|
-| Claude   | `claude mcp add-json -s project <name> '<json>'`    | Non-interactive, project-scoped, handles merging         |
-| OpenCode | Write `opencode.json` directly                      | No non-interactive CLI for adding servers                |
-| Codex    | Write `.codex/config.toml` directly                 | CLI only writes user-scope, no `--scope` flag            |
+| Backend  | Method                                                          | Reason                                               |
+|----------|-----------------------------------------------------------------|------------------------------------------------------|
+| Claude   | `claude mcp add -t http -s user <name> <url> [-H "K: V" ...]`  | Non-interactive, user-scoped, handles merging        |
+| OpenCode | Write `opencode.json` directly                                  | No non-interactive CLI for adding servers             |
+| Codex    | Write `.codex/config.toml` directly                             | CLI only writes user-scope, no `--scope` flag        |
 
-**Claude example** — ACE runs:
+**Claude examples** — ACE runs:
 
 ```sh
-claude mcp add-json -s project linear '{
-  "type": "url",
-  "url": "https://mcp.linear.app/sse"
-}'
+# OAuth server (no headers)
+claude mcp add -t http -s user linear https://mcp.linear.app/mcp
+
+# PAT server (with header)
+claude mcp add -t http -s user github https://api.githubcopilot.com/mcp/ \
+  -H "Authorization: Bearer ghp_xxxxx"
 ```
 
-The CLI writes `.mcp.json` and merges with any existing entries. ACE never touches `.mcp.json`
-directly for the Claude backend.
+User scope (`-s user`) makes the server available across all projects. The CLI writes to the
+user-level config and merges with existing entries. ACE never touches `.mcp.json` directly for
+the Claude backend.
+
+Before adding, ACE checks `claude mcp get <name>` to detect existing registrations. If the
+server is already registered at any scope, ACE warns and skips — it does not overwrite.
 
 For OpenCode and Codex, ACE writes the config file directly — merging into existing content
 (preserving manually-added entries) rather than overwriting. These are deferred until those
