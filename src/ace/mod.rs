@@ -120,6 +120,10 @@ impl Ace {
         self.io.data(msg);
     }
 
+    pub fn separator(&mut self) {
+        self.io.separator();
+    }
+
     // -- input --
 
     pub fn prompt_text(&mut self, prompt: &str, initial: Option<&str>) -> Result<String, IoError> {

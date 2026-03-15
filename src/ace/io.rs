@@ -119,6 +119,13 @@ impl Io {
         println!("{msg}");
     }
 
+    pub fn separator(&mut self) {
+        self.clear_spinner();
+        if self.mode == OutputMode::Human {
+            eprintln!("\n{}\n", style("⟢⟢⟢⟢⟢⟢⟢").dim());
+        }
+    }
+
     // -- input --
 
     pub fn prompt_text(&mut self, prompt: &str, initial: Option<&str>) -> Result<String, IoError> {

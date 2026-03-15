@@ -50,6 +50,8 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         school_cache.as_deref(),
     );
 
+    ace.separator();
+
     Exec {
         backend: ace.state().backend,
         session_prompt,
