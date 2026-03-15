@@ -33,4 +33,12 @@ impl Backend {
             Backend::Codex => "AGENTS.md",
         }
     }
+
+    pub fn mcp_config_file(&self) -> &'static str {
+        match self {
+            Backend::Claude => ".mcp.json",
+            Backend::OpenCode => "opencode.json",
+            Backend::Codex => ".codex/config.toml",
+        }
+    }
 }

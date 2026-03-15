@@ -204,4 +204,57 @@ fn setup_embedded_with_subpath() {
     env.assert_symlink(".claude/skills", "school/skills");
 }
 
+#[test]
+fn setup_codex_backend() {
+    let env = TestEnv::new();
+    env.git_init();
+
+    // School with backend = "codex".
+    env.write_file(
+        "school.toml",
+        "name = \"codex-school\"\nbackend = \"codex\"\n",
+    );
+    env.mkdir("skills/test-skill");
+    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
+
+    env.ace()
+        .args(["setup", "."])
+        .assert()
+        .success();
+
+    // Should use .agents/ dir instead of .claude/.
+    env.assert_symlink(".agents/skills", "skills");
+
+    // Should create AGENTS.md instead of CLAUDE.md.
+    env.assert_exists("AGENTS.md");
+    env.assert_contains("AGENTS.md", "codex-school");
+    env.assert_not_exists("CLAUDE.md");
+}
+
+#[test]
+fn setup_opencode_backend() {
+    let env = TestEnv::new();
+    env.git_init();
+
+    env.write_file(
+        "school.toml",
+        "name = \"oc-school\"\nbackend = \"opencode\"\n",
+    );
+    env.mkdir("skills/test-skill");
+    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
+
+    env.ace()
+        .args(["setup", "."])
+        .assert()
+        .success();
+
+    // Should use .opencode/ dir.
+    env.assert_symlink(".opencode/skills", "skills");
+
+    // Should create AGENTS.md.
+    env.assert_exists("AGENTS.md");
+    env.assert_contains("AGENTS.md", "oc-school");
+    env.assert_not_exists("CLAUDE.md");
+}
+
 use predicates;
