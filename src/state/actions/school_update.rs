@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::config;
-use super::import_skill::{clone_repo, copy_dir_recursive, discover_skills, ImportError};
+use super::utils::{clone_repo, copy_dir_recursive, discover_skills, CloneError};
 
 pub struct SchoolUpdate<'a> {
     pub school_root: &'a Path,
@@ -16,7 +16,7 @@ pub enum SchoolUpdateError {
     #[error("{0}")]
     Config(#[from] config::ConfigError),
     #[error("{0}")]
-    Import(#[from] ImportError),
+    Clone(#[from] CloneError),
 }
 
 pub enum SchoolUpdateResult {

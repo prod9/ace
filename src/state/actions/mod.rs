@@ -7,6 +7,7 @@ pub mod school_init;
 pub mod school_update;
 pub mod setup;
 pub mod update;
+pub mod utils;
 pub mod write_config;
 
 use std::path::Path;
