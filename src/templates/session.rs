@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::path::Path;
 
 use crate::templates::builtins;
+use crate::templates::Template;
 use crate::state::actions::update::{ChangeKind, SkillChange};
 
 /// Build the session prompt from built-in + school + project layers.
@@ -14,8 +16,10 @@ pub fn build_session_prompt(
 ) -> String {
     let mut parts = Vec::new();
 
-    let builtin = format!("School: {school_name}\n\n{}", builtins::SESSION);
-    parts.push(builtin);
+    let vals = HashMap::from([
+        ("school_name".to_string(), school_name.to_string()),
+    ]);
+    parts.push(Template::parse(builtins::SESSION).substitute(&vals));
 
     if !school_session_prompt.is_empty() {
         parts.push(school_session_prompt.to_string());
@@ -30,7 +34,10 @@ pub fn build_session_prompt(
     }
 
     if let Some(cache) = school_cache {
-        parts.push(format!("School cache: {}", cache.display()));
+        let vals = HashMap::from([
+            ("school_cache".to_string(), cache.display().to_string()),
+        ]);
+        parts.push(Template::parse(builtins::SCHOOL_CHANGES).substitute(&vals));
     }
 
     let previous_skills = skills_dir.join("previous-skills");
@@ -39,11 +46,10 @@ pub fn build_session_prompt(
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(".claude");
-        let tpl = super::Template::parse(builtins::PREVIOUS_SKILLS);
-        let vals = std::collections::HashMap::from([
+        let vals = HashMap::from([
             ("skills_dir".to_string(), skills_dir_name.to_string()),
         ]);
-        parts.push(tpl.substitute(&vals));
+        parts.push(Template::parse(builtins::PREVIOUS_SKILLS).substitute(&vals));
     }
 
     parts.join("\n\n")
@@ -107,7 +113,14 @@ mod tests {
         let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
         assert!(prompt.contains("School: Acme"));
         assert!(prompt.contains("ACE (AI Coding Environment)"));
-        assert!(prompt.contains("propose changes back to the school repo"));
+    }
+
+    #[test]
+    fn no_cache_omits_proposal_steps() {
+        let dir = nonexistent_dir();
+        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
+        assert!(!prompt.contains("School cache:"));
+        assert!(!prompt.contains("propose school changes"));
     }
 
     #[test]
@@ -185,17 +198,12 @@ mod tests {
     }
 
     #[test]
-    fn injects_school_cache_path() {
+    fn injects_school_cache_and_proposal_steps() {
         let dir = nonexistent_dir();
         let cache = Path::new("/home/user/.cache/ace/repos/org/school");
         let prompt = build_session_prompt("Acme", "", "", &dir, &[], Some(cache));
         assert!(prompt.contains("School cache: /home/user/.cache/ace/repos/org/school"));
-    }
-
-    #[test]
-    fn no_cache_no_injection() {
-        let dir = nonexistent_dir();
-        let prompt = build_session_prompt("Acme", "", "", &dir, &[], None);
-        assert!(!prompt.contains("School cache:"));
+        assert!(prompt.contains("guide the user through"));
+        assert!(prompt.contains("git -C /home/user/.cache/ace/repos/org/school"));
     }
 }
