@@ -8,6 +8,7 @@ use crate::config::ConfigError;
 
 use super::install::Install;
 use super::link::Link;
+use super::mcp_register::McpRegister;
 use super::update::{SkillChange, Update};
 
 #[derive(Debug, thiserror::Error)]
@@ -18,6 +19,8 @@ pub enum PrepareError {
     Clone(String),
     #[error("write failed: {0}")]
     Write(std::io::Error),
+    #[error("{0}")]
+    McpRegister(#[from] super::mcp_register::McpRegisterError),
 }
 
 /// Ensure school is ready: install if not cached, update if cached, link into project.
@@ -89,6 +92,20 @@ impl Prepare<'_> {
                     ));
                 }
             }
+        }
+
+        // Register MCP servers from school.toml.
+        ace.require_state()?;
+        let mcp_entries: Vec<_> = ace.state().school.as_ref()
+            .map(|s| s.mcp.clone())
+            .unwrap_or_default();
+
+        if !mcp_entries.is_empty() {
+            McpRegister {
+                backend: self.backend,
+                entries: &mcp_entries,
+            }
+            .run(ace)?;
         }
 
         Ok(PrepareResult { changes })

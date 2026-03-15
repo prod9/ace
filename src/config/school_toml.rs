@@ -35,6 +35,10 @@ pub struct ImportDecl {
 pub struct McpDecl {
     pub name: String,
     pub url: String,
+    #[serde(skip_serializing_if = "is_empty_map")]
+    pub headers: HashMap<String, String>,
+    #[serde(skip_serializing_if = "is_empty_str")]
+    pub instructions: String,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
