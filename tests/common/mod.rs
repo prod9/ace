@@ -128,6 +128,21 @@ impl TestEnv {
         assert!(status.success(), "git commit failed");
     }
 
+    /// Create a minimal embedded school: school.toml + one skill.
+    pub fn setup_embedded_school(&self, name: &str) {
+        self.write_file("school.toml", &format!("name = \"{name}\"\n"));
+        self.mkdir("skills/test-skill");
+        self.write_file("skills/test-skill/SKILL.md", "# Test Skill\n");
+    }
+
+    /// Create an embedded school and run `ace setup .` — the most common test fixture.
+    pub fn setup_embedded(&self, name: &str) {
+        self.git_init();
+        self.setup_embedded_school(name);
+        let assert = self.ace().args(["setup", "."]).assert();
+        assert.success();
+    }
+
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured
     /// with a clean environment and sandbox paths.
     pub fn ace(&self) -> Command {

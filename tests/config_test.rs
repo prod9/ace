@@ -5,15 +5,7 @@ use common::TestEnv;
 #[test]
 fn config_shows_effective() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("test-school");
 
     let output = env.ace()
         .args(["config"])
@@ -23,7 +15,6 @@ fn config_shows_effective() {
     assert!(output.status.success(), "ace config should succeed");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // Should contain the school specifier and backend field.
     assert!(stdout.contains("school"), "output should contain school field");
     assert!(stdout.contains("backend"), "output should contain backend field");
 }
@@ -31,15 +22,7 @@ fn config_shows_effective() {
 #[test]
 fn config_includes_school_toml() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("test-school");
 
     let output = env.ace()
         .args(["config"])

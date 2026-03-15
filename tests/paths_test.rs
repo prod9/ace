@@ -5,16 +5,7 @@ use common::TestEnv;
 #[test]
 fn paths_lists_config_paths() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    // Setup first to create ace.toml.
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("test-school");
 
     let output = env.ace()
         .args(["paths"])
@@ -36,15 +27,7 @@ fn paths_lists_config_paths() {
 #[test]
 fn paths_single_key() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("test-school");
 
     let output = env.ace()
         .args(["paths", "config.project"])
@@ -63,15 +46,7 @@ fn paths_single_key() {
 #[test]
 fn paths_alias() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("test-school");
 
     let output = env.ace()
         .args(["paths", "project"])
@@ -87,15 +62,7 @@ fn paths_alias() {
 #[test]
 fn paths_unknown_key() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("test-school");
 
     env.ace()
         .args(["paths", "nonexistent"])
