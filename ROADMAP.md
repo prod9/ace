@@ -13,17 +13,16 @@
 
 ## Features
 
-- [ ] **MCP registration** — register `[[mcp]]` from school.toml into the active backend.
-      Claude (first): `claude mcp add-json -s project` per entry. CLI handles merging.
-      OpenCode/Codex: deferred until those backends ship (requires direct file writes).
-      All entries are remote URLs — no Docker/stdio.
-- [ ] **Codex backend** — third Backend variant.
-      Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
-      Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).
-      LiteLLM: native via `OPENAI_BASE_URL` or `model_providers` config.
+- [x] **~~MCP registration~~** — register `[[mcp]]` from school.toml into the active backend.
+      Claude: `claude mcp add-json -s project` per entry. OpenCode/Codex: deferred (hint shown).
+- [x] **~~Codex backend~~** — Backend variant fully wired. Setup is now backend-aware: resolves
+      backend from config layers, uses correct skills_dir (.agents/) and instructions file
+      (AGENTS.md). Exec already supported via Backend enum.
 - [x] **TUI school picker** — multi-school selection when multiple cached schools exist
-- [ ] Add `tool` field to AceToml so Link knows backend-specific target dir
-- [ ] `role` and `description` fields in ace_toml.rs for non-dev roles (PM, requirements-only)
+- [x] ~~Add `tool` field to AceToml so Link knows backend-specific target dir~~ — superseded by
+      backend-aware setup. Backend resolution from config layers determines skills_dir.
+- [x] ~~`role` and `description` fields in ace_toml.rs~~ — for non-dev roles (PM, requirements-only).
+      Last-Some-wins resolution across config layers. Injected into session prompt.
 
 ## School
 
@@ -32,20 +31,18 @@
 
 ## Testing
 
-- [ ] **Network-dependent tests** — find a strategy to enable integration tests that require
-      networking (e.g. `ace setup owner/repo`, `ace import`, `ace school update` which clone
-      from GitHub). Options: conditional `#[ignore]` with CI-only flag, mock git server,
-      pre-seeded fixture repos, or record/replay HTTP layer.
-- [ ] **DRY up test code** — extract common patterns from integration tests (e.g. "setup
-      embedded school" fixture, repeated school.toml + skills/ boilerplate) into TestEnv
-      builder methods or shared helpers.
-- [ ] **Extract shared git/fs utilities** — `clone_repo`, `copy_dir_recursive`,
-      `discover_skills` live in `import_skill.rs` but are also used by `school_update.rs`.
-      Move to a shared module (e.g. `actions/utils.rs`) to reduce cross-action coupling.
+- [x] **~~Network-dependent tests~~** — `#[ignore]` strategy with `ACE_TEST_NETWORK` env var.
+      Run with `cargo test -- --ignored`. Tests in `tests/network_test.rs`.
+- [x] **~~DRY up test code~~** — `setup_embedded_school()` and `setup_embedded()` helpers
+      added to TestEnv. Config and paths tests simplified.
+- [x] **~~Extract shared git/fs utilities~~** — `clone_repo`, `copy_dir_recursive`,
+      `discover_skills` moved to `actions/utils.rs`. `import_skill.rs` and `school_update.rs`
+      import from shared module.
 
 ## Backlog
 
-- [ ] **Ctrl+C / signal handling** — general cleanup strategy for terminal state (cursor, alt screen, raw mode) on interrupt during ACE's own TUI phases (prompts, progress, `ace fly`). Must not interfere with the backend child process which handles its own signals after exec.
+- [x] **~~Ctrl+C / signal handling~~** — SIGINT handler restores cursor visibility before exit.
+      Only in human mode. Uses signal-hook flag + watchdog thread. Exit code 130.
 - [ ] Setup modes discussion — see `spec/` notes
 - [ ] Auto `--continue` magic
 - [ ] Cross-build script (`cargo` native, `cross` for cross-platform)
