@@ -20,31 +20,15 @@ enum Segment<'a> {
 }
 
 impl<'a> Template<'a> {
+    fn new() -> Self {
+        Self { segments: Vec::new(), names: Vec::new() }
+    }
+
     /// Parse a template string into segments. Single-pass, zero-copy for literals.
     pub fn parse(input: &'a str) -> Self {
-        let mut parser = Parser::new();
-        let mut segments = Vec::new();
-        let mut names = Vec::new();
-        let mut lit_start = 0;
-
-        for (i, byte) in input.bytes().enumerate() {
-            let Some((open, ns, ne)) = parser.feed(i, byte) else { continue };
-            let name = input[ns..ne].trim();
-            if !is_valid_name(name) {
-                continue;
-            }
-
-            flush_literal(input, lit_start, open, &mut segments);
-            segments.push(Segment::Placeholder(name));
-            lit_start = ne + 2; // skip past `}}`
-
-            if !names.contains(&name) {
-                names.push(name);
-            }
-        }
-
-        flush_literal(input, lit_start, input.len(), &mut segments);
-        Self { segments, names }
+        let mut tpl = Self::new();
+        Parser::new().parse_all(input, &mut tpl);
+        tpl
     }
 
     /// Unique placeholder names in order of first appearance.
@@ -59,22 +43,26 @@ impl<'a> Template<'a> {
             match seg {
                 Segment::Literal(s) => out.push_str(s),
                 Segment::Placeholder(name) => {
-                    out.push_str(values.get(*name).map(|s| s.as_str()).unwrap_or(""));
+                    let v = values.get(*name).map(|s| s.as_str()).unwrap_or("");
+                    out.push_str(v);
                 }
             }
         }
         out
     }
-}
 
-fn flush_literal<'a>(input: &'a str, start: usize, end: usize, segments: &mut Vec<Segment<'a>>) {
-    if end > start {
-        segments.push(Segment::Literal(&input[start..end]));
+    pub(crate) fn push_literal(&mut self, text: &'a str) {
+        if !text.is_empty() {
+            self.segments.push(Segment::Literal(text));
+        }
     }
-}
 
-fn is_valid_name(name: &str) -> bool {
-    !name.is_empty() && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    pub(crate) fn push_placeholder(&mut self, name: &'a str) {
+        self.segments.push(Segment::Placeholder(name));
+        if !self.names.contains(&name) {
+            self.names.push(name);
+        }
+    }
 }
 
 #[cfg(test)]
