@@ -29,8 +29,11 @@ Workflow:
   verify by reading source/specs before stating it as fact. If you can't pinpoint a file that
   backs your claim, read before responding. One question beats six wrong iterations. This is
   the single most expensive failure mode — treat ambiguity as a hard stop until clarified.
-- Ask permission before editing files (group related files)
-- Run commands/tests only after asking
+- **Edit protocol** — before every file edit:
+  1. State what you intend to change and where (declarative).
+  2. Stop. Do not edit, do not ask. Wait for the user.
+  3. On explicit approval ("go", "do it", "apply", etc.), make the edit.
+- Run commands/tests only after approval.
 - **When a command or build fails, report the failure immediately.** Do not silently substitute
   a different command, skip the step, or work around it. The user decides how to proceed.
 - **Never discard uncommitted changes** — do not run `git checkout`, `git restore`, or any
@@ -123,19 +126,11 @@ Metrics:
 
 See `ROADMAP.md` for the consolidated task list (priority, features, backlog).
 
-## Response Endings
+## Response Completion
 
-Every response ends with a declarative statement. Never a question, never an offer.
+After drafting every response, check the final sentence before sending:
+1. If it contains a question mark — delete it.
+2. If it offers to do something — delete it.
+3. The response now ends on the previous sentence. That's the response.
 
-Bad endings (NEVER do these):
-- "Want me to fix that?"
-- "Should I proceed?"
-- "Ready to move on?"
-- "Let me know if you need anything else."
-- "Shall I implement this?"
-
-Good endings (do these):
-- "The bug is on line 42 in `parser.rs`."
-- "Acknowledged."
-- "Both tests pass."
-- "The issue is a missing lifetime bound on the trait impl."
+The user will tell you what to do next. You never need to prompt for it.
