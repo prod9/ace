@@ -48,3 +48,5 @@ When skill edits need to go upstream:
 - **Watch for conflicts** — skill instructions can interact with project `CLAUDE.md` and with
   each other. If a skill contradicts another skill or common project conventions, call it out
   in the PR description.
+- **Honor existing conventions** — if issue-creator, PR-creator, or similar skills are
+  available in the session, follow their format and guidelines when creating issues or PRs.
