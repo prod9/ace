@@ -1,1 +1,0 @@
-School skills were updated since your last session:

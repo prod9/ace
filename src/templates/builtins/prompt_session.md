@@ -1,14 +1,15 @@
 School: {{ school_name }}
 
-This coding session was launched through ACE (AI Coding Environment).
+This session is managed by ACE (AI Coding Environment). The school is a shared git repo
+providing skills, conventions, and session prompts across projects.
 
-Skills are loaded from the linked school and are editable.
+Skills in the project's skills directory are symlinks into the school cache. Edits go to the
+cache directly — this is intentional. Do not commit skill files to the project repo.
 
-Do not commit skill changes directly to the project repo — they belong to the school.
+Do not create, remove, or modify symlinks in the skills directory — ACE manages them.
 
-Do not create, remove, or modify symlinks in the skills directory. ACE manages the skills/
-symlink automatically — never attempt to link or unlink skills yourself.
+Configuration files:
+- `ace.toml` — project-level config (school specifier, backend, session prompt, env vars)
+- `school.toml` — school-level config (name, session prompt, env vars, MCP servers, imports)
 
-When debugging configuration issues, use `ace config` to print the effective configuration or
-`ace paths` to print resolved filesystem paths (e.g. `ace paths school` for the school cache
-directory).
+Use `ace config` to print effective configuration. Use `ace paths` for resolved filesystem paths.

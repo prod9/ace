@@ -11,17 +11,18 @@ from the backend's own system prompt.
 
 Built by concatenating layers, separated by blank lines:
 
-1. **Built-in** — `prompt_session.md`, always present. Contains school name, skill/symlink
-   rules, debugging tips. Rendered with `{{ school_name }}`.
+1. **Built-in** — `prompt_session.md`, always present. Contains school name/concept, symlink
+   edit flow, config file awareness, debugging tips. Rendered with `{{ school_name }}`.
 2. **School** — `session_prompt` field in `school.toml`. Domain-specific instructions from the
-   school maintainer.
+   school maintainer. Injected verbatim (no template substitution).
 3. **Project** — `session_prompt` field in `ace.toml`. Project-specific overrides or additions.
-4. **Skill change summary** — only when skills changed since last session. Lists added,
-   updated, and removed skills.
+   Injected verbatim (no template substitution).
+4. **Skill change summary** — `prompt_changes.md`, only when skills changed since last session.
+   Lists added, updated, and removed skills. Rendered with `{{ changes }}`.
 5. **School changes** — `prompt_school_changes.md`, only when a school cache exists (remote
    schools). Contains proposal workflow steps. Rendered with `{{ school_cache }}`.
 6. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
-   exists. Migration guidance. Rendered with `{{ skills_dir }}`.
+   exists. Consolidation guidance. Rendered with `{{ skills_dir }}`.
 
 Empty/absent layers are skipped.
 
@@ -69,6 +70,7 @@ parsed template supports `placeholders()` (returns unique names) and `substitute
 | `{{ school_name }}`  | `prompt_session.md`, project/school CLAUDE.md templates | School display name | `Acme` |
 | `{{ skills_dir }}`   | `prompt_previous_skills.md`, project CLAUDE.md template | Backend skills directory name | `.claude` |
 | `{{ school_cache }}` | `prompt_school_changes.md` | School cache path             | `/home/user/.cache/ace/repos/org/school` |
+| `{{ changes }}`      | `prompt_changes.md`       | Formatted change list (built by `session.rs`) | `- Added: \`new-skill\`` |
 
 ### Adding a Placeholder
 

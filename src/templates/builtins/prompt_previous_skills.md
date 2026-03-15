@@ -4,4 +4,3 @@ This project has unconsolidated skills in `{{ skills_dir }}/previous-skills/`. B
    - If a matching school skill exists: merge the content into it (edit through symlink)
    - If no matching school skill exists: move the folder from `previous-skills/` into the school's `skills/` directory
 3. Delete `{{ skills_dir }}/previous-skills/` when all skills are consolidated
-4. Guide the user through proposing changes back to the school repo
