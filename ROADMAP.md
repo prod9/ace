@@ -1,55 +1,49 @@
 # ACE Roadmap
 
-## Priority
+Tracked in Linear (project: ACE, team: PRODIGY9, key: PROD9).
 
-- [x] **~~PKCE auth flow~~** — superseded by remote MCP + OAuth. All three backends (Claude,
-      OpenCode, Codex) handle OAuth discovery natively for remote MCP servers. ACE delegates
-      auth entirely to the backend. `authenticate.rs` stub can be removed.
-- [x] ~~Investigate adding rules() to school~~ — generalized to link all 4 school folders
-      (skills, rules, commands, agents) with backend compatibility warnings
-- [x] **~~Services removal~~** — `[[services]]`, `ServiceDecl`, `authenticate.rs`,
-      `ace school add-service`, `{{ services.X.token }}` templating all removed. `[[mcp]]`
-      simplified to `name` + `url` (remote-only). See `spec/mcp.md`.
+## In Progress
 
-## Features
+### MCP Registration (3 work items)
 
-- [ ] **MCP registration** — register `[[mcp]]` from school.toml into the active backend.
-      Claude (first): `claude mcp add-json -s project` per entry. CLI handles merging.
-      OpenCode/Codex: deferred until those backends ship (requires direct file writes).
-      All entries are remote URLs — no Docker/stdio.
-- [ ] **Codex backend** — third Backend variant.
-      Instructions file: `AGENTS.md` (not `CLAUDE.md`). Config: TOML in `.codex/config.toml`.
-      Skills in `.agents/skills/`. Exec: `codex` (interactive) or `codex exec` (scripted).
-      LiteLLM: native via `OPENAI_BASE_URL` or `model_providers` config.
-- [x] **TUI school picker** — multi-school selection when multiple cached schools exist
-- [ ] Add `tool` field to AceToml so Link knows backend-specific target dir
-- [ ] `role` and `description` fields in ace_toml.rs for non-dev roles (PM, requirements-only)
+Register `[[mcp]]` from school.toml into the active backend. Design finalized in `spec/mcp.md`
+and `spec/backend.md`. Three sequential work items:
 
-## School
+1. **PROD9-11: Placeholder template engine** (`src/template.rs`)
+   - 4-state parser (Text → MaybeOpen → Name → MaybeClose)
+   - `extract_placeholders(input) -> Vec<String>`
+   - `substitute(input, values) -> String`
+   - Pure functions, no regex, no deps
 
-- [ ] Propose pending school cache changes (general-coding, rust-coding, typst-coding skills)
-- [x] ~~Update school CLAUDE.md template~~: commit messages as policy memos (see `spec/school/overview.md`)
+2. **McpDecl struct update** (`src/config/school_toml.rs`)
+   - Add `headers: HashMap<String, String>` (optional)
+   - Add `instructions: String` (optional)
 
-## Testing
+3. **Registration action** (`src/state/actions/register_mcp.rs` or similar)
+   - For each `[[mcp]]` entry:
+     - `claude mcp get <name>` — exists? warn and skip
+     - Placeholders in headers? Print `instructions`, prompt user, substitute
+     - `claude mcp add -t http -s user <name> <url> [-H "K: V" ...]`
+   - Inject `instructions` into session prompt for mid-session auth help
+   - Claude first. OpenCode/Codex deferred (file-based writes).
+   - Runs during setup, after school install
 
-- [ ] **Network-dependent tests** — find a strategy to enable integration tests that require
-      networking (e.g. `ace setup owner/repo`, `ace import`, `ace school update` which clone
-      from GitHub). Options: conditional `#[ignore]` with CI-only flag, mock git server,
-      pre-seeded fixture repos, or record/replay HTTP layer.
-- [ ] **DRY up test code** — extract common patterns from integration tests (e.g. "setup
-      embedded school" fixture, repeated school.toml + skills/ boilerplate) into TestEnv
-      builder methods or shared helpers.
-- [ ] **Extract shared git/fs utilities** — `clone_repo`, `copy_dir_recursive`,
-      `discover_skills` live in `import_skill.rs` but are also used by `school_update.rs`.
-      Move to a shared module (e.g. `actions/utils.rs`) to reduce cross-action coupling.
+Not in scope: OAuth, secret storage, stdio MCP, OpenCode/Codex.
 
-## Backlog
+## Backlog (in Linear)
 
-- [ ] **Ctrl+C / signal handling** — general cleanup strategy for terminal state (cursor, alt screen, raw mode) on interrupt during ACE's own TUI phases (prompts, progress, `ace fly`). Must not interfere with the backend child process which handles its own signals after exec.
-- [ ] Setup modes discussion — see `spec/` notes
-- [ ] Auto `--continue` magic
-- [ ] Cross-build script (`cargo` native, `cross` for cross-platform)
-- [ ] Release workflow — blocked on [github-mcp-server#1012](https://github.com/github/github-mcp-server/issues/1012)
-- [ ] Self-update — transparent auto-update for the ace binary
-- [ ] `ace switch` — switch between backends (re-link folders, regenerate instructions file)
-- [ ] Skill diff tool — compare skill versions after update
+- PROD9-6: `ace setup` wrong specifier blocks re-run
+- PROD9-7: School init .gitignore template
+- PROD9-9: Investigate additional backends (Cursor, Continue, Cline)
+- PROD9-10: School scripts for machine/software setup
+- PROD9-12: Startup logo animation
+- Codex backend (already implemented as Backend::Codex, needs MCP + polish)
+- `tool` field in AceToml
+- `role`/`description` fields in AceToml
+- Propose pending school cache changes
+- Test infrastructure (network tests, DRY boilerplate, extract shared git/fs utils)
+- Ctrl+C / signal handling
+- Auto `--continue` magic
+- Build & release (cross-build, release workflow, self-update)
+- `ace switch` (switch between backends)
+- Skill diff tool
