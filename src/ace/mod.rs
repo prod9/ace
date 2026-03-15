@@ -1,19 +1,22 @@
+pub mod io;
+
 use std::path::{Path, PathBuf};
 
 use crate::config;
 use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
 use crate::config::ConfigError;
-use crate::events::OutputMode;
 use crate::git::Git;
 use crate::state::State;
-use crate::term_ui::sink::EventSink;
+
+pub use io::{logo, IoError, OutputMode};
+use io::Io;
 
 pub struct Ace {
     project_dir: PathBuf,
     state: Option<State>,
     school: Option<SchoolPaths>,
-    sink: EventSink,
+    io: Io,
     mode: OutputMode,
 }
 
@@ -23,7 +26,7 @@ impl Ace {
             project_dir,
             state: None,
             school: None,
-            sink: EventSink::new(mode),
+            io: Io::new(mode),
             mode,
         }
     }
@@ -91,27 +94,39 @@ impl Ace {
         Git::new(repo, self.mode)
     }
 
+    // -- output --
+
     pub fn progress(&mut self, msg: &str) {
-        self.sink.progress(msg);
+        self.io.progress(msg);
     }
 
     pub fn done(&mut self, msg: &str) {
-        self.sink.done(msg);
+        self.io.done(msg);
     }
 
     pub fn warn(&mut self, msg: &str) {
-        self.sink.warn(msg);
+        self.io.warn(msg);
     }
 
     pub fn error(&mut self, msg: &str) {
-        self.sink.error(msg);
+        self.io.error(msg);
     }
 
     pub fn hint(&mut self, msg: &str) {
-        self.sink.hint(msg);
+        self.io.hint(msg);
     }
 
     pub fn data(&mut self, msg: &str) {
-        self.sink.data(msg);
+        self.io.data(msg);
+    }
+
+    // -- input --
+
+    pub fn prompt_text(&mut self, prompt: &str, initial: Option<&str>) -> Result<String, IoError> {
+        self.io.prompt_text(prompt, initial)
+    }
+
+    pub fn prompt_select(&mut self, prompt: &str, options: Vec<String>) -> Result<String, IoError> {
+        self.io.prompt_select(prompt, options)
     }
 }

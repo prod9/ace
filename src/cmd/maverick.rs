@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use console::Term;
 
-use crate::events::OutputMode;
+use crate::ace::OutputMode;
 
 const GIF_DATA: &[u8] = include_bytes!("../topgun.gif");
 

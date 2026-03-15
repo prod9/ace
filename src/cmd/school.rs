@@ -4,10 +4,10 @@ use clap::Subcommand;
 
 use crate::ace::Ace;
 use crate::config::skill_meta;
-use crate::events::OutputMode;
+use crate::config::school_toml;
+use crate::ace::OutputMode;
 use crate::state::actions::school_init::SchoolInit;
 use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateResult};
-use crate::term_ui::{Tui, Workflow};
 
 use super::CmdError;
 
@@ -46,20 +46,24 @@ pub async fn run(ace: &mut Ace, command: Command) {
 }
 
 fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdError> {
-    match name {
-        Some(name) => {
-            let project_dir = ace.project_dir().to_path_buf();
-            SchoolInit {
-                name: &name,
-                project_dir: &project_dir,
-                force,
-            }
-            .run(ace)?;
-        }
+    let project_dir = ace.project_dir().to_path_buf();
+
+    let name = match name {
+        Some(n) => n,
         None => {
-            Tui::new(ace).run(Workflow::SchoolInit { force })?;
+            let toml_path = project_dir.join("school.toml");
+            let existing = if force && toml_path.exists() {
+                school_toml::load(&toml_path).ok()
+                    .map(|s| s.name)
+                    .filter(|n| !n.is_empty())
+            } else {
+                None
+            };
+            ace.prompt_text("School name:", existing.as_deref())?
         }
-    }
+    };
+
+    SchoolInit { name: &name, project_dir: &project_dir, force }.run(ace)?;
     Ok(())
 }
 

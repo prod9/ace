@@ -10,7 +10,7 @@ mod setup;
 
 use clap::{Parser, Subcommand};
 
-use crate::ace::Ace;
+use crate::ace::{Ace, IoError};
 use crate::config::ConfigError;
 use crate::state::actions::import_skill::ImportError;
 use crate::state::actions::prepare::PrepareError;
@@ -18,7 +18,6 @@ use crate::state::actions::school_init::SchoolInitError;
 use crate::state::actions::school_update::SchoolUpdateError;
 use crate::state::actions::setup::SetupError;
 use crate::git::GitError;
-use crate::term_ui::TermError;
 
 #[derive(Parser)]
 #[command(
@@ -96,7 +95,7 @@ pub(crate) enum CmdError {
     #[error("{0}")]
     Git(#[from] GitError),
     #[error("{0}")]
-    Tui(#[from] TermError),
+    Prompt(#[from] IoError),
     #[error("{0}")]
     Other(String),
 }

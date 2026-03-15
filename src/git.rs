@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 
-use crate::events::OutputMode;
+use crate::ace::OutputMode;
 
 #[derive(Debug, thiserror::Error)]
 pub enum GitError {

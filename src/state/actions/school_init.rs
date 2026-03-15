@@ -45,6 +45,7 @@ impl SchoolInit<'_> {
             };
             school_toml::save(&toml_path, &toml)?;
         }
+        ace.done("Created school.toml");
 
         let instructions = self.project_dir.join("CLAUDE.md");
         if !instructions.exists() {

@@ -1,7 +1,6 @@
 use crate::ace::Ace;
 use crate::config::index_toml;
 use crate::state::actions::setup::Setup;
-use crate::term_ui;
 
 use super::CmdError;
 
@@ -15,7 +14,7 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
 
     let resolved = match specifier {
         Some(s) => s.to_string(),
-        None => resolve_from_cache()?,
+        None => resolve_from_cache(ace)?,
     };
 
     Setup {
@@ -29,7 +28,7 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
     Ok(())
 }
 
-fn resolve_from_cache() -> Result<String, CmdError> {
+fn resolve_from_cache(ace: &mut Ace) -> Result<String, CmdError> {
     let index_path = index_toml::index_path()
         .map_err(|e| CmdError::Other(format!("{e}")))?;
     let index = index_toml::load(&index_path)
@@ -40,7 +39,7 @@ fn resolve_from_cache() -> Result<String, CmdError> {
         0 => Err(CmdError::Other("no cached schools, ace setup <owner/repo>?".to_string())),
         1 => Ok(specs.into_iter().next().expect("checked len=1")),
         _ => {
-            let choice = term_ui::select("Select school:", specs)?;
+            let choice = ace.prompt_select("Select school:", specs)?;
             Ok(choice)
         }
     }

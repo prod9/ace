@@ -1,17 +1,63 @@
+use std::io::IsTerminal;
+
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::events::OutputMode;
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutputMode {
+    #[default]
+    Human,
+    Porcelain,
+    Silent,
+}
 
-pub struct EventSink {
+impl OutputMode {
+    pub fn detect(porcelain: bool) -> Self {
+        if porcelain || !std::io::stderr().is_terminal() {
+            Self::Porcelain
+        } else {
+            Self::Human
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum IoError {
+    #[error("cancelled")]
+    Cancelled,
+    #[error("{0}")]
+    Io(#[from] std::io::Error),
+}
+
+pub struct Io {
     mode: OutputMode,
     spinner: Option<ProgressBar>,
 }
 
-impl EventSink {
+#[allow(dead_code)]
+pub const LOGO: &str = r"
+░█▀█░█▀▀░█▀▀
+░█▀█░█░░░█▀▀
+░▀░▀░▀▀▀░▀▀▀";
+
+pub const LOGO_COLOR: &str = "\x1b[36m
+░█▀█░█▀▀░█▀▀
+░█▀█░█░░░█▀▀
+░▀░▀░▀▀▀░▀▀▀\x1b[0m";
+
+pub fn logo(mode: OutputMode) -> &'static str {
+    match mode {
+        OutputMode::Human => LOGO_COLOR,
+        _ => "",
+    }
+}
+
+impl Io {
     pub fn new(mode: OutputMode) -> Self {
         Self { mode, spinner: None }
     }
+
+    // -- output --
 
     pub fn progress(&mut self, msg: &str) {
         self.clear_spinner();
@@ -73,9 +119,35 @@ impl EventSink {
         println!("{msg}");
     }
 
+    // -- input --
+
+    pub fn prompt_text(&mut self, prompt: &str, initial: Option<&str>) -> Result<String, IoError> {
+        self.clear_spinner();
+        let mut p = inquire::Text::new(prompt);
+        if let Some(val) = initial {
+            p = p.with_initial_value(val);
+        }
+        p.prompt().map_err(map_inquire_err)
+    }
+
+    pub fn prompt_select(&mut self, prompt: &str, options: Vec<String>) -> Result<String, IoError> {
+        self.clear_spinner();
+        inquire::Select::new(prompt, options)
+            .prompt()
+            .map_err(map_inquire_err)
+    }
+
     fn clear_spinner(&mut self) {
         if let Some(sp) = self.spinner.take() {
             sp.finish_and_clear();
         }
+    }
+}
+
+fn map_inquire_err(e: inquire::InquireError) -> IoError {
+    match e {
+        inquire::InquireError::OperationCanceled
+        | inquire::InquireError::OperationInterrupted => IoError::Cancelled,
+        other => IoError::Io(std::io::Error::other(other)),
     }
 }

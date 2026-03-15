@@ -21,10 +21,8 @@ fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>) -> Result<(), Cmd
     match result {
         ImportResult::Done { .. } => {}
         ImportResult::NeedsSelection(skills) => {
-            let names: Vec<&str> = skills.iter().map(|s| s.name.as_str()).collect();
-            let selected = inquire::Select::new("Multiple skills found, pick one:", names)
-                .prompt()
-                .map_err(|e| ImportError::Clone(format!("prompt: {e}")))?;
+            let names: Vec<String> = skills.iter().map(|s| s.name.clone()).collect();
+            let selected = ace.prompt_select("Multiple skills found, pick one:", names)?;
 
             let skill = skills.iter().find(|s| s.name == selected)
                 .ok_or_else(|| ImportError::SkillNotFound(selected.to_string()))?;
