@@ -2,6 +2,7 @@ mod ace;
 mod cmd;
 mod config;
 mod git;
+mod template;
 mod templates;
 mod state;
 
