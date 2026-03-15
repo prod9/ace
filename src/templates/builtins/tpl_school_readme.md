@@ -1,4 +1,4 @@
-# {school_name}
+# {{ school_name }}
 
 ACE school repository — shared skills, conventions, and session prompts for your team.
 

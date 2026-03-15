@@ -1,0 +1,8 @@
+pub const SESSION: &str = include_str!("builtins/prompt_session.md");
+pub const PREVIOUS_SKILLS: &str = include_str!("builtins/prompt_previous_skills.md");
+pub const CHANGES_HEADER: &str = include_str!("builtins/prompt_changes_header.md");
+pub const CHANGES_FOOTER: &str = include_str!("builtins/prompt_changes_footer.md");
+pub const PROJECT_CLAUDE_MD: &str = include_str!("builtins/tpl_project_claude_md.md");
+pub const SCHOOL_CLAUDE_MD: &str = include_str!("builtins/tpl_school_claude_md.md");
+pub const ACE_SCHOOL_SKILL: &str = include_str!("builtins/tpl_ace_school_skill.md");
+pub const SCHOOL_README: &str = include_str!("builtins/tpl_school_readme.md");

@@ -47,19 +47,23 @@ impl SchoolInit<'_> {
         }
         ace.done("Created school.toml");
 
+        let vals = std::collections::HashMap::from([
+            ("school_name".to_string(), self.name.to_string()),
+        ]);
+
         let instructions = self.project_dir.join("CLAUDE.md");
         if !instructions.exists() {
-            let ctx = templates::PromptCtx::new(Path::new(".claude"), self.name);
-            let content = templates::render(templates::SCHOOL_CLAUDE_MD, &ctx);
-            std::fs::write(&instructions, content).map_err(SchoolInitError::Write)?;
+            let tpl = templates::Template::parse(templates::builtins::SCHOOL_CLAUDE_MD);
+            std::fs::write(&instructions, tpl.substitute(&vals))
+                .map_err(SchoolInitError::Write)?;
             ace.done("Created CLAUDE.md");
         }
 
         let readme = self.project_dir.join("README.md");
         if !readme.exists() {
-            let ctx = templates::PromptCtx::new(Path::new(".claude"), self.name);
-            let content = templates::render(templates::SCHOOL_README, &ctx);
-            std::fs::write(&readme, content).map_err(SchoolInitError::Write)?;
+            let tpl = templates::Template::parse(templates::builtins::SCHOOL_README);
+            std::fs::write(&readme, tpl.substitute(&vals))
+                .map_err(SchoolInitError::Write)?;
             ace.done("Created README.md");
         }
 
@@ -67,7 +71,7 @@ impl SchoolInit<'_> {
         let skill_path = skill_dir.join("SKILL.md");
         if !skill_path.exists() {
             std::fs::create_dir_all(&skill_dir).map_err(SchoolInitError::Write)?;
-            std::fs::write(&skill_path, templates::ACE_SCHOOL_SKILL)
+            std::fs::write(&skill_path, templates::builtins::ACE_SCHOOL_SKILL)
                 .map_err(SchoolInitError::Write)?;
             ace.done("Created skills/ace-school/SKILL.md");
         }

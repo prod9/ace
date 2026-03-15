@@ -31,12 +31,11 @@ this is intentional. The school cache is a real git working copy.
 When skill edits need to go upstream:
 
 1. Run `ace diff` to review changes.
-2. `cd $(ace paths school)` to enter the school cache directory.
-3. `git checkout -b ace/{short-description}` — create a feature branch.
-4. Stage and commit with a descriptive message.
-5. `git push -u origin {branch}` — push to the school remote.
-6. Create a PR to the school repo. Use GitHub MCP if available.
-7. Do **NOT** reset the cache to main — that destroys uncommitted work across all branches.
+2. `git -C $(ace paths school) checkout -b ace/{short-description}` — create a feature branch.
+3. Stage and commit with a descriptive message. Use `git -C $(ace paths school)` for all git commands — do not `cd` out of the project directory.
+4. `git -C $(ace paths school) push -u origin {branch}` — push to the school remote.
+5. Create a PR to the school repo. Use GitHub MCP if available.
+6. Do **NOT** reset the cache to main — that destroys uncommitted work across all branches.
 
 ## Good school PR guidelines
 
