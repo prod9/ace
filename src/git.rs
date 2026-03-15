@@ -57,6 +57,10 @@ impl<'a> Git<'a> {
         self.output(&args)
     }
 
+    pub fn intent_to_add_all(&self) -> Result<(), GitError> {
+        self.run(&["add", "-N", "."])
+    }
+
     pub fn diff(&self) -> Result<String, GitError> {
         let color = match self.mode {
             OutputMode::Human => "--color=always",

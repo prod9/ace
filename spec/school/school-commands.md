@@ -104,10 +104,12 @@ Re-fetch all imported skills from their sources.
 
 ## `ace diff`
 
-Show uncommitted changes in the school cache. Runs `git diff` in the cached school repo.
+Show uncommitted changes in the school cache, including untracked files.
 
+- Runs `git add -N .` (intent-to-add) before diffing so new files appear in the output.
 - Prints `# school-cache\t<path>` as the first line (metadata, tab-separated).
 - Resolves school specifier from `ace.toml`.
 - Errors if no school configured or school is embedded (no cache directory).
 - Passes raw diff output through to stdout (human-readable, not tab-separated).
 - Prints metadata line even if the cache is clean (diff output may be empty).
+- Output is a valid unified diff (patch-compatible).

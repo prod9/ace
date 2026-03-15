@@ -13,7 +13,9 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
 
     ace.data(&format!("# school-cache\t{}", cache.display()));
 
-    let out = ace.git(&cache).diff()?;
+    let git = ace.git(&cache);
+    git.intent_to_add_all()?;
+    let out = git.diff()?;
     if !out.is_empty() {
         ace.data(&out);
     }

@@ -35,7 +35,7 @@ When skill edits need to go upstream:
 3. `git checkout -b ace/{short-description}` — create a feature branch.
 4. Stage and commit with a descriptive message.
 5. `git push -u origin {branch}` — push to the school remote.
-6. Create a PR via GitHub MCP (`mcp__github__create_pull_request`).
+6. Create a PR to the school repo. Use GitHub MCP if available.
 7. Do **NOT** reset the cache to main — that destroys uncommitted work across all branches.
 
 ## Good school PR guidelines
