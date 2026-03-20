@@ -4,7 +4,7 @@
 
 Three supported backends:
 
-| Value      | Binary     | Skills Dir  | Instructions File | MCP Config              |
+| Value      | Binary     | Backend Dir | Instructions File | MCP Config              |
 |------------|------------|-------------|-------------------|-------------------------|
 | `claude`   | `claude`   | `.claude`   | `CLAUDE.md`       | `.mcp.json` (JSON)      |
 | `opencode` | `opencode` | `.opencode` | `AGENTS.md`       | `opencode.json` (JSONC) |
@@ -32,7 +32,7 @@ Fallback if no layer specifies backend: `claude`.
 ## Per-Backend Conventions
 
 - **Binary name**: `backend.binary()` — used for exec.
-- **Skills directory**: `backend.skills_dir()` — skills are linked into `{skills_dir}/skills/`.
+- **Backend directory**: `backend.backend_dir()` — school folders are linked into `{backend_dir}/`.
 - **Instructions file**: `backend.instructions_file()` — generated per-project by ACE during setup.
 
 ## MCP Server Registration

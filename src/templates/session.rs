@@ -10,7 +10,7 @@ pub fn build_session_prompt(
     school_name: &str,
     school_session_prompt: &str,
     project_session_prompt: &str,
-    skills_dir: &Path,
+    backend_dir: &Path,
     changes: &[SkillChange],
     school_cache: Option<&Path>,
     school_is_dirty: bool,
@@ -45,14 +45,14 @@ pub fn build_session_prompt(
         }
     }
 
-    let previous_skills = skills_dir.join("previous-skills");
+    let previous_skills = backend_dir.join("previous-skills");
     if previous_skills.exists() {
-        let skills_dir_name = skills_dir
+        let backend_dir_name = backend_dir
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or(".claude");
         let vals = HashMap::from([
-            ("skills_dir".to_string(), skills_dir_name.to_string()),
+            ("backend_dir".to_string(), backend_dir_name.to_string()),
         ]);
         parts.push(Template::parse(builtins::PREVIOUS_SKILLS).substitute(&vals));
     }
@@ -162,13 +162,13 @@ mod tests {
     }
 
     #[test]
-    fn previous_skills_uses_skills_dir_name() {
+    fn previous_skills_uses_backend_dir_name() {
         let fix = TempDir::new("ace-test-prompt-opencode");
         let skills = fix.path().join(".opencode").join("previous-skills");
         std::fs::create_dir_all(&skills).expect("create previous-skills dir");
 
-        let skills_dir = fix.path().join(".opencode");
-        let prompt = build_session_prompt("Acme", "", "", &skills_dir, &[], None, false);
+        let backend_dir = fix.path().join(".opencode");
+        let prompt = build_session_prompt("Acme", "", "", &backend_dir, &[], None, false);
         assert!(prompt.contains(".opencode/previous-skills/"), "should use .opencode dir name");
         assert!(!prompt.contains(".claude/previous-skills/"), "should not contain .claude");
     }

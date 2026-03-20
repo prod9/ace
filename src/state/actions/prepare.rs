@@ -27,7 +27,7 @@ pub enum PrepareError {
 pub struct Prepare<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
-    pub skills_dir: &'a str,
+    pub backend_dir: &'a str,
     pub backend: Backend,
 }
 
@@ -73,7 +73,7 @@ impl Prepare<'_> {
         let result = Link {
             school_root: &school_paths.root,
             project_dir: self.project_dir,
-            skills_dir: self.skills_dir,
+            backend_dir: self.backend_dir,
         }
         .run(ace)?;
 

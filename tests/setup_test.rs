@@ -109,7 +109,7 @@ fn setup_links_partial_folders() {
 }
 
 #[test]
-fn setup_adopts_existing_skills_dir() {
+fn setup_adopts_existing_backend_dir() {
     let env = TestEnv::new();
     env.git_init();
     env.write_file("school.toml", "name = \"test-school\"\n");

@@ -9,14 +9,14 @@ const MARKER_END: &str = "# end ACE";
 
 pub struct UpdateGitignore<'a> {
     pub project_dir: &'a Path,
-    pub skills_dir: &'a str,
+    pub backend_dir: &'a str,
 }
 
 impl UpdateGitignore<'_> {
     pub fn run(&self, ace: &mut Ace) -> Result<(), std::io::Error> {
         let path = self.project_dir.join(".gitignore");
         let existing = std::fs::read_to_string(&path).unwrap_or_default();
-        let block = build_block(self.skills_dir);
+        let block = build_block(self.backend_dir);
 
         let new_content = if existing.contains(MARKER_START) {
             replace_block(&existing, &block)
@@ -34,9 +34,9 @@ impl UpdateGitignore<'_> {
     }
 }
 
-fn build_block(skills_dir: &str) -> String {
+fn build_block(backend_dir: &str) -> String {
     let folders = SCHOOL_FOLDERS.iter()
-        .map(|f| format!("{skills_dir}/{f}/"))
+        .map(|f| format!("{backend_dir}/{f}/"))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -94,7 +94,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn build_block_uses_skills_dir() {
+    fn build_block_uses_backend_dir() {
         let block = build_block(".claude");
         assert!(block.contains(".claude/skills/"));
         assert!(block.contains(".claude/rules/"));

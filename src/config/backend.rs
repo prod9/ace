@@ -23,7 +23,7 @@ impl Backend {
         }
     }
 
-    pub fn skills_dir(&self) -> &'static str {
+    pub fn backend_dir(&self) -> &'static str {
         match self {
             Backend::Claude => ".claude",
             Backend::OpenCode => ".opencode",

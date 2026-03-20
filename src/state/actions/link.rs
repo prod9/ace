@@ -10,7 +10,7 @@ pub const SCHOOL_FOLDERS: &[&str] = &["skills", "rules", "commands", "agents"];
 pub struct Link<'a> {
     pub school_root: &'a Path,
     pub project_dir: &'a Path,
-    pub skills_dir: &'a str,
+    pub backend_dir: &'a str,
 }
 
 impl Link<'_> {
@@ -23,8 +23,8 @@ impl Link<'_> {
                 continue;
             }
 
-            let project_dir = self.project_dir.join(self.skills_dir).join(name);
-            let previous_dir = self.project_dir.join(self.skills_dir).join(format!("previous-{name}"));
+            let project_dir = self.project_dir.join(self.backend_dir).join(name);
+            let previous_dir = self.project_dir.join(self.backend_dir).join(format!("previous-{name}"));
 
             let adopted = adopt_previous(&project_dir, &previous_dir)?;
             let linked = ensure_symlink(&project_dir, &school_dir)?;

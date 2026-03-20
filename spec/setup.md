@@ -40,7 +40,7 @@ runs.
      `index.toml` entry, parse `school.toml`, register MCP servers, write user config.
    - **Yes** → **Update**: `git pull` on the cached repo.
 2. **Link**: symlink school folders (`skills/`, `rules/`, `commands/`, `agents/`) from
-   `<cache>/<folder>/` into `<project>/<skills_dir>/<folder>/`. One symlink per folder. Skips
+   `<cache>/<folder>/` into `<project>/<backend_dir>/<folder>/`. One symlink per folder. Skips
    folders absent from the school. Preserves existing real directories by renaming them to
    `previous-<folder>/` before creating the symlink (first-time adoption).
 

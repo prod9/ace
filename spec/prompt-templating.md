@@ -23,7 +23,7 @@ Built by concatenating layers, separated by blank lines:
    schools). Contains proposal workflow steps. Rendered with `{{ school_cache }}`. When the
    cache has uncommitted changes, `prompt_dirty_school.md` is appended (no placeholders).
 6. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
-   exists. Consolidation guidance. Rendered with `{{ skills_dir }}`.
+   exists. Consolidation guidance. Rendered with `{{ backend_dir }}`.
 
 Empty/absent layers are skipped.
 
@@ -77,7 +77,7 @@ parsed template supports `placeholders()` (returns unique names) and `substitute
 | Placeholder        | Used in                   | Source                        | Example                              |
 |--------------------|---------------------------|-------------------------------|--------------------------------------|
 | `{{ school_name }}`  | `prompt_session.md`, project/school CLAUDE.md templates | School display name | `Acme` |
-| `{{ skills_dir }}`   | `prompt_previous_skills.md`, project CLAUDE.md template | Backend skills directory name | `.claude` |
+| `{{ backend_dir }}`  | `prompt_previous_skills.md`, project CLAUDE.md template | Backend directory name        | `.claude` |
 | `{{ school_cache }}` | `prompt_school_changes.md` | School cache path             | `/home/user/.cache/ace/repos/org/school` |
 | `{{ changes }}`      | `prompt_changes.md`       | Formatted change list (built by `session.rs`) | `- Added: \`new-skill\`` |
 

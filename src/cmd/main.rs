@@ -18,14 +18,14 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
     let specifier = ace.state().school_specifier.clone()
         .ok_or(ConfigError::NoSchool)?;
 
-    // Prepare (install/update/link) needs a preliminary backend for skills_dir.
+    // Prepare (install/update/link) needs a preliminary backend for backend_dir.
     let preliminary_backend = ace.state().backend;
     let project_dir = ace.project_dir().to_path_buf();
 
     let prepare_result = (Prepare {
         specifier: &specifier,
         project_dir: &project_dir,
-        skills_dir: preliminary_backend.skills_dir(),
+        backend_dir: preliminary_backend.backend_dir(),
         backend: preliminary_backend,
     })
     .run(ace)
@@ -40,12 +40,12 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
     let school = ace.state().school.as_ref()
         .ok_or(ConfigError::NoSchool)?;
 
-    let skills_dir = project_dir.join(ace.state().backend.skills_dir());
+    let backend_dir = project_dir.join(ace.state().backend.backend_dir());
     let session_prompt = build_session_prompt(
         &school.name,
         &school.session_prompt,
         &ace.state().session_prompt,
-        &skills_dir,
+        &backend_dir,
         &prepare_result.changes,
         school_cache.as_deref(),
         prepare_result.school_is_dirty,
