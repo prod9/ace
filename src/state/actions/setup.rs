@@ -6,6 +6,7 @@ use crate::config::backend::Backend;
 use crate::config::ConfigError;
 use crate::templates;
 
+use super::gitignore::UpdateGitignore;
 use super::prepare::{Prepare, PrepareError};
 use super::write_config::WriteConfig;
 
@@ -50,6 +51,13 @@ impl Setup<'_> {
         }
         .run(ace)
         .await?;
+
+        UpdateGitignore {
+            project_dir: self.project_dir,
+            skills_dir: backend.skills_dir(),
+        }
+        .run(ace)
+        .map_err(SetupError::Write)?;
 
         let instructions = self.project_dir.join(backend.instructions_file());
         if !instructions.exists() {

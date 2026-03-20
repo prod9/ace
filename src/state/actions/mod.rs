@@ -1,4 +1,5 @@
 pub mod exec;
+pub mod gitignore;
 pub mod import_skill;
 pub mod install;
 pub mod link;
