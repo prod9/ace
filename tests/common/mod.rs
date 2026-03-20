@@ -128,6 +128,18 @@ impl TestEnv {
         assert!(status.success(), "git commit failed");
     }
 
+    pub fn git_status(&self) -> String {
+        let output = std::process::Command::new("git")
+            .args(["status", "--porcelain"])
+            .env_clear()
+            .env("PATH", std::env::var("PATH").unwrap_or_default())
+            .current_dir(&self.root)
+            .output()
+            .expect("git status");
+        assert!(output.status.success(), "git status failed");
+        String::from_utf8(output.stdout).expect("git status utf8")
+    }
+
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured
     /// with a clean environment and sandbox paths.
     pub fn ace(&self) -> Command {

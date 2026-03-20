@@ -204,4 +204,31 @@ fn setup_embedded_with_subpath() {
     env.assert_symlink(".claude/skills", "school/skills");
 }
 
+#[test]
+fn setup_gitignore_ignores_symlinks() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills/test-skill");
+    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
+
+    // Commit school files first so they're tracked.
+    env.git_commit("school files");
+
+    env.ace()
+        .args(["setup", "."])
+        .assert()
+        .success();
+
+    // After setup, .claude/skills is a new symlink. The .gitignore should
+    // prevent it from appearing as untracked in git status.
+    // Git rolls untracked entries up to the directory level, so we check
+    // that .claude/ itself doesn't appear (all its contents are ignored).
+    let status = env.git_status();
+    assert!(
+        !status.contains(".claude/"),
+        ".claude/ entries should be ignored by git, but git status shows:\n{status}"
+    );
+}
+
 use predicates;

@@ -36,7 +36,7 @@ impl UpdateGitignore<'_> {
 
 fn build_block(backend_dir: &str) -> String {
     let folders = SCHOOL_FOLDERS.iter()
-        .map(|f| format!("{backend_dir}/{f}/"))
+        .map(|f| format!("{backend_dir}/{f}"))
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -96,10 +96,10 @@ mod tests {
     #[test]
     fn build_block_uses_backend_dir() {
         let block = build_block(".claude");
-        assert!(block.contains(".claude/skills/"));
-        assert!(block.contains(".claude/rules/"));
-        assert!(block.contains(".claude/commands/"));
-        assert!(block.contains(".claude/agents/"));
+        assert!(block.contains(".claude/skills"));
+        assert!(block.contains(".claude/rules"));
+        assert!(block.contains(".claude/commands"));
+        assert!(block.contains(".claude/agents"));
         assert!(block.contains(MARKER_START));
         assert!(block.contains(MARKER_END));
     }
@@ -107,8 +107,8 @@ mod tests {
     #[test]
     fn build_block_opencode() {
         let block = build_block(".opencode");
-        assert!(block.contains(".opencode/skills/"));
-        assert!(block.contains(".opencode/agents/"));
+        assert!(block.contains(".opencode/skills"));
+        assert!(block.contains(".opencode/agents"));
     }
 
     #[test]
@@ -144,7 +144,7 @@ mod tests {
 
         assert!(result.contains("node_modules/"));
         assert!(result.contains(".env"));
-        assert!(result.contains(".claude/skills/"));
+        assert!(result.contains(".claude/skills"));
         assert!(!result.contains(".old/skills/"));
     }
 
@@ -168,6 +168,6 @@ mod tests {
 
         // Both should contain the same block
         assert!(replaced.contains(MARKER_START));
-        assert!(replaced.contains(".claude/skills/"));
+        assert!(replaced.contains(".claude/skills"));
     }
 }
