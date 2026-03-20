@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Cross-build ACE for all release targets.
-# Local-arch: plain cargo. Cross-arch: `cross` (requires Docker).
+# Cross-build ACE for all release targets using cargo-zigbuild.
+#
+# From macOS: builds all 4 targets (both macOS + both Linux).
+# From Linux: builds both Linux targets; macOS targets are skipped
+#             (Apple SDK is not available on Linux).
+#
+# Prerequisites:
+#   cargo install cargo-zigbuild
+#   zig (v0.12+) — https://ziglang.org/download/
 
-TARGETS=(
+TARGETS_MACOS=(
   aarch64-apple-darwin
   x86_64-apple-darwin
+)
+
+TARGETS_LINUX=(
   aarch64-unknown-linux-gnu
   x86_64-unknown-linux-gnu
 )
@@ -15,19 +25,53 @@ OUTDIR="${1:-target/dist}"
 mkdir -p "$OUTDIR"
 
 HOST_TARGET="$(rustc -vV | awk '/^host:/ { print $2 }')"
+HOST_OS="$(uname -s)"
 
-# Check for `cross` if any non-host targets exist.
-needs_cross=false
-for target in "${TARGETS[@]}"; do
-  [ "$target" != "$HOST_TARGET" ] && needs_cross=true
-done
-if $needs_cross && ! command -v cross &>/dev/null; then
-  echo "Error: cross not found (needed for non-host targets)."
+# --- Preflight checks -------------------------------------------------------
+
+if ! command -v cargo-zigbuild &>/dev/null; then
+  echo "Error: cargo-zigbuild not found."
   echo ""
-  echo "  cargo install cross"
+  echo "  cargo install cargo-zigbuild"
   echo ""
   exit 1
 fi
+
+if ! command -v zig &>/dev/null; then
+  echo "Error: zig not found."
+  echo ""
+  echo "  See https://ziglang.org/download/"
+  echo ""
+  exit 1
+fi
+
+# On macOS, ensure SDKROOT is set for framework linking.
+if [ "$HOST_OS" = "Darwin" ] && [ -z "${SDKROOT:-}" ]; then
+  SDKROOT="$(xcrun --show-sdk-path 2>/dev/null || true)"
+  if [ -z "$SDKROOT" ]; then
+    echo "Warning: SDKROOT not set and xcrun failed. macOS targets may fail."
+  else
+    export SDKROOT
+  fi
+fi
+
+# --- Build targets -----------------------------------------------------------
+
+# Determine which targets to build based on host OS.
+TARGETS=("${TARGETS_LINUX[@]}")
+if [ "$HOST_OS" = "Darwin" ]; then
+  TARGETS=("${TARGETS_MACOS[@]}" "${TARGETS_LINUX[@]}")
+else
+  echo "Note: skipping macOS targets (not available on $HOST_OS)."
+fi
+
+# Ensure all required Rust targets are installed.
+for target in "${TARGETS[@]}"; do
+  if ! rustup target list --installed | grep -qx "$target"; then
+    echo "Installing Rust target: $target"
+    rustup target add "$target"
+  fi
+done
 
 failed=()
 
@@ -37,7 +81,7 @@ for target in "${TARGETS[@]}"; do
   if [ "$target" = "$HOST_TARGET" ]; then
     cmd=(cargo build --release --target "$target")
   else
-    cmd=(cross build --release --target "$target")
+    cmd=(cargo zigbuild --release --target "$target")
   fi
 
   if "${cmd[@]}"; then
