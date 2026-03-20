@@ -3,22 +3,19 @@ set -euo pipefail
 
 # Cross-build ACE for all release targets using cargo-zigbuild.
 #
-# From macOS: builds all 4 targets (both macOS + both Linux).
-# From Linux: builds both Linux targets; macOS targets are skipped
-#             (Apple SDK is not available on Linux).
+# Must be run from macOS (Apple SDK required for darwin targets).
 #
 # Prerequisites:
 #   cargo install cargo-zigbuild
 #   zig (v0.12+) — https://ziglang.org/download/
 
-TARGETS_MACOS=(
+TARGETS=(
   aarch64-apple-darwin
   x86_64-apple-darwin
-)
-
-TARGETS_LINUX=(
   aarch64-unknown-linux-gnu
   x86_64-unknown-linux-gnu
+  aarch64-unknown-linux-musl
+  x86_64-unknown-linux-musl
 )
 
 OUTDIR="${1:-target/dist}"
@@ -28,6 +25,11 @@ HOST_TARGET="$(rustc -vV | awk '/^host:/ { print $2 }')"
 HOST_OS="$(uname -s)"
 
 # --- Preflight checks -------------------------------------------------------
+
+if [ "$HOST_OS" != "Darwin" ]; then
+  echo "Error: build-all.sh must be run from macOS (need Apple SDK for darwin targets)."
+  exit 1
+fi
 
 if ! command -v cargo-zigbuild &>/dev/null; then
   echo "Error: cargo-zigbuild not found."
@@ -45,24 +47,14 @@ if ! command -v zig &>/dev/null; then
   exit 1
 fi
 
-# On macOS, ensure SDKROOT is set for framework linking.
-if [ "$HOST_OS" = "Darwin" ] && [ -z "${SDKROOT:-}" ]; then
+# Ensure SDKROOT is set for framework linking.
+if [ -z "${SDKROOT:-}" ]; then
   SDKROOT="$(xcrun --show-sdk-path 2>/dev/null || true)"
   if [ -z "$SDKROOT" ]; then
-    echo "Warning: SDKROOT not set and xcrun failed. macOS targets may fail."
-  else
-    export SDKROOT
+    echo "Error: SDKROOT not set and xcrun failed."
+    exit 1
   fi
-fi
-
-# --- Build targets -----------------------------------------------------------
-
-# Determine which targets to build based on host OS.
-TARGETS=("${TARGETS_LINUX[@]}")
-if [ "$HOST_OS" = "Darwin" ]; then
-  TARGETS=("${TARGETS_MACOS[@]}" "${TARGETS_LINUX[@]}")
-else
-  echo "Note: skipping macOS targets (not available on $HOST_OS)."
+  export SDKROOT
 fi
 
 # Ensure all required Rust targets are installed.
@@ -72,6 +64,8 @@ for target in "${TARGETS[@]}"; do
     rustup target add "$target"
   fi
 done
+
+# --- Build targets -----------------------------------------------------------
 
 failed=()
 
