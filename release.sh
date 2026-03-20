@@ -25,6 +25,12 @@ if ! echo "$HEAD_TAGS" | grep -qx "$TAG"; then
   exit 1
 fi
 
+# Refuse to release with uncommitted changes.
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "Error: working tree is dirty. Commit or stash changes first."
+  exit 1
+fi
+
 echo "==> Releasing ACE $TAG"
 
 # Build all targets.
