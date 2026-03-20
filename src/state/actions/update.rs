@@ -24,6 +24,7 @@ pub struct SkillChange {
 #[derive(Debug, Default)]
 pub struct UpdateResult {
     pub changes: Vec<SkillChange>,
+    pub school_is_dirty: bool,
 }
 
 /// Git fetch + ff-only merge school cache to latest origin/main.
@@ -52,7 +53,8 @@ impl Update<'_> {
         if git.is_dirty().map_err(|e| PrepareError::Clone(e.to_string()))? {
             ace.warn(&format!("school has local changes at {}", cache.display()));
             ace.hint("Propose changes back to the school repo, or resolve manually.");
-            return Ok(UpdateResult::default());
+            ace.hint("If the dirty files are just artifacts, add a .gitignore entry to the school repo.");
+            return Ok(UpdateResult { school_is_dirty: true, ..Default::default() });
         }
 
         if !is_stale(cache) {
@@ -96,7 +98,7 @@ impl Update<'_> {
             Vec::new()
         };
 
-        Ok(UpdateResult { changes })
+        Ok(UpdateResult { changes, ..Default::default() })
     }
 }
 

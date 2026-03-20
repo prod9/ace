@@ -48,6 +48,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         &skills_dir,
         &prepare_result.changes,
         school_cache.as_deref(),
+        prepare_result.school_is_dirty,
     );
 
     ace.separator();

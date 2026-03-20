@@ -9,7 +9,7 @@ use crate::config::ConfigError;
 use super::install::Install;
 use super::link::Link;
 use super::mcp_register::McpRegister;
-use super::update::{SkillChange, Update};
+use super::update::{SkillChange, Update, UpdateResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrepareError {
@@ -34,6 +34,7 @@ pub struct Prepare<'a> {
 #[derive(Debug, Default)]
 pub struct PrepareResult {
     pub changes: Vec<SkillChange>,
+    pub school_is_dirty: bool,
 }
 
 // Backend support matrix — which folders each backend natively supports.
@@ -51,13 +52,12 @@ fn is_supported(backend: Backend, folder: &str) -> bool {
 
 impl Prepare<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
-        let changes = if is_cached(self.specifier)? {
+        let update_result = if is_cached(self.specifier)? {
             (Update {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             })
             .run(ace)?
-            .changes
         } else {
             Install {
                 specifier: self.specifier,
@@ -65,7 +65,7 @@ impl Prepare<'_> {
             }
             .run(ace)
             .await?;
-            Vec::new()
+            UpdateResult::default()
         };
 
         let school_paths = school_paths::resolve(self.project_dir, self.specifier)?;
@@ -108,7 +108,10 @@ impl Prepare<'_> {
             .run(ace)?;
         }
 
-        Ok(PrepareResult { changes })
+        Ok(PrepareResult {
+            changes: update_result.changes,
+            school_is_dirty: update_result.school_is_dirty,
+        })
     }
 }
 
