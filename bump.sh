@@ -19,7 +19,7 @@ if ! cargo set-version --help &>/dev/null; then
 fi
 
 cargo set-version "$VERSION"
-git commit -am "Bump version to $VERSION"
+git commit -am "v$VERSION"
 git tag "v$VERSION"
 
 echo "==> Tagged v$VERSION — run ./release.sh to publish"
