@@ -46,10 +46,10 @@ Workflow:
   of related changes. Don't lump unrelated work into a single commit, and don't split a
   coherent change across multiple commits unnecessarily.
 - **Never lose conversation state.** Before ANY context switch (compaction, task switch,
-  tangent, side-ask like "while you're at it…", "after this…", "also…", or any new thread),
-  capture unfinished work first: create Linear issues for pending tasks, update specs with
-  design decisions, add notes to CLAUDE.md for durable knowledge. Conversation evaporates
-  on compaction; checked-in files and Linear are the only survivors.
+  tangent, side-ask, or any new thread), capture unfinished work first: save to the
+  backend's built-in memory if available, create issues for pending tasks, update specs
+  with design decisions, add notes to CLAUDE.md for durable knowledge. Conversation
+  evaporates on compaction; checked-in files and issue tracker are the only survivors.
 
 Metrics:
 - After finishing code changes, report `git diff --stat` and share your read on the delta with
