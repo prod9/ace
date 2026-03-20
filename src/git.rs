@@ -43,6 +43,14 @@ impl<'a> Git<'a> {
         Ok(out.trim() != "0")
     }
 
+    pub fn current_branch(&self) -> Result<String, GitError> {
+        Ok(self.output(&["rev-parse", "--abbrev-ref", "HEAD"])?.trim().to_string())
+    }
+
+    pub fn checkout_branch(&self, branch: &str) -> Result<(), GitError> {
+        self.run(&["checkout", branch])
+    }
+
     pub fn diff_name_status(
         &self,
         from: &str,

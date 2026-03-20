@@ -50,11 +50,32 @@ impl Update<'_> {
         }
 
         let git = ace.git(cache);
-        if git.is_dirty().map_err(|e| PrepareError::Clone(e.to_string()))? {
-            ace.warn(&format!("school has local changes at {}", cache.display()));
-            ace.hint("Propose changes back to the school repo, or resolve manually.");
-            ace.hint("If the dirty files are just artifacts, add a .gitignore entry to the school repo.");
-            return Ok(UpdateResult { school_is_dirty: true, ..Default::default() });
+        let branch = git.current_branch()
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
+        let on_main = branch == "main";
+        let dirty = git.is_dirty()
+            .map_err(|e| PrepareError::Clone(e.to_string()))?;
+
+        match (on_main, dirty) {
+            (true, false) => {}
+            (true, true) => {
+                ace.warn("school has local changes — updates blocked");
+                ace.hint("Skills may be outdated until changes are proposed.");
+                ace.hint("Ask your AI assistant to propose the changes — it knows how.");
+                return Ok(UpdateResult { school_is_dirty: true, ..Default::default() });
+            }
+            (false, false) => {
+                git.checkout_branch("main")
+                    .map_err(|e| PrepareError::Clone(e.to_string()))?;
+                ace.hint(&format!("Switched school cache from branch {branch} back to main"));
+            }
+            (false, true) => {
+                ace.warn(&format!(
+                    "school is on branch {branch} with uncommitted changes — updates blocked"
+                ));
+                ace.hint("Skills may be outdated. Ask your AI assistant to propose the changes — it knows how.");
+                return Ok(UpdateResult { school_is_dirty: true, ..Default::default() });
+            }
         }
 
         if !is_stale(cache) {
