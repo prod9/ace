@@ -20,11 +20,20 @@ Built by concatenating layers, separated by blank lines:
 4. **Skill change summary** — `prompt_changes.md`, only when skills changed since last session.
    Lists added, updated, and removed skills. Rendered with `{{ changes }}`.
 5. **School changes** — `prompt_school_changes.md`, only when a school cache exists (remote
-   schools). Contains proposal workflow steps. Rendered with `{{ school_cache }}`.
+   schools). Contains proposal workflow steps. Rendered with `{{ school_cache }}`. When the
+   cache has uncommitted changes, `prompt_dirty_school.md` is appended (no placeholders).
 6. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
    exists. Consolidation guidance. Rendered with `{{ skills_dir }}`.
 
 Empty/absent layers are skipped.
+
+### Template File Convention
+
+Each `.md` template is a self-contained text block — no leading blank lines, file ends with a
+single newline. Separation between blocks is the composition code's responsibility: parts are
+trimmed, empties filtered, then joined with `"\n\n"`. This single rule handles all newline
+management. Conditional content uses a separate `.md` file with a conditional `parts.push()`,
+never an embedded placeholder that resolves to empty string.
 
 ### Config Fields
 
