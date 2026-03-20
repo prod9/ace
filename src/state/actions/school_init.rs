@@ -76,6 +76,13 @@ impl SchoolInit<'_> {
             ace.done("Created skills/ace-school/SKILL.md");
         }
 
+        let gitignore = self.project_dir.join(".gitignore");
+        if !gitignore.exists() {
+            std::fs::write(&gitignore, templates::builtins::GITIGNORE)
+                .map_err(SchoolInitError::Write)?;
+            ace.done("Created .gitignore");
+        }
+
         Ok(())
     }
 }
