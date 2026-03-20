@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 mod ace;
 mod cmd;
 mod config;

@@ -47,6 +47,7 @@ pub struct FolderResult {
     pub adopted: bool,
 }
 
+#[cfg(test)]
 impl LinkResult {
     pub fn linked(&self, name: &str) -> bool {
         self.folders.iter().any(|f| f.name == name && f.linked)

@@ -15,6 +15,20 @@ OUTDIR="${1:-target/dist}"
 mkdir -p "$OUTDIR"
 
 HOST_TARGET="$(rustc -vV | awk '/^host:/ { print $2 }')"
+
+# Check for `cross` if any non-host targets exist.
+needs_cross=false
+for target in "${TARGETS[@]}"; do
+  [ "$target" != "$HOST_TARGET" ] && needs_cross=true
+done
+if $needs_cross && ! command -v cross &>/dev/null; then
+  echo "Error: cross not found (needed for non-host targets)."
+  echo ""
+  echo "  cargo install cross"
+  echo ""
+  exit 1
+fi
+
 failed=()
 
 for target in "${TARGETS[@]}"; do
