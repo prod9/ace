@@ -76,7 +76,6 @@ impl Prepare<'_> {
             backend_dir: self.backend_dir,
         }
         .run(ace)?;
-
         for folder in &result.folders {
             if folder.adopted {
                 ace.done(&format!("Moved previous {0} to previous-{0}/", folder.name));

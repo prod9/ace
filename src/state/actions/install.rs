@@ -26,6 +26,7 @@ impl Install<'_> {
             std::fs::create_dir_all(parent)
                 .map_err(|e| PrepareError::Clone(format!("mkdir: {e}")))?;
         }
+
         let repo = self.specifier.split_once(':').map_or(
             self.specifier,
             |(owner_repo, _)| owner_repo,
@@ -38,6 +39,7 @@ impl Install<'_> {
         ace.done(&format!("Cloned {repo}"));
 
         update_index(&school_paths.source)?;
+
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
         ace.done(&format!("School: {}", school_toml.name));

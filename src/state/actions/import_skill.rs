@@ -61,6 +61,7 @@ impl ImportSkill<'_> {
         };
 
         self.install_skill(selected)?;
+
         ace.done(&format!("Imported skill: {}", selected.name));
         Ok(ImportResult::Done { skill: selected.name.clone() })
     }
@@ -78,6 +79,7 @@ impl ImportSkill<'_> {
         if dest.exists() {
             std::fs::remove_dir_all(&dest)?;
         }
+
         copy_dir_recursive(&skill.path, &dest)?;
 
         let toml_path = self.school_root.join("school.toml");
