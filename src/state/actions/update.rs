@@ -36,6 +36,8 @@ pub struct Update<'a> {
 
 impl Update<'_> {
     pub fn run(&self, ace: &mut Ace) -> Result<UpdateResult, PrepareError> {
+        // -- resolve school paths --
+
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
         let cache = match &school_paths.cache {
@@ -49,6 +51,8 @@ impl Update<'_> {
             )));
         }
 
+        // -- ensure working tree is clean and on main --
+
         let git = ace.git(cache);
         let branch = git.current_branch()
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
@@ -56,31 +60,20 @@ impl Update<'_> {
         let dirty = git.is_dirty()
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
-        match (on_main, dirty) {
-            (true, false) => {}
-            (true, true) => {
-                ace.warn("school has local changes — updates blocked");
-                ace.hint("Skills may be outdated until changes are proposed.");
-                ace.hint("Ask your AI assistant to propose the changes — it knows how.");
-                return Ok(UpdateResult { school_is_dirty: true, ..Default::default() });
-            }
-            (false, false) => {
-                git.checkout_branch("main")
-                    .map_err(|e| PrepareError::Clone(e.to_string()))?;
-                ace.hint(&format!("Switched school cache from branch {branch} back to main"));
-            }
-            (false, true) => {
-                ace.warn(&format!(
-                    "school is on branch {branch} with uncommitted changes — updates blocked"
-                ));
-                ace.hint("Skills may be outdated. Ask your AI assistant to propose the changes — it knows how.");
-                return Ok(UpdateResult { school_is_dirty: true, ..Default::default() });
-            }
+        if dirty {
+            return Ok(self.warn_dirty(ace, on_main, &branch));
+        }
+        if !on_main {
+            git.checkout_branch("main")
+                .map_err(|e| PrepareError::Clone(e.to_string()))?;
+            ace.hint(&format!("Switched school cache from branch {branch} back to main"));
         }
 
         if !is_stale(cache) {
             return Ok(UpdateResult::default());
         }
+
+        // -- fetch and fast-forward --
 
         let old_head = git.rev_parse("HEAD")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
@@ -104,22 +97,42 @@ impl Update<'_> {
             return Ok(UpdateResult::default());
         }
 
+        // -- collect skill changes --
+
         let new_head = git.rev_parse("HEAD")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
-        let changes = if old_head != new_head {
-            match git.diff_name_status(&old_head, &new_head, Some("skills/")) {
-                Ok(stdout) => parse_diff_output(&stdout),
-                Err(e) => {
-                    ace.warn(&format!("failed to diff skill changes: {e}"));
-                    Vec::new()
-                }
-            }
-        } else {
-            Vec::new()
-        };
+        let changes = diff_skill_changes(ace, &git, &old_head, &new_head);
 
         Ok(UpdateResult { changes, ..Default::default() })
+    }
+
+    fn warn_dirty(&self, ace: &mut Ace, on_main: bool, branch: &str) -> UpdateResult {
+        if on_main {
+            ace.warn("school has local changes — updates blocked");
+            ace.hint("Skills may be outdated until changes are proposed.");
+            ace.hint("Ask your AI assistant to propose the changes — it knows how.");
+        } else {
+            ace.warn(&format!(
+                "school is on branch {branch} with uncommitted changes — updates blocked"
+            ));
+            ace.hint("Skills may be outdated. Ask your AI assistant to propose the changes — it knows how.");
+        }
+        UpdateResult { school_is_dirty: true, ..Default::default() }
+    }
+}
+
+fn diff_skill_changes(ace: &mut Ace, git: &crate::git::Git<'_>, old: &str, new: &str) -> Vec<SkillChange> {
+    if old == new {
+        return Vec::new();
+    }
+
+    match git.diff_name_status(old, new, Some("skills/")) {
+        Ok(stdout) => parse_diff_output(&stdout),
+        Err(e) => {
+            ace.warn(&format!("failed to diff skill changes: {e}"));
+            Vec::new()
+        }
     }
 }
 
