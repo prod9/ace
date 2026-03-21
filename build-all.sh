@@ -3,7 +3,9 @@ set -euo pipefail
 
 # Cross-build ACE for all release targets using cargo-zigbuild.
 #
-# Must be run from macOS (Apple SDK required for darwin targets).
+# Runs on macOS or Linux:
+#   macOS  — builds all targets (darwin + linux)
+#   Linux  — builds linux targets only (darwin targets require macOS runners)
 #
 # Prerequisites:
 #   cargo install cargo-zigbuild
@@ -24,12 +26,36 @@ mkdir -p "$OUTDIR"
 HOST_TARGET="$(rustc -vV | awk '/^host:/ { print $2 }')"
 HOST_OS="$(uname -s)"
 
-# --- Preflight checks -------------------------------------------------------
+# --- Filter targets by host OS ----------------------------------------------
 
-if [ "$HOST_OS" != "Darwin" ]; then
-  echo "Error: build-all.sh must be run from macOS (need Apple SDK for darwin targets)."
+build_targets=()
+skipped=()
+
+for target in "${TARGETS[@]}"; do
+  case "$target" in
+    *-apple-darwin)
+      if [ "$HOST_OS" = "Darwin" ]; then
+        build_targets+=("$target")
+      else
+        skipped+=("$target")
+      fi
+      ;;
+    *)
+      build_targets+=("$target")
+      ;;
+  esac
+done
+
+if [ ${#skipped[@]} -gt 0 ]; then
+  echo "Skipping (need macOS runner): ${skipped[*]}"
+fi
+
+if [ ${#build_targets[@]} -eq 0 ]; then
+  echo "Error: no buildable targets for this platform."
   exit 1
 fi
+
+# --- Preflight checks -------------------------------------------------------
 
 if ! command -v cargo-zigbuild &>/dev/null; then
   echo "Error: cargo-zigbuild not found."
@@ -47,18 +73,20 @@ if ! command -v zig &>/dev/null; then
   exit 1
 fi
 
-# Ensure SDKROOT is set for framework linking.
-if [ -z "${SDKROOT:-}" ]; then
-  SDKROOT="$(xcrun --show-sdk-path 2>/dev/null || true)"
-  if [ -z "$SDKROOT" ]; then
-    echo "Error: SDKROOT not set and xcrun failed."
-    exit 1
+# Ensure SDKROOT is set for framework linking (macOS only).
+if [ "$HOST_OS" = "Darwin" ]; then
+  if [ -z "${SDKROOT:-}" ]; then
+    SDKROOT="$(xcrun --show-sdk-path 2>/dev/null || true)"
+    if [ -z "$SDKROOT" ]; then
+      echo "Error: SDKROOT not set and xcrun failed."
+      exit 1
+    fi
+    export SDKROOT
   fi
-  export SDKROOT
 fi
 
 # Ensure all required Rust targets are installed.
-for target in "${TARGETS[@]}"; do
+for target in "${build_targets[@]}"; do
   if ! rustup target list --installed | grep -qx "$target"; then
     echo "Installing Rust target: $target"
     rustup target add "$target"
@@ -69,7 +97,7 @@ done
 
 failed=()
 
-for target in "${TARGETS[@]}"; do
+for target in "${build_targets[@]}"; do
   echo "==> $target"
 
   if [ "$target" = "$HOST_TARGET" ]; then
