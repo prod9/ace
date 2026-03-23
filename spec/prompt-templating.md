@@ -13,16 +13,19 @@ Built by concatenating layers, separated by blank lines:
 
 1. **Built-in** — `prompt_session.md`, always present. Contains school name/concept, symlink
    edit flow, config file awareness, debugging tips. Rendered with `{{ school_name }}`.
-2. **School** — `session_prompt` field in `school.toml`. Domain-specific instructions from the
+2. **Role** — resolved from the user's selected role in the school's `[[roles]]` list. Injected
+   as `Role: {name}\n{prompt}`. Only present when a role is set and found in the school. See
+   [roles.md](roles.md).
+3. **School** — `session_prompt` field in `school.toml`. Domain-specific instructions from the
    school maintainer. Injected verbatim (no template substitution).
-3. **Project** — `session_prompt` field in `ace.toml`. Project-specific overrides or additions.
+4. **Project** — `session_prompt` field in `ace.toml`. Project-specific overrides or additions.
    Injected verbatim (no template substitution).
-4. **Skill change summary** — `prompt_changes.md`, only when skills changed since last session.
+5. **Skill change summary** — `prompt_changes.md`, only when skills changed since last session.
    Lists added, updated, and removed skills. Rendered with `{{ changes }}`.
-5. **School changes** — `prompt_school_changes.md`, only when a school cache exists (remote
+6. **School changes** — `prompt_school_changes.md`, only when a school cache exists (remote
    schools). Contains proposal workflow steps. Rendered with `{{ school_cache }}`. When the
    cache has uncommitted changes, `prompt_dirty_school.md` is appended (no placeholders).
-6. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
+7. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
    exists. Consolidation guidance. Rendered with `{{ backend_dir }}`.
 
 Empty/absent layers are skipped.

@@ -18,6 +18,7 @@ Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
 - `backend` — `"claude"`, `"opencode"`, or `"codex"` (highest-priority `Some` wins: local → project → user; fallback `claude`). See [backend.md](backend.md).
+- `role` — selected role name (last non-empty wins). Must match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
 

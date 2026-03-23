@@ -13,6 +13,16 @@ NODE_VERSION = "22"
 PYTHON_VERSION = "3.12"
 LITELLM_BASE_URL = "https://llm.acme.corp/v1"
 
+[[roles]]
+name = "task-master"
+prompt = """You are a project manager. Break down requirements into actionable tasks, \
+write specs, manage issue trackers, and coordinate work across repos."""
+
+[[roles]]
+name = "backend-engineer"
+prompt = """You are a backend engineer. Focus on API design, database queries, \
+business logic, and service architecture."""
+
 [[mcp]]
 name = "github"
 url = "https://api.githubcopilot.com/mcp/"
@@ -82,6 +92,31 @@ what they do, enabling better cross-project reasoning and navigation.
   about tech stack, domain, and responsibilities.
 - `env` — Optional. Project-specific environment variables. Merged with top-level `[env]`
   (project values override).
+
+### `[[roles]]`
+
+Array of role definitions. Each entry describes a team role that affects how the AI behaves
+during sessions. Users pick a role on first run; the selected role's prompt is injected
+into the session prompt. See [roles.md](../roles.md) for the full workflow.
+
+- `name` — Short identifier (e.g. `"task-master"`, `"backend-engineer"`). Used as the stored
+  value in `ace.local.toml`.
+- `prompt` — Injected into the session prompt verbatim. The school operator uses this to
+  control how the backend behaves for this role.
+
+Schools with no `[[roles]]` entries skip role selection entirely.
+
+```toml
+[[roles]]
+name = "task-master"
+prompt = """You are a project manager. Break down requirements into actionable tasks, \
+write specs, manage issue trackers, and coordinate work across repos."""
+
+[[roles]]
+name = "backend-engineer"
+prompt = """You are a backend engineer. Focus on API design, database queries, \
+business logic, and service architecture."""
+```
 
 ### `[[imports]]`
 

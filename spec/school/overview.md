@@ -34,7 +34,7 @@ skills, conventions, and agent configurations — regardless of which project th
 ## Structure
 
 ```
-school.toml              # School metadata and configuration (see 01-school-toml.md)
+school.toml              # School metadata and configuration (see school-toml.md)
 skills/
   <name>/
     SKILL.md             # Skill definition (standard Claude/OpenCode skill format)
