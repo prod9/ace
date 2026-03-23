@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::config;
-use super::import_skill::{clone_repo, copy_dir_recursive, discover_skills, ImportError};
+use super::import_skill::{clone_repo, copy_dir_recursive, discover_skills, DiscoveredSkill, ImportError};
 
 pub struct SchoolUpdate<'a> {
     pub school_root: &'a Path,
@@ -29,6 +29,8 @@ pub enum SchoolUpdateResult {
 
 impl SchoolUpdate<'_> {
     pub fn run(&self, ace: &mut Ace) -> Result<SchoolUpdateResult, SchoolUpdateError> {
+        // -- load config --
+
         let toml_path = self.school_root.join("school.toml");
         let school = config::school_toml::load(&toml_path)?;
 
@@ -36,15 +38,14 @@ impl SchoolUpdate<'_> {
             return Ok(SchoolUpdateResult::NoImports);
         }
 
-        // Group imports by source to avoid cloning the same repo twice.
-        let mut by_source: HashMap<&str, Vec<&str>> = HashMap::new();
-        for imp in &school.imports {
-            by_source.entry(imp.source.as_str())
-                .or_default()
-                .push(imp.skill.as_str());
-        }
+        // -- group imports by source --
+
+        let by_source = group_by_source(&school.imports);
+
+        // -- fetch each source and copy skills --
 
         let mut count = 0;
+
         for (source, skill_names) in &by_source {
             let tmp = tempfile::tempdir()?;
 
@@ -52,26 +53,47 @@ impl SchoolUpdate<'_> {
             clone_repo(source, tmp.path())?;
 
             let discovered = discover_skills(tmp.path())?;
-            for name in skill_names {
-                let found = discovered.iter().find(|s| s.name == *name);
-                let skill = match found {
-                    Some(s) => s,
-                    None => {
-                        ace.warn(&format!("skill {name} not found in {source}, skipping"));
-                        continue;
-                    }
-                };
-
-                let dest = self.school_root.join("skills").join(name);
-                if dest.exists() {
-                    std::fs::remove_dir_all(&dest)?;
-                }
-                copy_dir_recursive(&skill.path, &dest)?;
-                count += 1;
-            }
+            count += copy_matching_skills(ace, self.school_root, source, &skill_names, &discovered)?;
         }
 
         ace.done(&format!("Updated {count} skill(s)"));
         Ok(SchoolUpdateResult::Updated { count })
     }
+}
+
+fn group_by_source<'a>(imports: &'a [config::school_toml::ImportDecl]) -> HashMap<&'a str, Vec<&'a str>> {
+    let mut by_source: HashMap<&str, Vec<&str>> = HashMap::new();
+    for imp in imports {
+        by_source.entry(imp.source.as_str())
+            .or_default()
+            .push(imp.skill.as_str());
+    }
+    by_source
+}
+
+fn copy_matching_skills(
+    ace: &mut Ace,
+    school_root: &Path,
+    source: &str,
+    names: &[&str],
+    discovered: &[DiscoveredSkill],
+) -> Result<usize, SchoolUpdateError> {
+    let mut count = 0;
+
+    for name in names {
+        let Some(skill) = discovered.iter().find(|s| s.name == *name) else {
+            ace.warn(&format!("skill {name} not found in {source}, skipping"));
+            continue;
+        };
+
+        let dest = school_root.join("skills").join(name);
+        if dest.exists() {
+            std::fs::remove_dir_all(&dest)?;
+        }
+
+        copy_dir_recursive(&skill.path, &dest)?;
+        count += 1;
+    }
+
+    Ok(count)
 }
