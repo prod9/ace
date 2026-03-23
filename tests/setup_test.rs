@@ -5,17 +5,7 @@ use common::TestEnv;
 #[test]
 fn setup_embedded_school() {
     let env = TestEnv::new();
-    env.git_init();
-
-    // Embedded school: school.toml + skills/ in project root.
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test Skill\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("danger-zone");
 
     // ace.toml written with school specifier.
     env.assert_exists("ace.toml");
@@ -26,7 +16,7 @@ fn setup_embedded_school() {
 
     // CLAUDE.md generated with school name.
     env.assert_exists("CLAUDE.md");
-    env.assert_contains("CLAUDE.md", "test-school");
+    env.assert_contains("CLAUDE.md", "danger-zone");
 }
 
 #[test]
@@ -45,16 +35,7 @@ fn setup_not_in_git_repo() {
 #[test]
 fn setup_already_set_up() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test Skill\n");
-
-    // First setup succeeds.
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("iceman");
 
     // Second setup fails — already set up.
     env.ace()
@@ -138,16 +119,7 @@ fn setup_adopts_existing_backend_dir() {
 #[test]
 fn setup_idempotent_relink() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    // First setup.
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("goose");
 
     env.assert_symlink(".claude/skills", "skills");
 
@@ -166,19 +138,10 @@ fn setup_idempotent_relink() {
 #[test]
 fn setup_generates_claude_md() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"My Cool School\"\n");
-    env.mkdir("skills/example");
-    env.write_file("skills/example/SKILL.md", "# Example\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("viper");
 
     env.assert_exists("CLAUDE.md");
-    env.assert_contains("CLAUDE.md", "My Cool School");
-    // Should reference the skills directory.
+    env.assert_contains("CLAUDE.md", "viper");
     env.assert_contains("CLAUDE.md", "skills");
 }
 
@@ -208,9 +171,7 @@ fn setup_embedded_with_subpath() {
 fn setup_gitignore_ignores_symlinks() {
     let env = TestEnv::new();
     env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
+    env.setup_embedded_school("rooster");
 
     // Commit school files first so they're tracked.
     env.git_commit("school files");

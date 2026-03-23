@@ -5,15 +5,7 @@ use common::TestEnv;
 #[test]
 fn config_shows_effective() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("top-gun");
 
     let output = env.ace()
         .args(["config"])
@@ -31,15 +23,7 @@ fn config_shows_effective() {
 #[test]
 fn config_includes_school_toml() {
     let env = TestEnv::new();
-    env.git_init();
-    env.write_file("school.toml", "name = \"test-school\"\n");
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
+    env.setup_embedded("top-gun");
 
     let output = env.ace()
         .args(["config"])
@@ -50,7 +34,7 @@ fn config_includes_school_toml() {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("# school.toml"), "should include school.toml section header");
-    assert!(stdout.contains("test-school"), "should include school name from school.toml");
+    assert!(stdout.contains("top-gun"), "should include school name from school.toml");
 }
 
 #[test]

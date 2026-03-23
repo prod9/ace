@@ -166,6 +166,20 @@ impl TestEnv {
         assert!(status.success(), "git commit failed");
     }
 
+    /// Create a minimal embedded school: school.toml + one skill.
+    pub fn setup_embedded_school(&self, name: &str) {
+        self.write_file("school.toml", &format!("name = \"{name}\"\n"));
+        self.mkdir("skills/maverick");
+        self.write_file("skills/maverick/SKILL.md", "# Maverick\n");
+    }
+
+    /// Create an embedded school and run `ace setup .` — the most common test fixture.
+    pub fn setup_embedded(&self, name: &str) {
+        self.git_init();
+        self.setup_embedded_school(name);
+        self.ace().args(["setup", "."]).assert().success();
+    }
+
     pub fn git_status(&self) -> String {
         let output = std::process::Command::new("git")
             .args(["status", "--porcelain"])
