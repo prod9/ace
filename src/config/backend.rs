@@ -12,6 +12,7 @@ pub enum Backend {
     Claude,
     OpenCode,
     Codex,
+    Flaude,
 }
 
 impl Backend {
@@ -20,12 +21,13 @@ impl Backend {
             Backend::Claude => "claude",
             Backend::OpenCode => "opencode",
             Backend::Codex => "codex",
+            Backend::Flaude => "flaude",
         }
     }
 
     pub fn backend_dir(&self) -> &'static str {
         match self {
-            Backend::Claude => ".claude",
+            Backend::Claude | Backend::Flaude => ".claude",
             Backend::OpenCode => ".opencode",
             Backend::Codex => ".agents",
         }
@@ -33,7 +35,7 @@ impl Backend {
 
     pub fn instructions_file(&self) -> &'static str {
         match self {
-            Backend::Claude => "CLAUDE.md",
+            Backend::Claude | Backend::Flaude => "CLAUDE.md",
             Backend::OpenCode => "AGENTS.md",
             Backend::Codex => "AGENTS.md",
         }
@@ -43,6 +45,7 @@ impl Backend {
     pub fn mcp_list(&self) -> HashSet<String> {
         match self {
             Backend::Claude => claude_mcp_list(),
+            Backend::Flaude => flaude_mcp_list(),
             Backend::OpenCode | Backend::Codex => HashSet::new(),
         }
     }
@@ -51,6 +54,7 @@ impl Backend {
     pub fn mcp_add(&self, entry: &McpDecl) -> Result<(), String> {
         match self {
             Backend::Claude => claude_mcp_add(entry),
+            Backend::Flaude => flaude_mcp_add(entry),
             Backend::OpenCode | Backend::Codex => {
                 Err("MCP registration not yet implemented for this backend".to_string())
             }
@@ -117,6 +121,50 @@ fn claude_mcp_add(entry: &McpDecl) -> Result<(), String> {
         return Err(stderr.trim().to_string());
     }
 
+    Ok(())
+}
+
+// -- Flaude test backend --
+//
+// Records MCP calls to a JSONL file instead of spawning a real backend binary.
+// Used by integration tests with `backend = "flaude"` in ace.toml.
+
+/// Read `FLAUDE_MCP_LIST` env var as comma-separated server names.
+fn flaude_mcp_list() -> HashSet<String> {
+    std::env::var("FLAUDE_MCP_LIST")
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// Append a JSON line to the file at `FLAUDE_RECORD`.
+fn flaude_mcp_add(entry: &McpDecl) -> Result<(), String> {
+    use std::io::Write;
+
+    let record_path = std::env::var("FLAUDE_RECORD")
+        .map_err(|_| "FLAUDE_RECORD env var not set".to_string())?;
+
+    let mut headers: Vec<(&String, &String)> = entry.headers.iter().collect();
+    headers.sort_by_key(|(k, _)| k.as_str());
+
+    let record = serde_json::json!({
+        "action": "mcp_add",
+        "name": entry.name,
+        "url": entry.url,
+        "headers": headers.iter()
+            .map(|(k, v)| format!("{k}: {v}"))
+            .collect::<Vec<_>>(),
+    });
+
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&record_path)
+        .map_err(|e| format!("open {record_path}: {e}"))?;
+
+    writeln!(file, "{record}").map_err(|e| format!("write {record_path}: {e}"))?;
     Ok(())
 }
 

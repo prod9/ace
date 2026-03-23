@@ -44,7 +44,7 @@ pub struct PrepareResult {
 fn is_supported(backend: Backend, folder: &str) -> bool {
     match (backend, folder) {
         (_, "skills") => true,
-        (Backend::Claude, _) => true,
+        (Backend::Claude | Backend::Flaude, _) => true,
         (Backend::OpenCode, "commands" | "agents") => true,
         _ => false,
     }

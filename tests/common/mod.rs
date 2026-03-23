@@ -4,6 +4,44 @@ use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
 
+// -- Flaude record parsing --
+
+#[derive(Debug)]
+pub struct FlaudeRecord {
+    pub action: String,
+    pub name: String,
+    pub url: String,
+    pub headers: Vec<String>,
+}
+
+pub fn read_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
+    let content = match std::fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    content
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(|line| {
+            let v: serde_json::Value = serde_json::from_str(line).expect("parse flaude record");
+            FlaudeRecord {
+                action: v["action"].as_str().unwrap_or_default().to_string(),
+                name: v["name"].as_str().unwrap_or_default().to_string(),
+                url: v["url"].as_str().unwrap_or_default().to_string(),
+                headers: v["headers"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            }
+        })
+        .collect()
+}
+
 pub struct TestEnv {
     _tmp: tempfile::TempDir,
     root: PathBuf,
@@ -138,6 +176,17 @@ impl TestEnv {
             .expect("git status");
         assert!(output.status.success(), "git status failed");
         String::from_utf8(output.stdout).expect("git status utf8")
+    }
+
+    /// Returns an `ace` command configured with the flaude test backend.
+    /// Sets `FLAUDE_RECORD` to a known path and optionally `FLAUDE_MCP_LIST`.
+    pub fn ace_flaude(&self, mcp_list: &str) -> Command {
+        let mut cmd = self.ace();
+        cmd.env("FLAUDE_RECORD", self.path("flaude-record.jsonl"));
+        if !mcp_list.is_empty() {
+            cmd.env("FLAUDE_MCP_LIST", mcp_list);
+        }
+        cmd
     }
 
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured

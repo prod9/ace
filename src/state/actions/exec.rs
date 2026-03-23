@@ -15,6 +15,10 @@ pub struct Exec {
 
 impl Exec {
     pub fn run(&self, _ace: &mut Ace) -> Result<(), std::io::Error> {
+        if self.backend == Backend::Flaude {
+            return Ok(());
+        }
+
         let mut cmd = Command::new(self.backend.binary());
         cmd.current_dir(&self.project_dir);
 
