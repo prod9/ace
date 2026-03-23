@@ -110,6 +110,12 @@ impl<'a> Git<'a> {
     }
 }
 
+/// Clone a GitHub repo by `owner/repo` specifier into `dest`.
+pub fn clone_github(source: &str, dest: &Path) -> Result<(), GitError> {
+    let url = format!("https://github.com/{source}.git");
+    clone_shallow(&url, dest)
+}
+
 /// Standalone — no repo context needed.
 pub fn clone_shallow(url: &str, dest: &Path) -> Result<(), GitError> {
     let cmd_str = format!("git clone --depth 1 --single-branch --no-tags {url}");

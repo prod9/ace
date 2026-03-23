@@ -50,7 +50,7 @@ source = "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx"
         .args(["school", "update"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 #[test]
@@ -95,7 +95,7 @@ source = "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx"
         .args(["school", "update"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 #[test]

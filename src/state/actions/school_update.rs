@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::config;
-use super::import_skill::{clone_repo, copy_dir_recursive, discover_skills, DiscoveredSkill, ImportError};
+use super::discover_skill::{DiscoveredSkill, discover_skills};
 
 pub struct SchoolUpdate<'a> {
     pub school_root: &'a Path,
@@ -16,7 +16,7 @@ pub enum SchoolUpdateError {
     #[error("{0}")]
     Config(#[from] config::ConfigError),
     #[error("{0}")]
-    Import(#[from] ImportError),
+    Git(#[from] crate::git::GitError),
 }
 
 pub enum SchoolUpdateResult {
@@ -50,7 +50,7 @@ impl SchoolUpdate<'_> {
             let tmp = tempfile::tempdir()?;
 
             ace.progress(&format!("Fetching {source}"));
-            clone_repo(source, tmp.path())?;
+            crate::git::clone_github(source, tmp.path())?;
 
             let discovered = discover_skills(tmp.path())?;
             count += copy_matching_skills(ace, self.school_root, source, &skill_names, &discovered)?;
@@ -91,7 +91,7 @@ fn copy_matching_skills(
             std::fs::remove_dir_all(&dest)?;
         }
 
-        copy_dir_recursive(&skill.path, &dest)?;
+        crate::fsutil::copy_dir_recursive(&skill.path, &dest)?;
         count += 1;
     }
 

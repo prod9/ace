@@ -3,6 +3,7 @@
 mod ace;
 mod cmd;
 mod config;
+mod fsutil;
 mod git;
 mod templates;
 mod state;

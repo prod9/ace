@@ -27,7 +27,7 @@ fn import_clone_failure_invalid_source() {
         .args(["import", "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx", "--skill", "my-skill"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn import_from_local_school_context() {
         .args(["import", "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn import_without_skill_flag_clone_failure() {
         .args(["import", "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn import_no_git_repo_with_school_toml() {
         .args(["import", "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx", "--skill", "x"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 #[test]
@@ -128,7 +128,7 @@ source = "some-owner/some-repo"
         .args(["import", "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx", "--skill", "new-skill"])
         .assert()
         .failure()
-        .stderr(predicates::str::contains("clone failed"));
+        .stderr(predicates::str::contains("git clone"));
 }
 
 use predicates;

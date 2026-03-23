@@ -1,3 +1,4 @@
+pub mod discover_skill;
 pub mod exec;
 pub mod gitignore;
 pub mod import_skill;
