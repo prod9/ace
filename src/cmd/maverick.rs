@@ -1,10 +1,9 @@
 use std::fmt::Write as _;
 use std::io::{self, BufWriter, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 use console::Term;
 
+use crate::ace::io::{ENTER_ALT_SCREEN, HIDE_CURSOR};
 use crate::ace::OutputMode;
 
 const GIF_DATA: &[u8] = include_bytes!("../topgun.gif");
@@ -13,23 +12,6 @@ const GIF_DATA: &[u8] = include_bytes!("../topgun.gif");
 const COLOR_LEVELS: u8 = 16; // quantization steps per channel (fewer = blockier, more color runs)
 const COLOR_MIN: u8 = 20; // black floor — values below this become 0
 const COLOR_MAX: u8 = 220; // white ceiling — values above this become 255
-
-struct AltScreen;
-
-impl AltScreen {
-    fn enter() -> Self {
-        eprint!("\x1b[?1049h\x1b[?25l");
-        let _ = io::stderr().flush();
-        Self
-    }
-}
-
-impl Drop for AltScreen {
-    fn drop(&mut self) {
-        eprint!("\x1b[?1049l\x1b[?25h");
-        let _ = io::stderr().flush();
-    }
-}
 
 pub fn run(mode: OutputMode) {
     if mode != OutputMode::Human {
@@ -44,16 +26,15 @@ pub fn run(mode: OutputMode) {
         _ => return,
     };
 
-    let stop = Arc::new(AtomicBool::new(false));
-    signal_hook::flag::register(signal_hook::consts::SIGINT, Arc::clone(&stop)).ok();
+    // Enter alt screen + hide cursor. Cleanup is handled by the global
+    // TerminalGuard (in ace::io) on both normal exit and Ctrl+C.
+    let _ = io::stderr().write_all(ENTER_ALT_SCREEN);
+    let _ = io::stderr().write_all(HIDE_CURSOR);
+    let _ = io::stderr().flush();
 
-    let _screen = AltScreen::enter();
     let mut out = BufWriter::new(io::stderr());
 
     for (text, delay_ms) in &frames {
-        if stop.load(Ordering::Relaxed) {
-            break;
-        }
         let _ = out.write_all(b"\x1b[H");
         let _ = out.write_all(text.as_bytes());
         let _ = out.flush();
