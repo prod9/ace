@@ -2,7 +2,6 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::config;
-use crate::config::backend::Backend;
 use crate::config::ConfigError;
 use crate::templates;
 
@@ -42,7 +41,10 @@ impl Setup<'_> {
 
         WriteConfig::project(&ace_paths.project, self.specifier)?;
 
-        let backend = Backend::default();
+        // Resolve backend from config layers (user/project/school).
+        ace.require_state()?;
+        let backend = ace.state().backend;
+
         Prepare {
             specifier: self.specifier,
             project_dir: self.project_dir,
@@ -51,6 +53,10 @@ impl Setup<'_> {
         }
         .run(ace)
         .await?;
+
+        // Reload state after Prepare (school.toml now available).
+        ace.reload_state()?;
+        let backend = ace.state().backend;
 
         UpdateGitignore {
             project_dir: self.project_dir,
@@ -61,7 +67,6 @@ impl Setup<'_> {
 
         let instructions = self.project_dir.join(backend.instructions_file());
         if !instructions.exists() {
-            ace.require_state()?;
             let school_name = ace.state().school.as_ref()
                 .ok_or(ConfigError::NoSchool)?
                 .name.clone();
