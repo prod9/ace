@@ -1,6 +1,6 @@
 mod common;
 
-use common::{read_flaude_records, TestEnv};
+use common::{read_flaude_mcp_records, TestEnv};
 
 const SCHOOL_TOML_OAUTH: &str = r#"
 name = "test-school"
@@ -58,7 +58,7 @@ fn mcp_register_oauth_server() {
         .assert()
         .success();
 
-    let records = read_flaude_records(&env.path("flaude-record.jsonl"));
+    let records = read_flaude_mcp_records(&env.path("flaude-record.jsonl"));
     assert_eq!(records.len(), 1, "should register one server");
     assert_eq!(records[0].name, "linear");
     assert_eq!(records[0].url, "https://mcp.linear.app/mcp");
@@ -74,7 +74,7 @@ fn mcp_register_with_headers() {
         .assert()
         .success();
 
-    let records = read_flaude_records(&env.path("flaude-record.jsonl"));
+    let records = read_flaude_mcp_records(&env.path("flaude-record.jsonl"));
     assert_eq!(records.len(), 1, "should register one server");
     assert_eq!(records[0].name, "sentry");
     assert!(
@@ -94,7 +94,7 @@ fn mcp_skip_already_registered() {
         .assert()
         .success();
 
-    let records = read_flaude_records(&env.path("flaude-record.jsonl"));
+    let records = read_flaude_mcp_records(&env.path("flaude-record.jsonl"));
     assert!(records.is_empty(), "should not register already-registered server");
 }
 
@@ -108,7 +108,7 @@ fn mcp_register_multiple_skip_existing() {
         .assert()
         .success();
 
-    let records = read_flaude_records(&env.path("flaude-record.jsonl"));
+    let records = read_flaude_mcp_records(&env.path("flaude-record.jsonl"));
     assert_eq!(records.len(), 1, "should register only the missing server");
     assert_eq!(records[0].name, "sentry");
 }
@@ -122,6 +122,6 @@ fn mcp_no_entries() {
         .assert()
         .success();
 
-    let records = read_flaude_records(&env.path("flaude-record.jsonl"));
+    let records = read_flaude_mcp_records(&env.path("flaude-record.jsonl"));
     assert!(records.is_empty(), "no MCP entries means no registrations");
 }

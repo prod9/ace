@@ -12,6 +12,14 @@ pub struct FlaudeRecord {
     pub name: String,
     pub url: String,
     pub headers: Vec<String>,
+    pub backend_args: Vec<String>,
+}
+
+pub fn read_flaude_mcp_records(path: &Path) -> Vec<FlaudeRecord> {
+    read_flaude_records(path)
+        .into_iter()
+        .filter(|r| r.action == "mcp_add")
+        .collect()
 }
 
 pub fn read_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
@@ -30,6 +38,14 @@ pub fn read_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
                 name: v["name"].as_str().unwrap_or_default().to_string(),
                 url: v["url"].as_str().unwrap_or_default().to_string(),
                 headers: v["headers"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                backend_args: v["backend_args"]
                     .as_array()
                     .map(|a| {
                         a.iter()

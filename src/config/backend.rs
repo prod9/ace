@@ -51,7 +51,7 @@ impl Backend {
     pub fn yolo_args(&self) -> Result<Vec<String>, String> {
         match self {
             Backend::Claude => Ok(vec!["--dangerously-skip-permissions".to_string()]),
-            Backend::Flaude => Ok(vec![]),
+            Backend::Flaude => Ok(vec!["--yolo".to_string()]),
             Backend::OpenCode | Backend::Codex => {
                 Err(format!("yolo mode not supported for {}", self.binary()))
             }

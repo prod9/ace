@@ -16,6 +16,7 @@ pub struct Exec {
 impl Exec {
     pub fn run(&self, _ace: &mut Ace) -> Result<(), std::io::Error> {
         if self.backend == Backend::Flaude {
+            flaude_record_exec(&self.backend_args)?;
             return Ok(());
         }
 
@@ -33,4 +34,26 @@ impl Exec {
         let err = cmd.exec();
         Err(err)
     }
+}
+
+/// Record the exec call to `FLAUDE_RECORD` for test assertions.
+fn flaude_record_exec(backend_args: &[String]) -> Result<(), std::io::Error> {
+    let record_path = match std::env::var("FLAUDE_RECORD") {
+        Ok(p) => p,
+        Err(_) => return Ok(()),
+    };
+
+    use std::io::Write;
+    let record = serde_json::json!({
+        "action": "exec",
+        "backend_args": backend_args,
+    });
+
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&record_path)?;
+
+    writeln!(file, "{record}")?;
+    Ok(())
 }
