@@ -41,6 +41,23 @@ impl Backend {
         }
     }
 
+    // TODO: Re-analyze the abstraction boundary between ACE and backends. Currently
+    // ACE knows backend-specific flags (yolo, system-prompt, etc.) scattered across
+    // Exec and here. Consider whether backends should own their full arg construction
+    // (a BackendOpts struct or trait) instead of ACE assembling args piecemeal.
+
+    /// Extra CLI args to skip permission prompts ("yolo mode").
+    /// Returns an error message if the backend doesn't support it.
+    pub fn yolo_args(&self) -> Result<Vec<String>, String> {
+        match self {
+            Backend::Claude => Ok(vec!["--dangerously-skip-permissions".to_string()]),
+            Backend::Flaude => Ok(vec![]),
+            Backend::OpenCode | Backend::Codex => {
+                Err(format!("yolo mode not supported for {}", self.binary()))
+            }
+        }
+    }
+
     /// List registered MCP server names. Best-effort: returns empty set on failure.
     pub fn mcp_list(&self) -> HashSet<String> {
         match self {

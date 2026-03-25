@@ -19,6 +19,7 @@ pub struct State {
     pub session_prompt: String,
     pub env: HashMap<String, String>,
     pub school: Option<School>,
+    pub yolo: bool,
 }
 
 impl State {
@@ -32,6 +33,7 @@ impl State {
             backend: resolved.backend,
             session_prompt: resolved.session_prompt,
             env: resolved.env,
+            yolo: resolved.yolo,
             school,
             config: tree,
         }
@@ -52,6 +54,7 @@ impl State {
             backend: Backend::default(),
             session_prompt: String::new(),
             env: HashMap::new(),
+            yolo: false,
             school: None,
         }
     }
@@ -67,6 +70,7 @@ struct Resolved {
     backend: Backend,
     session_prompt: String,
     env: HashMap<String, String>,
+    yolo: bool,
 }
 
 /// Resolve effective values from layers. Order: user → project → local (last wins).
@@ -102,11 +106,15 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         }
     }
 
+    // yolo: local layer only — never from project or school (personal preference).
+    let yolo = tree.ace_local.yolo;
+
     Resolved {
         school_specifier,
         backend,
         session_prompt,
         env,
+        yolo,
     }
 }
 
@@ -120,6 +128,7 @@ mod tests {
             backend: None,
             session_prompt: None,
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            yolo: false,
         }
     }
 

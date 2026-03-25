@@ -11,7 +11,7 @@ pub async fn run(ace: &mut Ace, backend_args: Vec<String>) {
     super::exit_on_err(ace, result);
 }
 
-async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdError> {
+async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), CmdError> {
     // Pass 1: load tree to get specifier for Prepare.
     ace.require_state()?;
 
@@ -51,10 +51,21 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         prepare_result.school_is_dirty,
     );
 
+    let backend = ace.state().backend;
+    if ace.state().yolo {
+        match backend.yolo_args() {
+            Ok(args) => {
+                backend_args.extend(args);
+                ace.warn("yolo mode — permission prompts disabled");
+            }
+            Err(msg) => ace.warn(&format!("yolo ignored: {msg}")),
+        }
+    }
+
     ace.separator();
 
     Exec {
-        backend: ace.state().backend,
+        backend,
         session_prompt,
         project_dir,
         env: ace.state().env.clone(),

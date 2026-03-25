@@ -18,6 +18,8 @@ pub struct AceToml {
     pub session_prompt: Option<String>,
     #[serde(skip_serializing_if = "is_empty_map")]
     pub env: HashMap<String, String>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub yolo: bool,
 }
 
 pub fn load(path: &Path) -> Result<AceToml, ConfigError> {
