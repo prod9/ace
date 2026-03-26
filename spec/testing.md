@@ -26,57 +26,20 @@ covers this without container overhead.
 
 Sandboxed filesystem root backed by `tempfile::TempDir`. RAII cleanup on drop.
 
-### API
+See `tests/common/mod.rs` for the full API. Key design points:
 
-| Method                                 | Description                                                                      |
-|----------------------------------------|----------------------------------------------------------------------------------|
-| `new()`                                | Create a new temp directory                                                      |
-| `root()` → `&Path`                    | Return the sandbox root path                                                     |
-| `path(rel)` → `PathBuf`               | Resolve relative path under root. **Panics on absolute paths** (escape prevention) |
-| `write_file(rel, contents)`            | Create file with contents, creating parent dirs as needed                        |
-| `read_file(rel)` → `String`           | Read file contents                                                               |
-| `mkdir(rel)`                           | Create directory (and parents)                                                   |
-| `symlink(target, link)`               | Create symlink. Both paths relative to root                                      |
-| `git_init()`                           | Run `git init` in the sandbox root                                               |
-| `assert_exists(rel)`                   | Assert path exists                                                               |
-| `assert_not_exists(rel)`               | Assert path does not exist                                                       |
-| `assert_symlink(link, expected_target)` | Assert symlink points to expected target                                         |
-| `assert_contains(rel, needle)`         | Assert file contains string                                                      |
-| `ace()` → `assert_cmd::Command`       | Pre-configured command for running the `ace` binary in the sandbox               |
-
-### Binary Runner
-
-Integration tests run the compiled `ace` binary via `assert_cmd`. The `ace()` helper returns
-a `Command` with:
-
-- `env_clear()` — no leaking of host environment
-- `HOME` set to sandbox root
-- `XDG_CONFIG_HOME` / `XDG_CACHE_HOME` set to sandbox subdirs
-- `current_dir` set to sandbox root
-
-This ensures tests never touch real user config, cache, or project files.
-
-### Escape Prevention
-
-All methods resolve paths through `path()`, which panics on absolute paths. This ensures
-tests cannot accidentally read/write outside the sandbox.
+- **Sandbox isolation**: `ace()` returns a `Command` with `env_clear()`, `HOME`/`XDG_CONFIG_HOME`/`XDG_CACHE_HOME` pointed at sandbox subdirs. Tests never touch real user files.
+- **Escape prevention**: all path methods go through `path()`, which panics on absolute paths.
+- **Remote school fixture**: `setup_remote_school()` creates a bare origin repo, cache clone, index entry, and ace.toml — everything needed to test Update/Pull without network access.
 
 ## File Layout
 
 ```
 tests/
   common/
-    mod.rs          # TestEnv struct + helpers
-  link_test.rs      # symlink/link action tests
-  sync_test.rs      # skill sync tests
-  ...
+    mod.rs              # TestEnv, RemoteSchool, FlaudeRecord, helpers
+  <command>_test.rs     # one file per CLI command / action area
 ```
-
-## Migration Path
-
-1. Move `TestFixture` from `src/state/actions/link.rs` → `TestEnv` in `tests/common/mod.rs`
-2. Migrate existing tests one commit at a time
-3. Remove inline `TestFixture` once all tests moved
 
 ## Conventions
 
