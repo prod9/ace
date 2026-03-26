@@ -58,6 +58,13 @@ pub fn read_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
         .collect()
 }
 
+/// A fake "remote" school: bare origin repo + cache clone at the XDG path.
+/// Use `git_in(&self.cache, ...)` or `git_in(&self.origin, ...)` to manipulate.
+pub struct RemoteSchool {
+    pub origin: PathBuf,
+    pub cache: PathBuf,
+}
+
 pub struct TestEnv {
     _tmp: tempfile::TempDir,
     root: PathBuf,
@@ -134,7 +141,11 @@ impl TestEnv {
         let meta = link_path
             .symlink_metadata()
             .unwrap_or_else(|_| panic!("{} should exist", link_path.display()));
-        assert!(meta.file_type().is_symlink(), "{} should be a symlink", link_path.display());
+        assert!(
+            meta.file_type().is_symlink(),
+            "{} should be a symlink",
+            link_path.display()
+        );
 
         let actual = std::fs::read_link(&link_path)
             .unwrap_or_else(|_| panic!("read_link {}", link_path.display()));
@@ -170,9 +181,14 @@ impl TestEnv {
 
         let status = std::process::Command::new("git")
             .args([
-                "-c", "user.email=test@test.com",
-                "-c", "user.name=Test",
-                "commit", "-m", message, "--allow-empty",
+                "-c",
+                "user.email=test@test.com",
+                "-c",
+                "user.name=Test",
+                "commit",
+                "-m",
+                message,
+                "--allow-empty",
             ])
             .env_clear()
             .env("PATH", std::env::var("PATH").unwrap_or_default())
@@ -217,6 +233,106 @@ impl TestEnv {
             cmd.env("FLAUDE_MCP_LIST", mcp_list);
         }
         cmd
+    }
+
+    /// Run a git command in an arbitrary directory. Returns stdout as String.
+    pub fn git_in(&self, dir: &Path, args: &[&str]) -> String {
+        let output = std::process::Command::new("git")
+            .args(args)
+            .env_clear()
+            .env("PATH", std::env::var("PATH").unwrap_or_default())
+            .current_dir(dir)
+            .output()
+            .unwrap_or_else(|e| panic!("git {:?}: {e}", args));
+        assert!(
+            output.status.success(),
+            "git {:?} failed in {}: {}",
+            args,
+            dir.display(),
+            String::from_utf8_lossy(&output.stderr),
+        );
+        String::from_utf8(output.stdout).expect("git output utf8")
+    }
+
+    /// Set up a fake remote school: bare origin, cache clone, index entry, ace.toml.
+    /// Project dir gets git init + ace.toml with flaude backend.
+    pub fn setup_remote_school(&self, specifier: &str) -> RemoteSchool {
+        let origin = self.path("origin.git");
+        let cache = self.path(&format!("cache/ace/{specifier}"));
+        let work = self.path("_school_work");
+
+        // 1. Bare origin repo with main as default branch.
+        std::fs::create_dir_all(&origin).expect("create origin dir");
+        self.git_in(
+            &origin,
+            &["init", "--bare", "--quiet", "--template=", "-b", "main"],
+        );
+
+        // 2. Temp working copy → commit school content → push to origin.
+        self.git_in(
+            self.root(),
+            &[
+                "clone",
+                "--quiet",
+                origin.to_str().expect("origin path"),
+                work.to_str().expect("work path"),
+            ],
+        );
+
+        std::fs::write(
+            work.join("school.toml"),
+            format!("name = \"{specifier}\"\n"),
+        )
+        .expect("write school.toml");
+        std::fs::create_dir_all(work.join("skills/maverick")).expect("mkdir skills");
+        std::fs::write(work.join("skills/maverick/SKILL.md"), "# Maverick\n")
+            .expect("write SKILL.md");
+
+        self.git_in(&work, &["add", "-A"]);
+        self.git_in(
+            &work,
+            &[
+                "-c",
+                "user.email=test@test.com",
+                "-c",
+                "user.name=Test",
+                "commit",
+                "-m",
+                "initial",
+            ],
+        );
+        self.git_in(&work, &["push"]);
+        std::fs::remove_dir_all(&work).expect("remove work dir");
+
+        // 3. Clone origin → cache path (mimics ace install).
+        std::fs::create_dir_all(cache.parent().expect("cache parent"))
+            .expect("create cache parent");
+        self.git_in(
+            self.root(),
+            &[
+                "clone",
+                "--quiet",
+                origin.to_str().expect("origin path"),
+                cache.to_str().expect("cache path"),
+            ],
+        );
+
+        // 4. Index entry.
+        let index_path = self.path("cache/ace/index.toml");
+        std::fs::write(
+            &index_path,
+            format!("[[school]]\nspecifier = \"{specifier}\"\nrepo = \"{specifier}\"\n"),
+        )
+        .expect("write index.toml");
+
+        // 5. Project dir: git init + ace.toml.
+        self.git_init();
+        self.write_file(
+            "ace.toml",
+            &format!("school = \"{specifier}\"\nbackend = \"flaude\"\n"),
+        );
+
+        RemoteSchool { origin, cache }
     }
 
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured
