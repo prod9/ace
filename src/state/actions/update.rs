@@ -2,9 +2,9 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::time::Duration;
 
+use super::prepare::PrepareError;
 use crate::ace::Ace;
 use crate::config;
-use super::prepare::PrepareError;
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
 
@@ -47,17 +47,20 @@ impl Update<'_> {
 
         if !cache.join(".git").exists() {
             return Err(PrepareError::Clone(format!(
-                "school not installed: {}", self.specifier
+                "school not installed: {}",
+                self.specifier
             )));
         }
 
         // -- ensure working tree is clean and on main --
 
         let git = ace.git(cache);
-        let branch = git.current_branch()
+        let branch = git
+            .current_branch()
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
         let on_main = branch == "main";
-        let dirty = git.is_dirty()
+        let dirty = git
+            .is_dirty()
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         if dirty {
@@ -66,7 +69,9 @@ impl Update<'_> {
         if !on_main {
             git.checkout_branch("main")
                 .map_err(|e| PrepareError::Clone(e.to_string()))?;
-            ace.hint(&format!("Switched school cache from branch {branch} back to main"));
+            ace.hint(&format!(
+                "Switched school cache from branch {branch} back to main"
+            ));
         }
 
         if !is_stale(cache) {
@@ -75,15 +80,17 @@ impl Update<'_> {
 
         // -- fetch and fast-forward --
 
-        let old_head = git.rev_parse("HEAD")
+        let old_head = git
+            .rev_parse("HEAD")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         ace.progress(&format!("Fetching {}", self.specifier));
-        git.fetch_shallow("origin", "main")
+        git.fetch("origin", "main")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
         ace.done(&format!("Fetched {}", self.specifier));
 
-        if git.is_ahead_of("origin/main")
+        if git
+            .is_ahead_of("origin/main")
             .map_err(|e| PrepareError::Clone(e.to_string()))?
         {
             ace.warn(&format!("school has local commits at {}", cache.display()));
@@ -99,12 +106,16 @@ impl Update<'_> {
 
         // -- collect skill changes --
 
-        let new_head = git.rev_parse("HEAD")
+        let new_head = git
+            .rev_parse("HEAD")
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         let changes = diff_skill_changes(ace, &git, &old_head, &new_head);
 
-        Ok(UpdateResult { changes, ..Default::default() })
+        Ok(UpdateResult {
+            changes,
+            ..Default::default()
+        })
     }
 
     fn warn_dirty(&self, ace: &mut Ace, on_main: bool, branch: &str) -> UpdateResult {
@@ -118,11 +129,19 @@ impl Update<'_> {
             ));
             ace.hint("Skills may be outdated. Ask your AI assistant to propose the changes — it knows how.");
         }
-        UpdateResult { school_is_dirty: true, ..Default::default() }
+        UpdateResult {
+            school_is_dirty: true,
+            ..Default::default()
+        }
     }
 }
 
-fn diff_skill_changes(ace: &mut Ace, git: &crate::git::Git<'_>, old: &str, new: &str) -> Vec<SkillChange> {
+fn diff_skill_changes(
+    ace: &mut Ace,
+    git: &crate::git::Git<'_>,
+    old: &str,
+    new: &str,
+) -> Vec<SkillChange> {
     if old == new {
         return Vec::new();
     }
@@ -140,7 +159,8 @@ fn diff_skill_changes(ace: &mut Ace, git: &crate::git::Git<'_>, old: &str, new: 
 /// Returns true (stale) if FETCH_HEAD is missing or old.
 fn is_stale(repo: &Path) -> bool {
     let fetch_head = repo.join(".git/FETCH_HEAD");
-    let age = fetch_head.metadata()
+    let age = fetch_head
+        .metadata()
         .and_then(|m| m.modified())
         .ok()
         .and_then(|t| t.elapsed().ok());

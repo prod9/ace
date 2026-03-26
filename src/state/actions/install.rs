@@ -34,7 +34,7 @@ impl Install<'_> {
         let url = format!("https://github.com/{repo}.git");
 
         ace.progress(&format!("Cloning {repo}"));
-        git::clone_shallow(&url, cache)
+        git::clone_repo(&url, cache)
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
         ace.done(&format!("Cloned {repo}"));
 
