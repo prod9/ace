@@ -8,7 +8,7 @@ use crate::config::ConfigError;
 
 use super::install::Install;
 use super::link::Link;
-use super::update::{SkillChange, Update, UpdateResult};
+use super::update::{SkillChange, Update, UpdateOutcome};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrepareError {
@@ -49,12 +49,18 @@ fn is_supported(backend: Backend, folder: &str) -> bool {
 
 impl Prepare<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
-        let update_result = if is_cached(self.specifier)? {
-            (Update {
+        let (changes, school_is_dirty) = if is_cached(self.specifier)? {
+            let outcome = (Update {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             })
-            .run(ace)?
+            .run(ace)?;
+            outcome.emit(ace);
+            match outcome {
+                UpdateOutcome::Dirty { .. } => (Vec::new(), true),
+                UpdateOutcome::Updated { changes } => (changes, false),
+                _ => (Vec::new(), false),
+            }
         } else {
             Install {
                 specifier: self.specifier,
@@ -62,7 +68,7 @@ impl Prepare<'_> {
             }
             .run(ace)
             .await?;
-            UpdateResult::default()
+            (Vec::new(), false)
         };
 
         let school_paths = school_paths::resolve(self.project_dir, self.specifier)?;
@@ -91,8 +97,8 @@ impl Prepare<'_> {
         }
 
         Ok(PrepareResult {
-            changes: update_result.changes,
-            school_is_dirty: update_result.school_is_dirty,
+            changes,
+            school_is_dirty,
         })
     }
 }
