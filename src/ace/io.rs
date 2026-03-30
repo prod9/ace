@@ -1,4 +1,6 @@
 use std::io::{IsTerminal, Write as _};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -8,42 +10,66 @@ use signal_hook::iterator::Signals;
 // ANSI escape sequences for terminal state management.
 // Alt screen is a separate buffer that preserves the user's scrollback.
 // Cursor hide/show prevents a flickering cursor during full-screen redraws.
-pub const ENTER_ALT_SCREEN: &[u8] = b"\x1b[?1049h"; // switch to alt screen buffer
-pub const HIDE_CURSOR: &[u8] = b"\x1b[?25l";
+const ENTER_ALT_SCREEN: &[u8] = b"\x1b[?1049h"; // switch to alt screen buffer
+const HIDE_CURSOR: &[u8] = b"\x1b[?25l";
 
-/// Terminal cleanup sequence: leave alt screen (`\x1b[?1049l`) + show cursor (`\x1b[?25h`).
-/// Safe to run even if alt screen was never entered (leave-alt-screen is a no-op).
-const TERMINAL_CLEANUP: &[u8] = b"\x1b[?1049l\x1b[?25h";
+const CLEANUP_CURSOR: &[u8] = b"\x1b[?25h";
+const CLEANUP_ALT_SCREEN: &[u8] = b"\x1b[?1049l\x1b[?25h";
 
 /// RAII guard that restores terminal state on drop and on SIGINT.
 ///
-/// Created once per session in Human mode. Spawns a background thread that
-/// blocks on a Unix signal fd — no polling. On Ctrl+C the thread writes
-/// cleanup escapes and exits with code 130 (128 + SIGINT).
-struct TerminalGuard {
+/// Starts in cursor-restore mode (show cursor only). Call `enter_alt_screen()`
+/// to upgrade — both drop and SIGINT will then also exit the alternate screen.
+///
+/// Spawns a background thread that blocks on a Unix signal fd — no polling.
+/// On Ctrl+C the thread writes cleanup escapes and exits with code 130.
+pub struct TerminalGuard {
+    alt_screen: Arc<AtomicBool>,
     handle: signal_hook::iterator::Handle,
 }
 
 impl TerminalGuard {
-    fn new() -> Self {
+    pub fn new() -> Self {
+        let alt_screen = Arc::new(AtomicBool::new(false));
+        let flag = Arc::clone(&alt_screen);
+
         let mut signals = Signals::new(&[SIGINT]).expect("register signal handler");
         let handle = signals.handle();
 
         std::thread::spawn(move || {
             for _ in signals.forever() {
-                let _ = std::io::stderr().write_all(TERMINAL_CLEANUP);
+                let cleanup = if flag.load(Ordering::Relaxed) {
+                    CLEANUP_ALT_SCREEN
+                } else {
+                    CLEANUP_CURSOR
+                };
+                let _ = std::io::stderr().write_all(cleanup);
                 let _ = std::io::stderr().flush();
                 std::process::exit(130);
             }
         });
 
-        Self { handle }
+        Self { alt_screen, handle }
+    }
+
+    /// Upgrade to alt-screen mode. Both drop and SIGINT will exit the
+    /// alternate screen buffer in addition to restoring the cursor.
+    pub fn enter_alt_screen(&self) {
+        self.alt_screen.store(true, Ordering::Relaxed);
+    }
+
+    fn cleanup_bytes(&self) -> &'static [u8] {
+        if self.alt_screen.load(Ordering::Relaxed) {
+            CLEANUP_ALT_SCREEN
+        } else {
+            CLEANUP_CURSOR
+        }
     }
 }
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        let _ = std::io::stderr().write_all(TERMINAL_CLEANUP);
+        let _ = std::io::stderr().write_all(self.cleanup_bytes());
         let _ = std::io::stderr().flush();
         self.handle.close();
     }
@@ -78,7 +104,7 @@ pub enum IoError {
 pub struct Io {
     mode: OutputMode,
     spinner: Option<ProgressBar>,
-    _guard: Option<TerminalGuard>,
+    guard: Option<TerminalGuard>,
 }
 
 #[allow(dead_code)]
@@ -105,7 +131,18 @@ impl Io {
             OutputMode::Human => Some(TerminalGuard::new()),
             _ => None,
         };
-        Self { mode, spinner: None, _guard: guard }
+        Self { mode, spinner: None, guard }
+    }
+
+    /// Enter alternate screen buffer. The guard will exit it on drop/SIGINT.
+    /// No-op in Porcelain/Silent mode (no terminal to manage).
+    pub fn enter_alt_screen(&self) {
+        if let Some(guard) = &self.guard {
+            guard.enter_alt_screen();
+            let _ = std::io::stderr().write_all(ENTER_ALT_SCREEN);
+            let _ = std::io::stderr().write_all(HIDE_CURSOR);
+            let _ = std::io::stderr().flush();
+        }
     }
 
     // -- output --

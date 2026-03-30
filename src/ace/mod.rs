@@ -96,6 +96,10 @@ impl Ace {
 
     // -- output --
 
+    pub fn enter_alt_screen(&self) {
+        self.io.enter_alt_screen();
+    }
+
     pub fn progress(&mut self, msg: &str) {
         self.io.progress(msg);
     }

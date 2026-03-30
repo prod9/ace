@@ -120,7 +120,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::School { command }) => school::run(ace, command).await,
         Some(Command::Pull) => pull::run(ace),
         Some(Command::Yolo) => yolo::run(ace),
-        Some(Command::Maverick) => maverick::run(ace.mode()),
+        Some(Command::Maverick) => maverick::run(ace),
         None => main::run(ace, cli.backend_args).await,
     }
 }

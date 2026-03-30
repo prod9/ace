@@ -3,8 +3,7 @@ use std::io::{self, BufWriter, Write};
 
 use console::Term;
 
-use crate::ace::io::{ENTER_ALT_SCREEN, HIDE_CURSOR};
-use crate::ace::OutputMode;
+use crate::ace::{Ace, OutputMode};
 
 const GIF_DATA: &[u8] = include_bytes!("../topgun.gif");
 
@@ -13,8 +12,8 @@ const COLOR_LEVELS: u8 = 16; // quantization steps per channel (fewer = blockier
 const COLOR_MIN: u8 = 20; // black floor — values below this become 0
 const COLOR_MAX: u8 = 220; // white ceiling — values above this become 255
 
-pub fn run(mode: OutputMode) {
-    if mode != OutputMode::Human {
+pub fn run(ace: &Ace) {
+    if ace.mode() != OutputMode::Human {
         return;
     }
 
@@ -26,11 +25,7 @@ pub fn run(mode: OutputMode) {
         _ => return,
     };
 
-    // Enter alt screen + hide cursor. Cleanup is handled by the global
-    // TerminalGuard (in ace::io) on both normal exit and Ctrl+C.
-    let _ = io::stderr().write_all(ENTER_ALT_SCREEN);
-    let _ = io::stderr().write_all(HIDE_CURSOR);
-    let _ = io::stderr().flush();
+    ace.enter_alt_screen();
 
     let mut out = BufWriter::new(io::stderr());
 
