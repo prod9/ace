@@ -13,5 +13,8 @@ wheels/
 # Claude Code
 .claude/
 
+# Local config
+ace.local.toml
+
 # Added by cargo
 /target
