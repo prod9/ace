@@ -53,6 +53,7 @@ impl Prepare<'_> {
             let outcome = (Update {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
+                force: false,
             })
             .run(ace)?;
             outcome.emit(ace);

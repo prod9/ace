@@ -5,6 +5,7 @@ mod fmt;
 mod import;
 mod main;
 mod paths;
+mod pull;
 mod school;
 mod setup;
 mod yolo;
@@ -73,6 +74,8 @@ enum Command {
         #[command(subcommand)]
         command: school::Command,
     },
+    /// Fetch latest school changes (force, ignoring cooldown)
+    Pull,
     /// Enable yolo mode (skip permission prompts)
     Yolo,
     /// 🛩️
@@ -115,6 +118,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths { key }) => paths::run(ace, key.as_deref()).await,
         Some(Command::School { command }) => school::run(ace, command).await,
+        Some(Command::Pull) => pull::run(ace),
         Some(Command::Yolo) => yolo::run(ace),
         Some(Command::Maverick) => maverick::run(ace.mode()),
         None => main::run(ace, cli.backend_args).await,

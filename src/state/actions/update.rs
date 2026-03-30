@@ -15,8 +15,19 @@ impl UpdateOutcome {
                     "Switched school cache from branch {from} back to main"
                 ));
             }
-            UpdateOutcome::Updated { .. } => {
-                ace.done("School updated");
+            UpdateOutcome::Updated { changes } if changes.is_empty() => {
+                ace.done("School updated (no skill changes)");
+            }
+            UpdateOutcome::Updated { changes } => {
+                let summary: Vec<String> = changes.iter().map(|c| {
+                    let prefix = match c.kind {
+                        ChangeKind::Added => "+",
+                        ChangeKind::Modified => "~",
+                        ChangeKind::Removed => "-",
+                    };
+                    format!("{prefix}{}", c.name)
+                }).collect();
+                ace.done(&format!("School updated ({})", summary.join(", ")));
             }
             UpdateOutcome::Dirty { on_main: true, .. } => {
                 ace.warn("school has local changes — updates blocked");
@@ -80,6 +91,7 @@ pub enum UpdateOutcome {
 pub struct Update<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
+    pub force: bool,
 }
 
 impl Update<'_> {
@@ -127,7 +139,7 @@ impl Update<'_> {
             None
         };
 
-        if !is_stale(cache) {
+        if !self.force && !is_stale(cache) {
             return if let Some(from) = switched_from {
                 Ok(UpdateOutcome::SwitchedBranch { from })
             } else {
