@@ -361,6 +361,7 @@ impl TestEnv {
         cmd.env("PATH", std::env::var("PATH").unwrap_or_default());
         cmd.env("XDG_CONFIG_HOME", self.path("config"));
         cmd.env("XDG_CACHE_HOME", self.path("cache"));
+        cmd.env("GIT_TERMINAL_PROMPT", "0");
         cmd.env("TERM", "dumb");
         cmd.current_dir(self.root());
         cmd

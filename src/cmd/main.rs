@@ -91,13 +91,28 @@ pub(super) async fn prepare_school(
         .map(|s| s.mcp.clone())
         .unwrap_or_default();
 
-    if !mcp_entries.is_empty() {
-        let backend = ace.state().backend;
-        McpRegister {
-            backend,
-            entries: &mcp_entries,
-        }
-        .run(ace)?;
+    if mcp_entries.is_empty() {
+        return Ok(prepare_result);
+    }
+
+    let backend = ace.state().backend;
+    let registered = backend.mcp_list();
+    let pending: Vec<&str> = mcp_entries.iter()
+        .filter(|e| !registered.contains(&e.name))
+        .map(|e| e.name.as_str())
+        .collect();
+
+    if pending.is_empty() {
+        return Ok(prepare_result);
+    }
+
+    let prompt = format!("Register MCP server(s): {}?", pending.join(", "));
+    if !ace.prompt_confirm(&prompt, true)? {
+        return Ok(prepare_result);
+    }
+
+    if let Err(e) = (McpRegister { backend, entries: &mcp_entries }).run(ace) {
+        ace.warn(&format!("MCP registration failed: {e}"));
     }
 
     Ok(prepare_result)
