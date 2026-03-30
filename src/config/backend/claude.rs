@@ -58,6 +58,9 @@ fn build_mcp_add_args(entry: &McpDecl) -> Vec<String> {
         "user".to_string(),
     ];
 
+    args.push(entry.name.clone());
+    args.push(entry.url.clone());
+
     let mut headers: Vec<(&String, &String)> = entry.headers.iter().collect();
     headers.sort_by_key(|(k, _)| k.as_str());
 
@@ -65,9 +68,6 @@ fn build_mcp_add_args(entry: &McpDecl) -> Vec<String> {
         args.push("-H".to_string());
         args.push(format!("{key}: {value}"));
     }
-
-    args.push(entry.name.clone());
-    args.push(entry.url.clone());
     args
 }
 
@@ -149,8 +149,8 @@ mod tests {
             args,
             vec![
                 "mcp", "add", "-t", "http", "-s", "user",
+                "sentry", "https://mcp.sentry.dev/sse",
                 "-H", "Authorization: Bearer tok",
-                "sentry", "https://mcp.sentry.dev/sse"
             ]
         );
     }
@@ -169,6 +169,15 @@ mod tests {
         };
 
         let args = build_mcp_add_args(&entry);
+        // Positional args must come before -H flags (variadic flag consumes rest)
+        let name_pos = args.iter().position(|a| a == "test").unwrap();
+        let url_pos = args.iter().position(|a| a == "https://example.com/mcp").unwrap();
+        let first_h = args.iter().position(|a| a == "-H").unwrap();
+
+        assert!(name_pos < first_h, "name must precede -H flags");
+        assert!(url_pos < first_h, "url must precede -H flags");
+        assert_eq!(url_pos, name_pos + 1, "url must follow name");
+
         let h_positions: Vec<usize> = args
             .iter()
             .enumerate()
