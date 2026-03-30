@@ -45,7 +45,8 @@ impl Install<'_> {
         ace.done(&format!("School: {}", school_toml.name));
 
         let ace_paths = config::paths::resolve(self.project_dir)?;
-        WriteConfig::user(&ace_paths.user, self.specifier)?;
+        WriteConfig::user(&ace_paths.user, self.specifier)
+            .map_err(PrepareError::Write)?;
 
         Ok(())
     }

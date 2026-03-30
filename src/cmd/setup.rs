@@ -1,6 +1,8 @@
 use crate::ace::Ace;
 use crate::config::index_toml;
+use crate::state::actions::gitignore::UpdateGitignore;
 use crate::state::actions::setup::Setup;
+use crate::templates;
 
 use super::CmdError;
 
@@ -21,8 +23,38 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
         specifier: &resolved,
         project_dir: &project_dir,
     }
+    .run(ace)?;
+
+    // Prepare school (install/update/link + MCP).
+    ace.require_state()?;
+    super::main::prepare_school(ace, &resolved).await?;
+
+    // Post-prepare setup: gitignore and instructions file.
+    let backend = ace.state().backend;
+
+    UpdateGitignore {
+        project_dir: &project_dir,
+        backend_dir: backend.backend_dir(),
+    }
     .run(ace)
-    .await?;
+    .map_err(|e| CmdError::Other(format!("gitignore: {e}")))?;
+
+    let instructions = project_dir.join(backend.instructions_file());
+    if !instructions.exists() {
+        let school_name = ace.state().school.as_ref()
+            .map(|s| s.name.clone())
+            .unwrap_or_default();
+
+        let backend_dir_name = backend.backend_dir();
+        let tpl = templates::Template::parse(templates::builtins::PROJECT_CLAUDE_MD);
+        let content = tpl.substitute(&std::collections::HashMap::from([
+            ("school_name".to_string(), school_name),
+            ("backend_dir".to_string(), backend_dir_name.to_string()),
+        ]));
+
+        std::fs::write(&instructions, content)?;
+        ace.done(&format!("Created {}", backend.instructions_file()));
+    }
 
     ace.done("Setup complete.");
     Ok(())

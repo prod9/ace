@@ -1,7 +1,8 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
 use crate::state::actions::exec::Exec;
-use crate::state::actions::prepare::Prepare;
+use crate::state::actions::mcp_register::McpRegister;
+use crate::state::actions::prepare::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
 
 use super::CmdError;
@@ -12,28 +13,14 @@ pub async fn run(ace: &mut Ace, backend_args: Vec<String>) {
 }
 
 async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), CmdError> {
-    // Pass 1: load tree to get specifier for Prepare.
     ace.require_state()?;
 
     let specifier = ace.state().school_specifier.clone()
         .ok_or(ConfigError::NoSchool)?;
 
-    // Prepare (install/update/link) needs a preliminary backend for backend_dir.
-    let preliminary_backend = ace.state().backend;
+    let prepare_result = prepare_school(ace, &specifier).await?;
+
     let project_dir = ace.project_dir().to_path_buf();
-
-    let prepare_result = (Prepare {
-        specifier: &specifier,
-        project_dir: &project_dir,
-        backend_dir: preliminary_backend.backend_dir(),
-        backend: preliminary_backend,
-    })
-    .run(ace)
-    .await?;
-
-    // Pass 2: reload with fresh school.toml after Prepare.
-    ace.reload_state()?;
-
     let school_paths = ace.require_school()?;
     let school_cache = school_paths.cache.clone();
 
@@ -74,4 +61,44 @@ async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), C
     .run(ace)?;
 
     Ok(())
+}
+
+/// Shared workflow: prepare school (install/update/link) → register MCP servers.
+///
+/// Called by both bare `ace` and `ace setup`. Reloads state after linking so
+/// school.toml is available for MCP registration and downstream callers.
+pub(super) async fn prepare_school(
+    ace: &mut Ace,
+    specifier: &str,
+) -> Result<PrepareResult, CmdError> {
+    let preliminary_backend = ace.state().backend;
+    let project_dir = ace.project_dir().to_path_buf();
+
+    let prepare_result = (Prepare {
+        specifier,
+        project_dir: &project_dir,
+        backend_dir: preliminary_backend.backend_dir(),
+        backend: preliminary_backend,
+    })
+    .run(ace)
+    .await?;
+
+    // Reload with fresh school.toml after Prepare.
+    ace.reload_state()?;
+
+    // Register MCP servers from school.toml.
+    let mcp_entries: Vec<_> = ace.state().school.as_ref()
+        .map(|s| s.mcp.clone())
+        .unwrap_or_default();
+
+    if !mcp_entries.is_empty() {
+        let backend = ace.state().backend;
+        McpRegister {
+            backend,
+            entries: &mcp_entries,
+        }
+        .run(ace)?;
+    }
+
+    Ok(prepare_result)
 }
