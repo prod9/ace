@@ -100,6 +100,7 @@ mod tests {
         assert!(block.contains(".claude/rules"));
         assert!(block.contains(".claude/commands"));
         assert!(block.contains(".claude/agents"));
+        assert!(block.contains("ace.local.toml"));
         assert!(block.contains(MARKER_START));
         assert!(block.contains(MARKER_END));
     }
@@ -109,6 +110,7 @@ mod tests {
         let block = build_block(".opencode");
         assert!(block.contains(".opencode/skills"));
         assert!(block.contains(".opencode/agents"));
+        assert!(block.contains("ace.local.toml"));
     }
 
     #[test]
