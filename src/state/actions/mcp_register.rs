@@ -31,11 +31,7 @@ impl McpRegister<'_> {
 
         // -- register missing servers --
 
-        for entry in self.entries {
-            if registered.contains(&entry.name) {
-                continue;
-            }
-
+        for entry in unregistered(self.entries, &registered) {
             let resolved = resolve_headers(entry, ace)?;
             let target = resolved.as_ref().unwrap_or(entry);
 
@@ -48,6 +44,14 @@ impl McpRegister<'_> {
 
         Ok(())
     }
+}
+
+/// Return entries not yet registered with the backend.
+fn unregistered<'a>(entries: &'a [McpDecl], registered: &HashSet<String>) -> Vec<&'a McpDecl> {
+    entries
+        .iter()
+        .filter(|e| !registered.contains(&e.name))
+        .collect()
 }
 
 fn registration_message(name: &str, no_headers: bool) -> String {
@@ -111,4 +115,99 @@ fn collect_placeholders(headers: &HashMap<String, String>) -> Vec<String> {
     }
 
     placeholders
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn decl(name: &str) -> McpDecl {
+        McpDecl {
+            name: name.to_string(),
+            url: format!("https://{name}.example.com/mcp"),
+            headers: HashMap::new(),
+            instructions: String::new(),
+        }
+    }
+
+    // -- unregistered --
+
+    #[test]
+    fn unregistered_returns_all_when_none_registered() {
+        let entries = vec![decl("linear"), decl("github")];
+        let registered = HashSet::new();
+
+        let result = unregistered(&entries, &registered);
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn unregistered_returns_empty_when_all_registered() {
+        let entries = vec![decl("linear"), decl("github")];
+        let registered: HashSet<String> =
+            ["linear", "github"].iter().map(|s| s.to_string()).collect();
+
+        let result = unregistered(&entries, &registered);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn unregistered_returns_only_missing() {
+        let entries = vec![decl("linear"), decl("github"), decl("sentry")];
+        let registered: HashSet<String> = ["linear"].iter().map(|s| s.to_string()).collect();
+
+        let result = unregistered(&entries, &registered);
+        let names: Vec<&str> = result.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(names, vec!["github", "sentry"]);
+    }
+
+    #[test]
+    fn unregistered_empty_entries() {
+        let entries: Vec<McpDecl> = vec![];
+        let registered: HashSet<String> = ["linear"].iter().map(|s| s.to_string()).collect();
+
+        let result = unregistered(&entries, &registered);
+        assert!(result.is_empty());
+    }
+
+    // -- registration_message --
+
+    #[test]
+    fn message_oauth_mentions_authorize() {
+        let msg = registration_message("linear", true);
+        assert!(msg.contains("authorize"), "OAuth message should mention authorize prompt");
+    }
+
+    #[test]
+    fn message_with_headers_omits_authorize() {
+        let msg = registration_message("sentry", false);
+        assert!(!msg.contains("authorize"), "PAT message should not mention authorize");
+        assert!(msg.contains("sentry"));
+    }
+
+    // -- collect_placeholders --
+
+    #[test]
+    fn placeholders_none() {
+        let headers: HashMap<String, String> =
+            [("Authorization".to_string(), "Bearer token123".to_string())]
+                .into_iter()
+                .collect();
+
+        assert!(collect_placeholders(&headers).is_empty());
+    }
+
+    #[test]
+    fn placeholders_deduplicates() {
+        let headers: HashMap<String, String> = [
+            ("X-Key".to_string(), "{{ api_key }}".to_string()),
+            ("X-Backup".to_string(), "{{ api_key }}".to_string()),
+        ]
+        .into_iter()
+        .collect();
+
+        let result = collect_placeholders(&headers);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "api_key");
+    }
 }

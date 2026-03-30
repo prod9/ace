@@ -84,7 +84,7 @@ fn remote_school_ace_flaude_runs() {
     let env = TestEnv::new();
     let _school = env.setup_remote_school("test/school");
 
-    env.ace_flaude("").assert().success();
+    env.ace().assert().success();
 
     // Verify ace linked skills into project.
     env.assert_exists(".claude/skills");
@@ -100,7 +100,7 @@ fn dirty_cache_warns() {
     // Dirty the cache working tree.
     std::fs::write(school.cache.join("dirty.txt"), "uncommitted").expect("dirty file");
 
-    env.ace_flaude("")
+    env.ace()
         .assert()
         .success()
         .stderr(predicates::str::contains("local changes").or(predicates::str::contains("dirty")));
@@ -115,7 +115,7 @@ fn dirty_non_main_warns_with_branch() {
     env.git_in(&school.cache, &["checkout", "-b", "feature-x"]);
     std::fs::write(school.cache.join("dirty.txt"), "uncommitted").expect("dirty file");
 
-    env.ace_flaude("")
+    env.ace()
         .assert()
         .success()
         .stderr(predicates::str::contains("feature-x"));
@@ -129,7 +129,7 @@ fn clean_non_main_switches_to_main() {
     // Switch to a clean feature branch.
     env.git_in(&school.cache, &["checkout", "-b", "feature-y"]);
 
-    env.ace_flaude("").assert().success();
+    env.ace().assert().success();
 
     // Verify cache is back on main.
     assert_eq!(
@@ -161,7 +161,7 @@ fn ahead_of_origin_warns() {
     );
     make_stale(&school);
 
-    env.ace_flaude("")
+    env.ace()
         .assert()
         .success()
         .stderr(predicates::str::contains("local commits"));
@@ -192,7 +192,7 @@ fn diverged_warns() {
     );
     make_stale(&school);
 
-    env.ace_flaude("")
+    env.ace()
         .assert()
         .success()
         .stderr(predicates::str::contains("local commits"));
@@ -204,10 +204,10 @@ fn already_fresh_skips_fetch() {
     let _school = env.setup_remote_school("test/school");
 
     // First run — triggers fetch (no FETCH_HEAD yet).
-    env.ace_flaude("").assert().success();
+    env.ace().assert().success();
 
     // Second run — FETCH_HEAD is fresh, should skip fetch entirely.
-    env.ace_flaude("")
+    env.ace()
         .assert()
         .success()
         .stderr(predicates::str::contains("Fetch").not());
@@ -222,7 +222,7 @@ fn fetches_new_changes() {
     push_to_origin(&env, &school, "skills/maverick/NEW.md", "# New content\n");
     make_stale(&school);
 
-    env.ace_flaude("").assert().success();
+    env.ace().assert().success();
 
     // Verify new content was merged into cache.
     assert!(

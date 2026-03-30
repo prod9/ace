@@ -15,14 +15,7 @@ pub struct FlaudeRecord {
     pub backend_args: Vec<String>,
 }
 
-pub fn read_flaude_mcp_records(path: &Path) -> Vec<FlaudeRecord> {
-    read_flaude_records(path)
-        .into_iter()
-        .filter(|r| r.action == "mcp_add")
-        .collect()
-}
-
-pub fn read_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
+fn parse_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
     let content = match std::fs::read_to_string(path) {
         Ok(c) => c,
         Err(_) => return Vec::new(),
@@ -224,15 +217,26 @@ impl TestEnv {
         String::from_utf8(output.stdout).expect("git status utf8")
     }
 
-    /// Returns an `ace` command configured with the flaude test backend.
-    /// Sets `FLAUDE_RECORD` to a known path and optionally `FLAUDE_MCP_LIST`.
-    pub fn ace_flaude(&self, mcp_list: &str) -> Command {
-        let mut cmd = self.ace();
-        cmd.env("FLAUDE_RECORD", self.path("flaude-record.jsonl"));
-        if !mcp_list.is_empty() {
-            cmd.env("FLAUDE_MCP_LIST", mcp_list);
-        }
-        cmd
+    /// Write the flaude MCP list file (one name per line).
+    /// Flaude's `mcp_list()` reads `$HOME/.flaude-mcp-list`.
+    pub fn write_flaude_mcp_list(&self, names: &[&str]) {
+        self.write_file(".flaude-mcp-list", &names.join("\n"));
+    }
+
+    /// Read MCP registration records written by flaude's `mcp_add()`.
+    pub fn read_flaude_mcp_records(&self) -> Vec<FlaudeRecord> {
+        parse_flaude_records(&self.path(".flaude-mcp-records.jsonl"))
+            .into_iter()
+            .filter(|r| r.action == "mcp_add")
+            .collect()
+    }
+
+    /// Read exec records written by flaude's exec recording.
+    pub fn read_flaude_exec_records(&self) -> Vec<FlaudeRecord> {
+        parse_flaude_records(&self.path(".flaude-exec-records.jsonl"))
+            .into_iter()
+            .filter(|r| r.action == "exec")
+            .collect()
     }
 
     /// Run a git command in an arbitrary directory. Returns stdout as String.
@@ -333,6 +337,19 @@ impl TestEnv {
         );
 
         RemoteSchool { origin, cache }
+    }
+
+    /// Set up an embedded school with flaude backend. Common fixture for
+    /// MCP and exec integration tests.
+    pub fn setup_flaude_school(&self, school_toml: &str) {
+        self.git_init();
+        self.write_file("school.toml", school_toml);
+        self.write_file("ace.toml", "school = \".\"\nbackend = \"flaude\"\n");
+        self.mkdir("skills/test-skill");
+        self.write_file("skills/test-skill/SKILL.md", "# Test\n");
+        self.write_file("CLAUDE.md", "# Test\n");
+        self.mkdir(".claude");
+        self.symlink("skills", ".claude/skills");
     }
 
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured

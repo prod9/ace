@@ -1,10 +1,24 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use super::McpDecl;
 
+/// Returns Codex's home directory (`$CODEX_HOME` or `~/.codex`).
+fn home_dir() -> Option<PathBuf> {
+    std::env::var("CODEX_HOME")
+        .ok()
+        .map(PathBuf::from)
+        .or_else(|| std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".codex")))
+}
+
+/// Check if Codex is ready: auth.json exists OR API key env var is set.
 #[allow(dead_code)]
 pub(super) fn is_ready() -> bool {
-    false
+    std::env::var("CODEX_API_KEY").is_ok()
+        || std::env::var("OPENAI_API_KEY").is_ok()
+        || home_dir()
+            .map(|d| d.join("auth.json").exists())
+            .unwrap_or(false)
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {

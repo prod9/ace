@@ -1,23 +1,47 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use super::McpDecl;
 
-/// Read `FLAUDE_MCP_LIST` env var as comma-separated server names.
+/// Flaude record file for MCP registrations.
+fn mcp_record_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::Path::new(&h).join(".flaude-mcp-records.jsonl")
+    })
+}
+
+/// Flaude MCP list file — one server name per line.
+fn mcp_list_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::Path::new(&h).join(".flaude-mcp-list")
+    })
+}
+
+/// Read registered MCP names from `$HOME/.flaude-mcp-list` (one per line).
 pub(super) fn mcp_list() -> HashSet<String> {
-    std::env::var("FLAUDE_MCP_LIST")
-        .unwrap_or_default()
-        .split(',')
+    let path = match mcp_list_path() {
+        Some(p) => p,
+        None => return HashSet::new(),
+    };
+
+    let content = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return HashSet::new(),
+    };
+
+    content
+        .lines()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .collect()
 }
 
-/// Append a JSON line to the file at `FLAUDE_RECORD`.
+/// Append a JSON record to `$HOME/.flaude-mcp-records.jsonl`.
 pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
     use std::io::Write;
 
-    let record_path =
-        std::env::var("FLAUDE_RECORD").map_err(|_| "FLAUDE_RECORD env var not set".to_string())?;
+    let record_path = mcp_record_path()
+        .ok_or_else(|| "HOME not set".to_string())?;
 
     let mut headers: Vec<(&String, &String)> = entry.headers.iter().collect();
     headers.sort_by_key(|(k, _)| k.as_str());
@@ -35,8 +59,8 @@ pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
         .create(true)
         .append(true)
         .open(&record_path)
-        .map_err(|e| format!("open {record_path}: {e}"))?;
+        .map_err(|e| format!("open {}: {e}", record_path.display()))?;
 
-    writeln!(file, "{record}").map_err(|e| format!("write {record_path}: {e}"))?;
+    writeln!(file, "{record}").map_err(|e| format!("write {}: {e}", record_path.display()))?;
     Ok(())
 }

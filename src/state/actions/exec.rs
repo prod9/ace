@@ -27,8 +27,8 @@ impl Exec {
             cmd.env(key, val);
         }
 
-        cmd.arg("--system-prompt").arg(&self.session_prompt);
-        cmd.args(&self.backend_args);
+        let args = build_exec_args(&self.session_prompt, &self.backend_args);
+        cmd.args(&args);
 
         use std::os::unix::process::CommandExt;
         let err = cmd.exec();
@@ -36,14 +36,25 @@ impl Exec {
     }
 }
 
-/// Record the exec call to `FLAUDE_RECORD` for test assertions.
+/// Build the argument list for the backend CLI invocation.
+fn build_exec_args(session_prompt: &str, backend_args: &[String]) -> Vec<String> {
+    let mut args = vec![
+        "--system-prompt".to_string(),
+        session_prompt.to_string(),
+    ];
+    args.extend_from_slice(backend_args);
+    args
+}
+
+/// Record the exec call to `$HOME/.flaude-exec-records.jsonl` for test assertions.
 fn flaude_record_exec(backend_args: &[String]) -> Result<(), std::io::Error> {
-    let record_path = match std::env::var("FLAUDE_RECORD") {
-        Ok(p) => p,
+    let home = match std::env::var("HOME") {
+        Ok(h) => h,
         Err(_) => return Ok(()),
     };
 
     use std::io::Write;
+    let record_path = std::path::Path::new(&home).join(".flaude-exec-records.jsonl");
     let record = serde_json::json!({
         "action": "exec",
         "backend_args": backend_args,
@@ -56,4 +67,25 @@ fn flaude_record_exec(backend_args: &[String]) -> Result<(), std::io::Error> {
 
     writeln!(file, "{record}")?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_exec_args_includes_system_prompt() {
+        let args = build_exec_args("You are helpful.", &[]);
+        assert_eq!(args, vec!["--system-prompt", "You are helpful."]);
+    }
+
+    #[test]
+    fn build_exec_args_appends_backend_args() {
+        let backend_args = vec!["--yolo".to_string(), "--verbose".to_string()];
+        let args = build_exec_args("prompt", &backend_args);
+        assert_eq!(
+            args,
+            vec!["--system-prompt", "prompt", "--yolo", "--verbose"]
+        );
+    }
 }
