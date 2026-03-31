@@ -19,9 +19,8 @@ fn mcp_list_path() -> Option<PathBuf> {
 
 /// Read registered MCP names from `$HOME/.flaude-mcp-list` (one per line).
 pub(super) fn mcp_list() -> HashSet<String> {
-    let path = match mcp_list_path() {
-        Some(p) => p,
-        None => return HashSet::new(),
+    let Some(path) = mcp_list_path() else {
+        return HashSet::new();
     };
 
     let content = match std::fs::read_to_string(&path) {

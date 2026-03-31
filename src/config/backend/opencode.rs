@@ -55,9 +55,8 @@ fn parse_mcp_names(json: &str) -> HashSet<String> {
         Err(_) => return HashSet::new(),
     };
 
-    let mcp_obj = match parsed.get("mcp").and_then(|v| v.as_object()) {
-        Some(obj) => obj,
-        None => return HashSet::new(),
+    let Some(mcp_obj) = parsed.get("mcp").and_then(|v| v.as_object()) else {
+        return HashSet::new();
     };
 
     mcp_obj

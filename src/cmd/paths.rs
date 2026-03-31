@@ -16,11 +16,10 @@ fn run_inner(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
 
     match key {
         Some(k) => {
-            let found = lookup_key(&all, k);
-            match found {
-                Some(value) => ace.data(value),
-                None => return Err(CmdError::Other(format!("unknown key: {k}"))),
-            }
+            let Some(value) = lookup_key(&all, k) else {
+                return Err(CmdError::Other(format!("unknown key: {k}")));
+            };
+            ace.data(value);
         }
         None => {
             for (k, v) in &all {

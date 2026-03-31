@@ -100,9 +100,8 @@ impl Update<'_> {
 
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
-        let cache = match &school_paths.cache {
-            Some(c) => c,
-            None => return Ok(UpdateOutcome::Embedded),
+        let Some(cache) = &school_paths.cache else {
+            return Ok(UpdateOutcome::Embedded);
         };
 
         if !cache.join(".git").exists() {

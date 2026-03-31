@@ -52,9 +52,8 @@ impl Tree {
 
     /// Second pass: load school.toml + school_paths from the resolved specifier.
     pub fn load_school(&mut self, project_dir: &Path) -> Result<(), ConfigError> {
-        let spec = match self.specifier() {
-            Some(s) => s,
-            None => return Ok(()),
+        let Some(spec) = self.specifier() else {
+            return Ok(());
         };
 
         let sp = school_paths::resolve(project_dir, &spec)?;
