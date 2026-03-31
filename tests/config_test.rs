@@ -38,7 +38,25 @@ fn config_includes_school_toml() {
 }
 
 #[test]
-fn config_shows_yolo_from_local() {
+fn config_shows_trust_from_local() {
+    let env = TestEnv::new();
+    env.setup_embedded("phoenix");
+
+    env.write_file("ace.local.toml", "trust = \"auto\"\n");
+
+    let output = env.ace()
+        .args(["config"])
+        .output()
+        .expect("ace config");
+
+    assert!(output.status.success(), "ace config should succeed");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("trust = \"auto\""), "trust should appear in effective config");
+}
+
+#[test]
+fn config_backcompat_yolo_becomes_trust() {
     let env = TestEnv::new();
     env.setup_embedded("phoenix");
 
@@ -52,7 +70,7 @@ fn config_shows_yolo_from_local() {
     assert!(output.status.success(), "ace config should succeed");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("yolo = true"), "yolo should appear in effective config");
+    assert!(stdout.contains("trust = \"yolo\""), "yolo=true should resolve to trust=yolo");
 }
 
 #[test]

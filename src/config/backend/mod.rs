@@ -55,16 +55,27 @@ impl Backend {
     // Exec and here. Consider whether backends should own their full arg construction
     // (a BackendOpts struct or trait) instead of ACE assembling args piecemeal.
 
-    /// Extra CLI args to skip permission prompts ("yolo mode").
+    /// Extra CLI args for the given trust level.
     /// Returns an error message if the backend doesn't support it.
-    pub fn yolo_args(&self) -> Result<Vec<String>, String> {
-        match self {
-            Backend::Claude => Ok(vec!["--dangerously-skip-permissions".to_string()]),
-            Backend::Flaude => Ok(vec!["--yolo".to_string()]),
-            Backend::Droid => Ok(vec!["--skip-permissions-unsafe".to_string()]),
-            Backend::OpenCode | Backend::Codex => {
-                Err(format!("yolo mode not supported for {}", self.binary()))
-            }
+    pub fn trust_args(&self, trust: super::ace_toml::Trust) -> Result<Vec<String>, String> {
+        use super::ace_toml::Trust;
+        match (self, trust) {
+            (_, Trust::Default) => Ok(vec![]),
+            (Backend::Claude, Trust::Auto) => Ok(vec![
+                "--permission-mode".to_string(), "auto".to_string(),
+            ]),
+            (Backend::Claude, Trust::Yolo) => Ok(vec![
+                "--permission-mode".to_string(), "bypassPermissions".to_string(),
+            ]),
+            (Backend::Flaude, Trust::Auto) => Ok(vec!["--auto".to_string()]),
+            (Backend::Flaude, Trust::Yolo) => Ok(vec!["--yolo".to_string()]),
+            (Backend::Droid, Trust::Yolo) => Ok(vec![
+                "--skip-permissions-unsafe".to_string(),
+            ]),
+            (_, trust) => Err(format!(
+                "trust={trust:?} not supported for {}",
+                self.binary(),
+            )),
         }
     }
 

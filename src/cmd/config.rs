@@ -21,7 +21,8 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
             Some(state.session_prompt.clone())
         },
         env: state.env.clone(),
-        yolo: state.yolo,
+        trust: state.trust,
+        yolo: false,
     };
 
     let output = toml::to_string_pretty(&effective)

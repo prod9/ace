@@ -5,7 +5,7 @@ pub use school::School;
 
 use std::collections::HashMap;
 
-use crate::config::ace_toml::AceToml;
+use crate::config::ace_toml::{AceToml, Trust};
 use crate::config::backend::Backend;
 use crate::config::tree::Tree;
 
@@ -19,7 +19,7 @@ pub struct State {
     pub session_prompt: String,
     pub env: HashMap<String, String>,
     pub school: Option<School>,
-    pub yolo: bool,
+    pub trust: Trust,
 }
 
 impl State {
@@ -33,7 +33,7 @@ impl State {
             backend: resolved.backend,
             session_prompt: resolved.session_prompt,
             env: resolved.env,
-            yolo: resolved.yolo,
+            trust: resolved.trust,
             school,
             config: tree,
         }
@@ -54,7 +54,7 @@ impl State {
             backend: Backend::default(),
             session_prompt: String::new(),
             env: HashMap::new(),
-            yolo: false,
+            trust: Trust::Default,
             school: None,
         }
     }
@@ -70,7 +70,7 @@ struct Resolved {
     backend: Backend,
     session_prompt: String,
     env: HashMap<String, String>,
-    yolo: bool,
+    trust: Trust,
 }
 
 /// Resolve effective values from layers. Order: user → project → local (last wins).
@@ -106,15 +106,22 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         }
     }
 
-    // yolo: local layer only — never from project or school (personal preference).
-    let yolo = tree.ace_local.yolo;
+    // trust: local layer only — never from project or school (personal preference).
+    // Backcompat: yolo = true in local config is treated as trust = "yolo".
+    let trust = if !tree.ace_local.trust.is_default() {
+        tree.ace_local.trust
+    } else if tree.ace_local.yolo {
+        Trust::Yolo
+    } else {
+        Trust::Default
+    };
 
     Resolved {
         school_specifier,
         backend,
         session_prompt,
         env,
-        yolo,
+        trust,
     }
 }
 
@@ -128,6 +135,7 @@ mod tests {
             backend: None,
             session_prompt: None,
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            trust: Trust::Default,
             yolo: false,
         }
     }

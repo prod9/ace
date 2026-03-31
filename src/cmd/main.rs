@@ -39,13 +39,19 @@ async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), C
     );
 
     let backend = ace.state().backend;
-    if ace.state().yolo {
-        match backend.yolo_args() {
+    let trust = ace.state().trust;
+    if !trust.is_default() {
+        match backend.trust_args(trust) {
             Ok(args) => {
                 backend_args.extend(args);
-                ace.warn("yolo mode — permission prompts disabled");
+                let label = match trust {
+                    crate::config::ace_toml::Trust::Auto => "auto mode — AI decides approvals",
+                    crate::config::ace_toml::Trust::Yolo => "yolo mode — permission prompts disabled",
+                    _ => "trust mode active",
+                };
+                ace.warn(label);
             }
-            Err(msg) => ace.warn(&format!("yolo ignored: {msg}")),
+            Err(msg) => ace.warn(&format!("trust ignored: {msg}")),
         }
     }
 

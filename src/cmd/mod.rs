@@ -76,7 +76,9 @@ enum Command {
     },
     /// Fetch latest school changes (force, ignoring cooldown)
     Pull,
-    /// Enable yolo mode (skip permission prompts)
+    /// Enable auto trust mode (AI decides which actions need approval)
+    Auto,
+    /// Enable yolo trust mode (skip all permission prompts)
     Yolo,
     /// 🛩️
     #[command(hide = true)]
@@ -119,7 +121,8 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Paths { key }) => paths::run(ace, key.as_deref()).await,
         Some(Command::School { command }) => school::run(ace, command).await,
         Some(Command::Pull) => pull::run(ace),
-        Some(Command::Yolo) => yolo::run(ace),
+        Some(Command::Auto) => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
+        Some(Command::Yolo) => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Some(Command::Maverick) => maverick::run(ace),
         None => main::run(ace, cli.backend_args).await,
     }

@@ -5,6 +5,21 @@ use std::path::Path;
 use super::backend::Backend;
 use super::{is_empty_str, is_empty_map, ConfigError};
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Trust {
+    #[default]
+    Default,
+    Auto,
+    Yolo,
+}
+
+impl Trust {
+    pub fn is_default(&self) -> bool {
+        matches!(self, Trust::Default)
+    }
+}
+
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AceToml {
@@ -18,6 +33,10 @@ pub struct AceToml {
     pub session_prompt: Option<String>,
     #[serde(skip_serializing_if = "is_empty_map")]
     pub env: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Trust::is_default")]
+    pub trust: Trust,
+
+    /// Deprecated: use `trust = "yolo"` instead. Kept for backcompat.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub yolo: bool,
 }
