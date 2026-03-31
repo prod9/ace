@@ -1,10 +1,8 @@
-use std::io;
 use std::path::Path;
 
-use serde::{de::DeserializeOwned, Serialize};
-
-use crate::config::ace_toml::AceToml;
-use crate::config::user_config::{SchoolEntry, UserConfig};
+use crate::config::ace_toml;
+use crate::config::user_config::{self, SchoolEntry};
+use crate::config::ConfigError;
 
 pub struct WriteConfig;
 
@@ -12,8 +10,8 @@ impl WriteConfig {
     /// Create/update ~/.config/ace/config.toml with an entry for the school.
     /// Preserves existing entries and credentials — only adds the school key
     /// if it doesn't already exist.
-    pub fn user(path: &Path, specifier: &str) -> Result<(), io::Error> {
-        let mut config: UserConfig = load_or_default(path)?;
+    pub fn user(path: &Path, specifier: &str) -> Result<(), ConfigError> {
+        let mut config = user_config::load_or_default(path)?;
 
         let repo_key = specifier
             .split_once(':')
@@ -23,40 +21,23 @@ impl WriteConfig {
             .entry(repo_key.to_string())
             .or_insert_with(SchoolEntry::default);
 
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        write_toml(path, &config)
+        user_config::save(path, &config)
     }
 
     /// Write ace.toml with school = "<specifier>".
     /// Preserves existing env entries if the file already exists.
-    pub fn project(path: &Path, specifier: &str) -> Result<(), io::Error> {
-        let mut config: AceToml = load_or_default(path)?;
+    pub fn project(path: &Path, specifier: &str) -> Result<(), ConfigError> {
+        let mut config = ace_toml::load_or_default(path)?;
         config.school = specifier.to_string();
-        write_toml(path, &config)
+        ace_toml::save(path, &config)
     }
-}
-
-fn load_or_default<T: DeserializeOwned + Default>(path: &Path) -> Result<T, io::Error> {
-    match std::fs::read_to_string(path) {
-        Ok(content) => toml::from_str::<T>(&content)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e)),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(T::default()),
-        Err(e) => Err(e),
-    }
-}
-
-fn write_toml<T: Serialize>(path: &Path, value: &T) -> Result<(), io::Error> {
-    let content = toml::to_string(value)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-    std::fs::write(path, content)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::ace_toml::AceToml;
+    use crate::config::user_config::UserConfig;
 
     #[test]
     fn project_creates_new_file() {

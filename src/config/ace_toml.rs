@@ -47,8 +47,50 @@ pub fn load(path: &Path) -> Result<AceToml, ConfigError> {
     Ok(config)
 }
 
+/// Load from file, returning default if the file doesn't exist.
+/// Errors on invalid TOML or other I/O failures.
+pub fn load_or_default(path: &Path) -> Result<AceToml, ConfigError> {
+    match std::fs::read_to_string(path) {
+        Ok(content) => Ok(toml::from_str(&content)?),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(AceToml::default()),
+        Err(e) => Err(ConfigError::from(e)),
+    }
+}
+
 pub fn save(path: &Path, toml: &AceToml) -> Result<(), ConfigError> {
     let content = toml::to_string_pretty(toml)?;
     std::fs::write(path, content)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn load_or_default_missing_file() {
+        let path = std::path::Path::new("/tmp/ace-test-nonexistent/ace.toml");
+        let result = load_or_default(path).expect("should return default");
+        assert!(result.school.is_empty());
+        assert!(result.backend.is_none());
+    }
+
+    #[test]
+    fn load_or_default_existing_file() {
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("ace.toml");
+        std::fs::write(&path, "school = \"prod9/school\"\n").expect("write");
+
+        let result = load_or_default(&path).expect("should load");
+        assert_eq!(result.school, "prod9/school");
+    }
+
+    #[test]
+    fn load_or_default_invalid_toml() {
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("ace.toml");
+        std::fs::write(&path, "not valid {{{{ toml").expect("write");
+
+        assert!(load_or_default(&path).is_err());
+    }
 }

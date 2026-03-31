@@ -13,8 +13,6 @@ pub enum SetupError {
     NotInGitRepo,
     #[error("already set up, use `ace` to run")]
     AlreadySetUp,
-    #[error("write failed: {0}")]
-    Write(std::io::Error),
 }
 
 /// Write ace.toml for the project. Precondition checks only (git repo, not already set up).
@@ -34,8 +32,7 @@ impl Setup<'_> {
             return Err(SetupError::AlreadySetUp);
         }
 
-        WriteConfig::project(&ace_paths.project, self.specifier)
-            .map_err(SetupError::Write)?;
+        WriteConfig::project(&ace_paths.project, self.specifier)?;
         Ok(())
     }
 }
