@@ -114,3 +114,59 @@ impl Backend {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Backend;
+    use crate::config::ace_toml::Trust;
+
+    #[test]
+    fn trust_default_returns_empty() {
+        for backend in [Backend::Claude, Backend::Flaude, Backend::Droid, Backend::OpenCode, Backend::Codex] {
+            let args = backend.trust_args(Trust::Default).expect("Default should always succeed");
+            assert!(args.is_empty(), "{:?} should return empty vec for Default", backend);
+        }
+    }
+
+    #[test]
+    fn trust_auto_claude() {
+        let args = Backend::Claude.trust_args(Trust::Auto).expect("Claude supports Auto");
+        assert_eq!(args, vec!["--permission-mode", "auto"]);
+    }
+
+    #[test]
+    fn trust_yolo_claude() {
+        let args = Backend::Claude.trust_args(Trust::Yolo).expect("Claude supports Yolo");
+        assert_eq!(args, vec!["--permission-mode", "bypassPermissions"]);
+    }
+
+    #[test]
+    fn trust_yolo_flaude() {
+        let args = Backend::Flaude.trust_args(Trust::Yolo).expect("Flaude supports Yolo");
+        assert_eq!(args, vec!["--yolo"]);
+    }
+
+    #[test]
+    fn trust_auto_flaude() {
+        let args = Backend::Flaude.trust_args(Trust::Auto).expect("Flaude supports Auto");
+        assert_eq!(args, vec!["--auto"]);
+    }
+
+    #[test]
+    fn trust_yolo_droid() {
+        let args = Backend::Droid.trust_args(Trust::Yolo).expect("Droid supports Yolo");
+        assert_eq!(args, vec!["--skip-permissions-unsafe"]);
+    }
+
+    #[test]
+    fn trust_auto_unsupported() {
+        let err = Backend::Droid.trust_args(Trust::Auto).expect_err("Droid should not support Auto");
+        assert!(err.contains("droid"), "error should mention the backend name");
+    }
+
+    #[test]
+    fn trust_auto_opencode_unsupported() {
+        let err = Backend::OpenCode.trust_args(Trust::Auto).expect_err("OpenCode should not support Auto");
+        assert!(err.contains("opencode"), "error should mention the backend name");
+    }
+}
