@@ -55,26 +55,32 @@ Current output files are flat:
 
 Current plan is manual publish from the dev machine, not GitHub Actions.
 
-Suggested flow:
+Build first:
 
 ```sh
 cd www
 bun run build
-
-git switch gh-pages
-rm -rf *
-cp -R dist/* .
-git add .
-git commit -m "Publish site"
-git push origin gh-pages
-git switch main
 ```
 
-Notes:
+Publish separately:
 
-- Keep `gh-pages` as generated output only.
-- Publish the contents of `dist/`, not the `dist/` directory itself.
-- If this becomes repetitive, add a small helper script later rather than introducing CI yet.
+```sh
+cd www
+./publish.sh
+```
+
+`publish.sh` does not run the build for you. It expects `dist/` to already contain the site you
+want to publish.
+
+Internally it:
+
+1. stages `www/dist`
+2. creates a temporary commit object from the staged site output
+3. runs `git subtree split --prefix=www/dist`
+4. updates the local `gh-pages` branch to that split commit
+5. force-pushes that commit to `origin/gh-pages`
+
+This keeps `gh-pages` as generated output only, with no manual file copying between branches.
 
 ## Next Step
 
