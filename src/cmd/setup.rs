@@ -34,7 +34,6 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
 
     UpdateGitignore {
         project_dir: &project_dir,
-        backend_dir: backend.backend_dir(),
     }
     .run(ace)
     .map_err(|e| CmdError::Other(format!("gitignore: {e}")))?;

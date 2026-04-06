@@ -1,22 +1,22 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::templates;
 use super::link::SCHOOL_FOLDERS;
 
 const MARKER_START: &str = "# ACE-managed — do not edit this block.";
 const MARKER_END: &str = "# end ACE";
 
+const BACKEND_DIRS: &[&str] = &[".claude", ".agents"];
+
 pub struct UpdateGitignore<'a> {
     pub project_dir: &'a Path,
-    pub backend_dir: &'a str,
 }
 
 impl UpdateGitignore<'_> {
     pub fn run(&self, ace: &mut Ace) -> Result<(), std::io::Error> {
         let path = self.project_dir.join(".gitignore");
         let existing = std::fs::read_to_string(&path).unwrap_or_default();
-        let block = build_block(self.backend_dir);
+        let block = build_block();
 
         let new_content = if existing.contains(MARKER_START) {
             replace_block(&existing, &block)
@@ -34,57 +34,52 @@ impl UpdateGitignore<'_> {
     }
 }
 
-fn build_block(backend_dir: &str) -> String {
-    let folders = SCHOOL_FOLDERS.iter()
-        .map(|f| format!("{backend_dir}/{f}"))
-        .collect::<Vec<_>>()
-        .join("\n");
+fn build_block() -> String {
+    let mut lines = vec![
+        MARKER_START.to_string(),
+        "# These folders are symlinks to the school cache managed by `ace setup`.".to_string(),
+        "# To update skills, update the school repo instead.".to_string(),
+        "# See: https://github.com/prod9/ace".to_string(),
+    ];
 
-    let tpl = templates::Template::parse(templates::builtins::PROJECT_GITIGNORE);
-    tpl.substitute(&std::collections::HashMap::from([
-        ("folders".to_string(), folders),
-    ]))
+    for dir in BACKEND_DIRS {
+        for folder in SCHOOL_FOLDERS {
+            lines.push(format!("{dir}/{folder}"));
+        }
+    }
+
+    lines.push("ace.local.toml".to_string());
+    lines.push(MARKER_END.to_string());
+    lines.push(String::new()); // trailing newline
+    lines.join("\n")
 }
 
 fn replace_block(content: &str, block: &str) -> String {
-    let mut result = String::new();
-    let mut in_block = false;
-    let mut replaced = false;
+    let Some(start) = content.find(MARKER_START) else {
+        return content.to_string();
+    };
+    let search_from = start + MARKER_START.len();
+    let Some(end_marker) = content[search_from..].find(MARKER_END) else {
+        return content.to_string();
+    };
+    let end = search_from + end_marker + MARKER_END.len();
 
-    for line in content.lines() {
-        if line.trim() == MARKER_START {
-            in_block = true;
-            if !replaced {
-                result.push_str(block);
-                replaced = true;
-            }
-            continue;
-        }
+    // Skip trailing newline after end marker.
+    let end = if content[end..].starts_with('\n') { end + 1 } else { end };
 
-        if in_block {
-            if line.trim() == MARKER_END {
-                in_block = false;
-            }
-            continue;
-        }
-
-        result.push_str(line);
-        result.push('\n');
-    }
-
+    let mut result = content[..start].to_string();
+    result.push_str(block);
+    result.push_str(&content[end..]);
     result
 }
 
 fn append_block(content: &str, block: &str) -> String {
-    let mut result = content.to_string();
-
-    if !result.is_empty() && !result.ends_with('\n') {
-        result.push('\n');
-    }
-    if !result.is_empty() && !result.ends_with("\n\n") {
-        result.push('\n');
+    if content.is_empty() {
+        return block.to_string();
     }
 
+    let mut result = content.trim_end().to_string();
+    result.push_str("\n\n");
     result.push_str(block);
     result
 }
@@ -94,44 +89,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn build_block_uses_backend_dir() {
-        let block = build_block(".claude");
+    fn build_block_contains_all_backends() {
+        let block = build_block();
         assert!(block.contains(".claude/skills"));
         assert!(block.contains(".claude/rules"));
         assert!(block.contains(".claude/commands"));
         assert!(block.contains(".claude/agents"));
+        assert!(block.contains(".agents/skills"));
+        assert!(block.contains(".agents/agents"));
         assert!(block.contains("ace.local.toml"));
         assert!(block.contains(MARKER_START));
         assert!(block.contains(MARKER_END));
     }
 
     #[test]
-    fn build_block_agents() {
-        let block = build_block(".agents");
-        assert!(block.contains(".agents/skills"));
-        assert!(block.contains(".agents/agents"));
-        assert!(block.contains("ace.local.toml"));
-    }
-
-    #[test]
     fn append_to_empty() {
-        let block = build_block(".claude");
+        let block = build_block();
         let result = append_block("", &block);
         assert_eq!(result, block);
     }
 
     #[test]
     fn append_to_existing() {
-        let block = build_block(".claude");
+        let block = build_block();
         let result = append_block("node_modules/\n", &block);
-        assert!(result.starts_with("node_modules/\n"));
+        assert!(result.starts_with("node_modules/"));
         assert!(result.contains(MARKER_START));
         assert!(result.ends_with('\n'));
     }
 
     #[test]
     fn append_adds_blank_line_separator() {
-        let block = build_block(".claude");
+        let block = build_block();
         let result = append_block("node_modules/\n", &block);
         assert!(result.contains("node_modules/\n\n#"));
     }
@@ -141,7 +130,7 @@ mod tests {
         let original = format!(
             "node_modules/\n{MARKER_START}\n.old/skills/\n{MARKER_END}\n.env\n"
         );
-        let block = build_block(".claude");
+        let block = build_block();
         let result = replace_block(&original, &block);
 
         assert!(result.contains("node_modules/"));
@@ -155,7 +144,7 @@ mod tests {
         let original = format!(
             "before\n{MARKER_START}\nold stuff\n{MARKER_END}\nafter\n"
         );
-        let block = build_block(".claude");
+        let block = build_block();
         let result = replace_block(&original, &block);
 
         assert!(result.contains("before\n"));
@@ -164,11 +153,10 @@ mod tests {
 
     #[test]
     fn idempotent_when_unchanged() {
-        let block = build_block(".claude");
+        let block = build_block();
         let content = append_block("", &block);
         let replaced = replace_block(&content, &block);
 
-        // Both should contain the same block
         assert!(replaced.contains(MARKER_START));
         assert!(replaced.contains(".claude/skills"));
     }

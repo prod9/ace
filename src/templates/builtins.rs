@@ -8,4 +8,3 @@ pub const SCHOOL_CLAUDE_MD: &str = include_str!("builtins/tpl_school_claude_md.m
 pub const ACE_SCHOOL_SKILL: &str = include_str!("builtins/tpl_ace_school_skill.md");
 pub const SCHOOL_README: &str = include_str!("builtins/tpl_school_readme.md");
 pub const GITIGNORE: &str = include_str!("builtins/tpl_gitignore.md");
-pub const PROJECT_GITIGNORE: &str = include_str!("builtins/tpl_project_gitignore.md");
