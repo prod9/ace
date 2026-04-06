@@ -5,8 +5,8 @@
 ```
 
 **ACE** (AI Coding Environment) — automation tooling for setting up and keeping AI coding
-environments up-to-date. Acts as entrypoint to [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-or [OpenCode](https://github.com/opencode-ai/opencode).
+environments up-to-date. Acts as an entrypoint to supported AI coding backends such as
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) and Codex.
 
 ## Install
 
@@ -14,12 +14,18 @@ or [OpenCode](https://github.com/opencode-ai/opencode).
 cargo install --path .
 ```
 
+For now, the public install path is still source-based. Manual release binaries and a curl
+installer are being prepared separately.
+
 ## Usage
 
 ```sh
 ace setup prod9/school                       # clone a school, register MCP, write config
-ace                                          # launch backend (claude/opencode)
+ace                                          # launch the configured backend
+ace --codex                                  # temporarily use Codex for this invocation
 ace -- --continue                            # pass flags through to the backend
+ace mcp                                      # register/check school MCP servers
+ace pull                                     # fetch latest school changes and relink
 ace import anthropics/skills --skill commit  # import a skill from an external repo
 ace school update                            # re-fetch all imported skills
 ```
@@ -29,12 +35,19 @@ ace school update                            # re-fetch all imported skills
 | Command | Description |
 |---------|-------------|
 | `ace setup [specifier]` | Clone a school, register MCP servers, write config |
+| `ace pull` | Fetch latest school changes and relink project folders |
 | `ace config` | Print effective configuration |
 | `ace paths [key]` | Print resolved filesystem paths (e.g. `ace paths school`) |
+| `ace mcp` | Add missing MCP servers, health-check, and help re-register broken ones |
+| `ace mcp check` | Health-check registered MCP servers without mutating state |
+| `ace mcp reset [name]` | Remove registered MCP servers so they can be re-added cleanly |
 | `ace import <source> [--skill <name>]` | Import a skill from an external repository |
 | `ace school init` | Initialize a new school repository |
 | `ace school update` | Re-fetch all imported skills from their sources |
+| `ace school skills` | List skills in the current school |
 | `ace diff` | Show uncommitted changes in the school cache |
+| `ace auto` | Persist auto trust mode in `ace.local.toml` |
+| `ace yolo` | Persist yolo trust mode in `ace.local.toml` |
 
 ## How it works
 
@@ -45,6 +58,9 @@ coding tools. When you run `ace`, it:
 2. Fetches/updates the school repository
 3. Symlinks skills into your project
 4. Launches the configured backend with the school's session prompt
+
+Backend selection can also be overridden per invocation with `-b`, `--backend`,
+`--claude`, `--codex`, or `--flaude`.
 
 ## School workflow
 
@@ -80,9 +96,10 @@ see ROADMAP.
 ## Cross-build
 
 Builds for linux/mac × arm64/amd64. Host-native target uses `cargo`, everything else uses
-[`cross`](https://github.com/cross-rs/cross) (Docker-based).
+`cargo-zigbuild`.
 
-Prerequisites: Docker, `cargo install cross`, stable Rust toolchain.
+Prerequisites: `cargo install cargo-zigbuild`, `zig`, stable Rust toolchain. Darwin targets
+must be built from macOS.
 
 ```sh
 ./build-all.sh            # output to target/dist/
@@ -90,6 +107,17 @@ Prerequisites: Docker, `cargo install cross`, stable Rust toolchain.
 ```
 
 `ureq` uses `rustls` (pure Rust TLS) so there are no system OpenSSL dependencies.
+
+## Releases
+
+Manual release flow:
+
+```sh
+./bump.sh 0.2.0
+./release.sh
+```
+
+`release.sh` cross-builds release binaries and publishes a GitHub release from the current tag.
 
 ## License
 
