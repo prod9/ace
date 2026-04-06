@@ -56,7 +56,9 @@ session_prompt = "This project uses PostgreSQL..."
 
 ### Delivery
 
-The composed prompt is passed to the backend via `--system-prompt <prompt>` CLI flag.
+The composed prompt is passed to the backend using that backend's native prompt-delivery
+mechanism. For some backends this is a `--system-prompt <prompt>` CLI flag; for others it is an
+initial positional prompt.
 
 ## Template Engine
 

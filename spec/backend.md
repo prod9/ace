@@ -36,7 +36,7 @@ Each backend must provide:
 - **`backend_dir()`** — project directory where school folders are linked.
 - **`instructions_file()`** — markdown file generated per-project during setup.
 - **`is_ready()`** — heuristic check that the backend is authenticated/configured.
-- **`yolo_args()`** — CLI flags to skip permission prompts, or error if unsupported.
+- **`trust_args(trust)`** — CLI flags for ACE trust modes, or error if unsupported.
 - **`mcp_list()`** — list currently registered MCP server names.
 - **`mcp_add(entry)`** — register a remote MCP server.
 - **`mcp_remove(name)`** — unregister a remote MCP server by name.
@@ -69,11 +69,12 @@ Link action handles remapping.
 
 ## Session Prompt
 
-Backends receive the session prompt via CLI flag (typically `--system-prompt`). See per-backend
-specs for flag details and exceptions.
+Backends receive the session prompt via their native invocation surface. For some backends this
+is a CLI flag such as `--system-prompt`; for others it is an initial positional prompt. See
+per-backend specs for the exact delivery mechanism.
 
 ## Readiness Check
 
-Before exec, ACE verifies the backend is ready to use — not just installed. If the backend is
-installed but not initialized, ACE prompts the user to run the backend's login/init flow rather
-than launching into a session that will immediately fail.
+Backends may expose an `is_ready()` heuristic so ACE can warn or gate execution when the backend
+is clearly not initialized. Whether ACE should enforce readiness before exec is a product
+decision and may vary by backend or evolve over time.
