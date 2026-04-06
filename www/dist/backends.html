@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACE - Backends</title>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<div class="container">
+
+<nav>
+  <a href="index.html">ACE</a>
+  <span class="sep">|</span>
+  <a href="commands.html">Commands</a>
+  <span class="sep">|</span>
+  <a href="configuration.html">Config</a>
+  <span class="sep">|</span>
+  <a href="backends.html">Backends</a>
+  <span class="sep">|</span>
+  <a href="schools.html">Schools</a>
+</nav>
+
+
+<h1>// backends</h1>
+
+<p>
+ACE supports multiple AI coding backends. Set the backend in ace.toml
+or ace.local.toml with <span style="color:#00ff88;">backend = "value"</span>.
+Default: <span style="color:#c0c0c0;">claude</span>.
+</p>
+
+<table>
+  <tr>
+    <th>Config Value</th>
+    <th>Binary</th>
+    <th>Project Dir</th>
+    <th>Instructions File</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td>claude</td>
+    <td>.claude</td>
+    <td>CLAUDE.md</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td>opencode</td>
+    <td>.opencode</td>
+    <td>AGENTS.md</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td>codex</td>
+    <td>.agents</td>
+    <td>AGENTS.md</td>
+  </tr>
+  <tr>
+    <td>droid</td>
+    <td>droid</td>
+    <td>.factory</td>
+    <td>AGENTS.md</td>
+  </tr>
+</table>
+
+<h2>// linked folders</h2>
+
+<p>
+ACE symlinks school folders into the project's backend directory.
+Not all backends support every folder.
+</p>
+
+<table>
+  <tr>
+    <th>Backend</th>
+    <th>skills/</th>
+    <th>rules/</th>
+    <th>commands/</th>
+    <th>agents/</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#00ff88;">yes</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#00ff88;">yes</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#555;">&mdash;</td>
+  </tr>
+  <tr>
+    <td>droid</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#00ff88;">yes <span style="color:#555;">(as droids/)</span></td>
+  </tr>
+</table>
+
+<h2>// trust modes</h2>
+
+<p>
+Trust modes control backend permission prompts. Set with
+<span style="color:#00ff88;">trust = "auto"</span> or
+<span style="color:#00ff88;">trust = "yolo"</span> in ace.local.toml,
+or use <span style="color:#00ff88;">ace auto</span> /
+<span style="color:#00ff88;">ace yolo</span>.
+</p>
+
+<table>
+  <tr>
+    <th>Backend</th>
+    <th>auto</th>
+    <th>yolo</th>
+    <th>CLI Flags</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#888;">--permission-mode auto / bypassPermissions</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#555;">not supported</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#555;">not supported</td>
+  </tr>
+  <tr>
+    <td>droid</td>
+    <td style="color:#555;">&mdash;</td>
+    <td style="color:#00ff88;">yes</td>
+    <td style="color:#888;">--skip-permissions-unsafe</td>
+  </tr>
+</table>
+
+<div class="note">
+Droid also supports tiered autonomy via <span style="color:#c0c0c0;">--auto low|medium|high</span>
+natively, but ACE does not map to these levels yet.
+</div>
+
+<h2>// MCP registration</h2>
+
+<p>
+ACE registers <span style="color:#00ff88;">[[mcp]]</span> entries from
+school.toml into the backend. All entries are remote HTTP endpoints.
+</p>
+
+<table>
+  <tr>
+    <th>Backend</th>
+    <th>Method</th>
+    <th>OAuth</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td style="color:#888;">CLI: <span style="color:#c0c0c0;">claude mcp add -t http -s user</span></td>
+    <td style="color:#888;">auto on 401</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td style="color:#888;">direct write to <span style="color:#c0c0c0;">~/.config/opencode/opencode.json</span></td>
+    <td style="color:#888;">auto on 401</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td style="color:#555;">not yet implemented</td>
+    <td style="color:#888;">in-session via /mcp</td>
+  </tr>
+  <tr>
+    <td>droid</td>
+    <td style="color:#888;">CLI: <span style="color:#c0c0c0;">droid mcp add</span></td>
+    <td style="color:#555;">TBD</td>
+  </tr>
+</table>
+
+<h2>// readiness check</h2>
+
+<p>
+ACE verifies the backend is authenticated before launching a session.
+</p>
+
+<table>
+  <tr>
+    <th>Backend</th>
+    <th>Check</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td style="color:#888;"><span style="color:#c0c0c0;">~/.claude.json</span> exists</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td style="color:#888;"><span style="color:#c0c0c0;">~/.local/share/opencode/auth.json</span> exists and non-empty</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td style="color:#888;"><span style="color:#c0c0c0;">~/.codex/auth.json</span> exists, or <span style="color:#c0c0c0;">CODEX_API_KEY</span> / <span style="color:#c0c0c0;">OPENAI_API_KEY</span> set</td>
+  </tr>
+  <tr>
+    <td>droid</td>
+    <td style="color:#888;"><span style="color:#c0c0c0;">~/.factory/settings.json</span> exists</td>
+  </tr>
+</table>
+
+<h2>// quirks</h2>
+
+<table>
+  <tr>
+    <th>Backend</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td>claude</td>
+    <td style="color:#888;">Default backend. Full feature support. MCP servers registered at user scope (<span style="color:#c0c0c0;">-s user</span>), not project scope.</td>
+  </tr>
+  <tr>
+    <td>opencode</td>
+    <td style="color:#888;">No CLI for MCP management &mdash; ACE writes JSON config directly. <span style="color:#c0c0c0;">OPENCODE_HOME</span> env var overrides default data directory.</td>
+  </tr>
+  <tr>
+    <td>codex</td>
+    <td style="color:#888;">MCP registration not yet implemented in ACE. Only skills/ folder linked. MCP auth handled inside Codex via <span style="color:#c0c0c0;">/mcp</span> command.</td>
+  </tr>
+  <tr>
+    <td>droid</td>
+    <td style="color:#888;">agents/ folder symlinked as <span style="color:#c0c0c0;">droids/</span> (Factory convention). System prompt injection method pending design decision.</td>
+  </tr>
+</table>
+
+
+<div class="line"></div>
+
+<footer>
+  PRODIGY9 &mdash; <a href="https://github.com/nicecai/ace">GitHub</a> &mdash; MIT License
+</footer>
+
+
+</div>
+</body>
+</html>
