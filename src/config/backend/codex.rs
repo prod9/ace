@@ -5,7 +5,14 @@ use std::process::Command;
 use super::{McpDecl, McpStatus, SessionOpts};
 use crate::config::ace_toml::Trust;
 
-/// Launch a Codex session. Replaces the current process via exec().
+pub(super) fn is_ready() -> bool {
+    std::env::var("CODEX_API_KEY").is_ok()
+        || std::env::var("OPENAI_API_KEY").is_ok()
+        || home_dir()
+            .map(|d| d.join("auth.json").exists())
+            .unwrap_or(false)
+}
+
 pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     let mut cmd = Command::new("codex");
     cmd.current_dir(&opts.project_dir);
@@ -32,41 +39,6 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     Err(cmd.exec())
 }
 
-const CHECK_SCHEMA: &str = r#"{"type":"object","properties":{"statuses":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"],"additionalProperties":false}}},"required":["statuses"],"additionalProperties":false}"#;
-
-/// Returns Codex's home directory (`$CODEX_HOME` or `~/.codex`).
-fn home_dir() -> Option<PathBuf> {
-    std::env::var("CODEX_HOME")
-        .ok()
-        .map(PathBuf::from)
-        .or_else(|| std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".codex")))
-}
-
-fn config_path() -> Option<PathBuf> {
-    home_dir().map(|d| d.join("config.toml"))
-}
-
-fn ensure_dir(path: &Path) -> Result<(), String> {
-    std::fs::create_dir_all(path)
-        .map_err(|e| format!("create {}: {e}", path.display()))
-}
-
-fn ensure_home_dir() -> Result<PathBuf, String> {
-    let home = home_dir().ok_or("cannot resolve Codex home".to_string())?;
-    ensure_dir(&home)?;
-    Ok(home)
-}
-
-/// Check if Codex is ready: auth.json exists OR API key env var is set.
-#[allow(dead_code)]
-pub(super) fn is_ready() -> bool {
-    std::env::var("CODEX_API_KEY").is_ok()
-        || std::env::var("OPENAI_API_KEY").is_ok()
-        || home_dir()
-            .map(|d| d.join("auth.json").exists())
-            .unwrap_or(false)
-}
-
 pub(super) fn mcp_list() -> HashSet<String> {
     // Best-effort: create home dir so CLI commands work.
     let _ = ensure_home_dir();
@@ -82,6 +54,47 @@ pub(super) fn mcp_list() -> HashSet<String> {
         }
         _ => list_from_config(),
     }
+}
+
+pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
+    ensure_home_dir()?;
+
+    if let Some(args) = build_mcp_add_args(entry) {
+        let output = Command::new("codex")
+            .args(&args)
+            .output()
+            .map_err(|e| format!("codex: {e}"))?;
+
+        if output.status.success() {
+            return Ok(());
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.trim().to_string());
+    }
+
+    add_to_config(entry)
+}
+
+pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
+    ensure_home_dir()?;
+
+    let args = build_mcp_remove_args(name);
+    let output = Command::new("codex")
+        .args(&args)
+        .output();
+
+    let output = match output {
+        Ok(o) => o,
+        Err(_) => return remove_from_config(name),
+    };
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(stderr.trim().to_string())
 }
 
 pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
@@ -120,45 +133,29 @@ pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     Ok(parse_check_output(&content))
 }
 
-pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
-    ensure_home_dir()?;
+const CHECK_SCHEMA: &str = r#"{"type":"object","properties":{"statuses":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"],"additionalProperties":false}}},"required":["statuses"],"additionalProperties":false}"#;
 
-    let args = build_mcp_remove_args(name);
-    let output = Command::new("codex")
-        .args(&args)
-        .output();
-
-    let output = match output {
-        Ok(o) => o,
-        Err(_) => return remove_from_config(name),
-    };
-
-    if output.status.success() {
-        return Ok(());
-    }
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    Err(stderr.trim().to_string())
+/// Returns Codex's home directory (`$CODEX_HOME` or `~/.codex`).
+fn home_dir() -> Option<PathBuf> {
+    std::env::var("CODEX_HOME")
+        .ok()
+        .map(PathBuf::from)
+        .or_else(|| std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".codex")))
 }
 
-pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
-    ensure_home_dir()?;
+fn config_path() -> Option<PathBuf> {
+    home_dir().map(|d| d.join("config.toml"))
+}
 
-    if let Some(args) = build_mcp_add_args(entry) {
-        let output = Command::new("codex")
-            .args(&args)
-            .output()
-            .map_err(|e| format!("codex: {e}"))?;
+fn ensure_dir(path: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(path)
+        .map_err(|e| format!("create {}: {e}", path.display()))
+}
 
-        if output.status.success() {
-            return Ok(());
-        }
-
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(stderr.trim().to_string());
-    }
-
-    add_to_config(entry)
+fn ensure_home_dir() -> Result<PathBuf, String> {
+    let home = home_dir().ok_or("cannot resolve Codex home".to_string())?;
+    ensure_dir(&home)?;
+    Ok(home)
 }
 
 fn list_from_config() -> HashSet<String> {

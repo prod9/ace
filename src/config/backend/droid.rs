@@ -4,7 +4,16 @@ use std::process::Command;
 use super::{McpDecl, McpStatus, SessionOpts};
 use crate::config::ace_toml::Trust;
 
-/// Launch a Droid session. Replaces the current process via exec().
+pub(super) fn is_ready() -> bool {
+    let home = match std::env::var("HOME") {
+        Ok(h) => h,
+        Err(_) => return false,
+    };
+    std::path::Path::new(&home)
+        .join(".factory/settings.json")
+        .exists()
+}
+
 pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     let mut cmd = Command::new("droid");
     cmd.current_dir(&opts.project_dir);
@@ -24,17 +33,6 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
 
     use std::os::unix::process::CommandExt;
     Err(cmd.exec())
-}
-
-/// Check if DROID is ready: ~/.factory/settings.json exists.
-pub(super) fn is_ready() -> bool {
-    let home = match std::env::var("HOME") {
-        Ok(h) => h,
-        Err(_) => return false,
-    };
-    std::path::Path::new(&home)
-        .join(".factory/settings.json")
-        .exists()
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
@@ -74,14 +72,6 @@ pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn build_mcp_remove_args(name: &str) -> Vec<String> {
-    vec![
-        "mcp".to_string(),
-        "remove".to_string(),
-        name.to_string(),
-    ]
-}
-
 pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     let prompt = format!(
         "You have MCP servers registered. For each of the following, call any tool to verify \
@@ -104,26 +94,12 @@ pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     parse_check_output(&stdout)
 }
 
-/// Parse Droid's `{"type":"result","result":"..."}` envelope.
-fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
-    let parsed: serde_json::Value = serde_json::from_str(output)
-        .map_err(|_| "failed to parse droid output".to_string())?;
-
-    if parsed.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false) {
-        let msg = parsed.get("result")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown error");
-        return Err(format!("droid: {msg}"));
-    }
-
-    match parsed.get("result") {
-        Some(serde_json::Value::String(s)) => Ok(super::parse_status_array(s)),
-        Some(serde_json::Value::Array(_)) => {
-            let json = parsed["result"].to_string();
-            Ok(super::parse_status_array(&json))
-        }
-        _ => Ok(Vec::new()),
-    }
+fn build_mcp_remove_args(name: &str) -> Vec<String> {
+    vec![
+        "mcp".to_string(),
+        "remove".to_string(),
+        name.to_string(),
+    ]
 }
 
 /// Build CLI args for `droid mcp add <name> <url> --type http [--header "K: V"]`.
@@ -146,6 +122,28 @@ fn build_mcp_add_args(entry: &McpDecl) -> Vec<String> {
     }
 
     args
+}
+
+/// Parse Droid's `{"type":"result","result":"..."}` envelope.
+fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
+    let parsed: serde_json::Value = serde_json::from_str(output)
+        .map_err(|_| "failed to parse droid output".to_string())?;
+
+    if parsed.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false) {
+        let msg = parsed.get("result")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown error");
+        return Err(format!("droid: {msg}"));
+    }
+
+    match parsed.get("result") {
+        Some(serde_json::Value::String(s)) => Ok(super::parse_status_array(s)),
+        Some(serde_json::Value::Array(_)) => {
+            let json = parsed["result"].to_string();
+            Ok(super::parse_status_array(&json))
+        }
+        _ => Ok(Vec::new()),
+    }
 }
 
 #[cfg(test)]

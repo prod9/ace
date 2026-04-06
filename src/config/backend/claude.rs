@@ -4,7 +4,14 @@ use std::process::Command;
 use super::{McpDecl, McpStatus, SessionOpts};
 use crate::config::ace_toml::Trust;
 
-/// Launch a Claude session. Replaces the current process via exec().
+pub(super) fn is_ready() -> bool {
+    let home = match std::env::var("HOME") {
+        Ok(h) => h,
+        Err(_) => return false,
+    };
+    std::path::Path::new(&home).join(".claude.json").exists()
+}
+
 pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     let mut cmd = Command::new("claude");
     cmd.current_dir(&opts.project_dir);
@@ -27,7 +34,6 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     Err(cmd.exec())
 }
 
-/// Read `~/.claude.json` and extract keys from the `mcpServers` object.
 pub(super) fn mcp_list() -> HashSet<String> {
     let home = match std::env::var("HOME") {
         Ok(h) => h,
@@ -41,19 +47,6 @@ pub(super) fn mcp_list() -> HashSet<String> {
     };
 
     parse_mcp_names(&content)
-}
-
-fn parse_mcp_names(json: &str) -> HashSet<String> {
-    let parsed: serde_json::Value = match serde_json::from_str(json) {
-        Ok(v) => v,
-        Err(_) => return HashSet::new(),
-    };
-
-    parsed
-        .get("mcpServers")
-        .and_then(|v| v.as_object())
-        .map(|obj| obj.keys().cloned().collect())
-        .unwrap_or_default()
 }
 
 pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
@@ -70,6 +63,59 @@ pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
+    let args = build_mcp_remove_args(name);
+
+    let output = Command::new("claude")
+        .args(&args)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.trim().to_string());
+    }
+
+    Ok(())
+}
+
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
+    let prompt = format!(
+        "You have MCP servers registered. For each of the following, call any tool to verify \
+         it responds. Reply with only a JSON object matching this shape: \
+         {{\"statuses\":[{{\"name\":\"...\",\"ok\":true/false}}]}}. Servers: {}",
+        names.join(", ")
+    );
+
+    let output = Command::new("claude")
+        .args([
+            "-p", &prompt,
+            "--output-format", "json",
+            "--json-schema", CHECK_SCHEMA,
+        ])
+        .output()
+        .map_err(|e| format!("claude: {e}"))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Claude returns JSON even on failure (is_error in envelope).
+    // Try to extract error from JSON before checking exit code.
+    parse_check_output(&stdout)
+}
+
+fn parse_mcp_names(json: &str) -> HashSet<String> {
+    let parsed: serde_json::Value = match serde_json::from_str(json) {
+        Ok(v) => v,
+        Err(_) => return HashSet::new(),
+    };
+
+    parsed
+        .get("mcpServers")
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default()
 }
 
 fn build_mcp_add_args(entry: &McpDecl) -> Vec<String> {
@@ -95,22 +141,6 @@ fn build_mcp_add_args(entry: &McpDecl) -> Vec<String> {
     args
 }
 
-pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
-    let args = build_mcp_remove_args(name);
-
-    let output = Command::new("claude")
-        .args(&args)
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(stderr.trim().to_string());
-    }
-
-    Ok(())
-}
-
 fn build_mcp_remove_args(name: &str) -> Vec<String> {
     vec![
         "mcp".to_string(),
@@ -122,30 +152,6 @@ fn build_mcp_remove_args(name: &str) -> Vec<String> {
 }
 
 const CHECK_SCHEMA: &str = r#"{"type":"object","properties":{"statuses":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"],"additionalProperties":false}}},"required":["statuses"],"additionalProperties":false}"#;
-
-pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
-    let prompt = format!(
-        "You have MCP servers registered. For each of the following, call any tool to verify \
-         it responds. Reply with only a JSON object matching this shape: \
-         {{\"statuses\":[{{\"name\":\"...\",\"ok\":true/false}}]}}. Servers: {}",
-        names.join(", ")
-    );
-
-    let output = Command::new("claude")
-        .args([
-            "-p", &prompt,
-            "--output-format", "json",
-            "--json-schema", CHECK_SCHEMA,
-        ])
-        .output()
-        .map_err(|e| format!("claude: {e}"))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // Claude returns JSON even on failure (is_error in envelope).
-    // Try to extract error from JSON before checking exit code.
-    parse_check_output(&stdout)
-}
 
 /// Parse Claude's `{"type":"result","result":"..."}` envelope.
 fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
@@ -176,15 +182,6 @@ fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
 
     // Fallback: bare array
     Ok(super::parse_status_array(&result_str))
-}
-
-#[allow(dead_code)]
-pub(super) fn is_ready() -> bool {
-    let home = match std::env::var("HOME") {
-        Ok(h) => h,
-        Err(_) => return false,
-    };
-    std::path::Path::new(&home).join(".claude.json").exists()
 }
 
 #[cfg(test)]

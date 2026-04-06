@@ -39,6 +39,19 @@ pub enum Backend {
     Droid,
 }
 
+/// Dispatch a method call to the matching backend module's free function.
+macro_rules! dispatch {
+    ($self:expr, $method:ident $(, $arg:expr)*) => {
+        match $self {
+            Backend::Claude => claude::$method($($arg),*),
+            Backend::Codex => codex::$method($($arg),*),
+            Backend::Droid => droid::$method($($arg),*),
+            Backend::Flaude => flaude::$method($($arg),*),
+            Backend::OpenCode => opencode::$method($($arg),*),
+        }
+    };
+}
+
 impl Backend {
     pub fn binary(&self) -> &'static str {
         match self {
@@ -68,8 +81,6 @@ impl Backend {
         }
     }
 
-    /// Check whether the backend supports the given trust level.
-    /// Returns Ok(()) if supported, Err(message) if not.
     pub fn supports_trust(&self, trust: Trust) -> Result<(), String> {
         match (self, trust) {
             (_, Trust::Default) => Ok(()),
@@ -84,77 +95,32 @@ impl Backend {
         }
     }
 
-    /// Launch a backend session. Each backend builds its own Command internally.
-    /// Flaude records to JSONL instead of exec'ing (test fake).
     pub fn exec_session(&self, opts: SessionOpts) -> Result<(), std::io::Error> {
-        match self {
-            Backend::Claude => claude::exec_session(opts),
-            Backend::Codex => codex::exec_session(opts),
-            Backend::Droid => droid::exec_session(opts),
-            Backend::Flaude => flaude::exec_session(opts),
-            Backend::OpenCode => opencode::exec_session(opts),
-        }
+        dispatch!(self, exec_session, opts)
     }
 
-    /// Check if the backend is ready to use (authenticated/configured).
-    /// Returns true if the backend appears to be set up, false otherwise.
     #[allow(dead_code)]
     pub fn is_ready(&self) -> bool {
-        match self {
-            Backend::Claude => claude::is_ready(),
-            Backend::Flaude => true,
-            Backend::Droid => droid::is_ready(),
-            Backend::OpenCode => opencode::is_ready(),
-            Backend::Codex => codex::is_ready(),
-        }
+        dispatch!(self, is_ready)
     }
 
-    /// List registered MCP server names. Best-effort: returns empty set on failure.
     pub fn mcp_list(&self) -> HashSet<String> {
-        match self {
-            Backend::Claude => claude::mcp_list(),
-            Backend::Flaude => flaude::mcp_list(),
-            Backend::Droid => droid::mcp_list(),
-            Backend::OpenCode => opencode::mcp_list(),
-            Backend::Codex => codex::mcp_list(),
-        }
+        dispatch!(self, mcp_list)
     }
 
-    /// Remove a registered MCP server by name.
     pub fn mcp_remove(&self, name: &str) -> Result<(), String> {
-        match self {
-            Backend::Claude => claude::mcp_remove(name),
-            Backend::Flaude => flaude::mcp_remove(name),
-            Backend::Droid => droid::mcp_remove(name),
-            Backend::OpenCode => opencode::mcp_remove(name),
-            Backend::Codex => codex::mcp_remove(name),
-        }
+        dispatch!(self, mcp_remove, name)
     }
 
-    /// Health-check registered MCP servers via one-shot backend prompt.
-    /// Returns Ok(statuses) on success, Err(reason) when the check itself fails.
     pub fn mcp_check(&self, names: &[String]) -> Result<Vec<McpStatus>, String> {
         if names.is_empty() {
             return Ok(Vec::new());
         }
-        match self {
-            Backend::Claude => claude::mcp_check(names),
-            Backend::OpenCode => opencode::mcp_check(names),
-            Backend::Droid => droid::mcp_check(names),
-            Backend::Flaude => flaude::mcp_check(names),
-            Backend::Codex => codex::mcp_check(names),
-        }
+        dispatch!(self, mcp_check, names)
     }
 
-    /// Register an MCP server entry with the backend.
     pub fn mcp_add(&self, entry: &McpDecl) -> Result<(), String> {
-        match self {
-            Backend::Claude => claude::mcp_add(entry),
-            Backend::Flaude => flaude::mcp_add(entry),
-            Backend::Droid => droid::mcp_add(entry),
-            Backend::OpenCode => opencode::mcp_add(entry),
-            Backend::Codex => codex::mcp_add(entry),
-        }
+        dispatch!(self, mcp_add, entry)
     }
 }
 

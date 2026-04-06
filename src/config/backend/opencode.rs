@@ -4,42 +4,6 @@ use std::process::Command;
 
 use super::{McpDecl, McpStatus, SessionOpts};
 
-/// Launch an OpenCode session. Replaces the current process via exec().
-pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
-    let mut cmd = Command::new("opencode");
-    cmd.current_dir(&opts.project_dir);
-
-    for (key, val) in &opts.env {
-        cmd.env(key, val);
-    }
-
-    cmd.args(["--system-prompt", &opts.session_prompt]);
-    cmd.args(&opts.extra_args);
-
-    use std::os::unix::process::CommandExt;
-    Err(cmd.exec())
-}
-
-/// Returns OpenCode's data directory (~/.local/share/opencode or $OPENCODE_HOME).
-#[allow(dead_code)]
-fn data_dir() -> PathBuf {
-    std::env::var("OPENCODE_HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs::data_local_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("opencode")
-        })
-}
-
-/// Returns OpenCode's config directory (~/.config/opencode).
-fn config_dir() -> PathBuf {
-    dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("opencode")
-}
-
-/// Check if OpenCode is ready: auth.json exists and is non-empty.
 pub(super) fn is_ready() -> bool {
     let auth_path = data_dir().join("auth.json");
     if !auth_path.exists() {
@@ -55,8 +19,21 @@ pub(super) fn is_ready() -> bool {
     }
 }
 
-/// Read MCP server names from ~/.config/opencode/opencode.json.
-/// Extracts keys from the "mcp" object where type is "remote".
+pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+    let mut cmd = Command::new("opencode");
+    cmd.current_dir(&opts.project_dir);
+
+    for (key, val) in &opts.env {
+        cmd.env(key, val);
+    }
+
+    cmd.args(["--system-prompt", &opts.session_prompt]);
+    cmd.args(&opts.extra_args);
+
+    use std::os::unix::process::CommandExt;
+    Err(cmd.exec())
+}
+
 pub(super) fn mcp_list() -> HashSet<String> {
     let config_path = config_dir().join("opencode.json");
     let content = match std::fs::read_to_string(&config_path) {
@@ -66,26 +43,52 @@ pub(super) fn mcp_list() -> HashSet<String> {
     parse_mcp_names(&content)
 }
 
-fn parse_mcp_names(json: &str) -> HashSet<String> {
-    let parsed: serde_json::Value = match serde_json::from_str(json) {
-        Ok(v) => v,
-        Err(_) => return HashSet::new(),
+pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
+    use std::io::Write;
+
+    let config_dir = config_dir();
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|e| format!("create {}: {e}", config_dir.display()))?;
+
+    let config_path = config_dir.join("opencode.json");
+
+    let existing = if config_path.exists() {
+        std::fs::read_to_string(&config_path)
+            .map_err(|e| format!("read {}: {e}", config_path.display()))?
+    } else {
+        "{}".to_string()
     };
 
-    let Some(mcp_obj) = parsed.get("mcp").and_then(|v| v.as_object()) else {
-        return HashSet::new();
+    let output = merge_mcp_entry(&existing, entry)?;
+
+    let mut file = std::fs::File::create(&config_path)
+        .map_err(|e| format!("create {}: {e}", config_path.display()))?;
+    file.write_all(output.as_bytes())
+        .map_err(|e| format!("write {}: {e}", config_path.display()))?;
+
+    Ok(())
+}
+
+pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
+    use std::io::Write;
+
+    let config_path = config_dir().join("opencode.json");
+
+    let existing = if config_path.exists() {
+        std::fs::read_to_string(&config_path)
+            .map_err(|e| format!("read {}: {e}", config_path.display()))?
+    } else {
+        return Ok(());
     };
 
-    mcp_obj
-        .iter()
-        .filter(|(_, v)| {
-            v.get("type")
-                .and_then(|t| t.as_str())
-                .map(|t| t == "remote")
-                .unwrap_or(false)
-        })
-        .map(|(k, _)| k.clone())
-        .collect()
+    let output = remove_mcp_entry(&existing, name)?;
+
+    let mut file = std::fs::File::create(&config_path)
+        .map_err(|e| format!("create {}: {e}", config_path.display()))?;
+    file.write_all(output.as_bytes())
+        .map_err(|e| format!("write {}: {e}", config_path.display()))?;
+
+    Ok(())
 }
 
 pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
@@ -108,6 +111,47 @@ pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(parse_check_output(&stdout))
+}
+
+/// Returns OpenCode's data directory (~/.local/share/opencode or $OPENCODE_HOME).
+#[allow(dead_code)]
+fn data_dir() -> PathBuf {
+    std::env::var("OPENCODE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs::data_local_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join("opencode")
+        })
+}
+
+/// Returns OpenCode's config directory (~/.config/opencode).
+fn config_dir() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("opencode")
+}
+
+fn parse_mcp_names(json: &str) -> HashSet<String> {
+    let parsed: serde_json::Value = match serde_json::from_str(json) {
+        Ok(v) => v,
+        Err(_) => return HashSet::new(),
+    };
+
+    let Some(mcp_obj) = parsed.get("mcp").and_then(|v| v.as_object()) else {
+        return HashSet::new();
+    };
+
+    mcp_obj
+        .iter()
+        .filter(|(_, v)| {
+            v.get("type")
+                .and_then(|t| t.as_str())
+                .map(|t| t == "remote")
+                .unwrap_or(false)
+        })
+        .map(|(k, _)| k.clone())
+        .collect()
 }
 
 /// Parse OpenCode's JSONL stream — concatenate "text" type parts.
@@ -148,29 +192,6 @@ fn extract_json_array(text: &str) -> Vec<McpStatus> {
     Vec::new()
 }
 
-/// Remove an MCP server entry from ~/.config/opencode/opencode.json.
-pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
-    use std::io::Write;
-
-    let config_path = config_dir().join("opencode.json");
-
-    let existing = if config_path.exists() {
-        std::fs::read_to_string(&config_path)
-            .map_err(|e| format!("read {}: {e}", config_path.display()))?
-    } else {
-        return Ok(());
-    };
-
-    let output = remove_mcp_entry(&existing, name)?;
-
-    let mut file = std::fs::File::create(&config_path)
-        .map_err(|e| format!("create {}: {e}", config_path.display()))?;
-    file.write_all(output.as_bytes())
-        .map_err(|e| format!("write {}: {e}", config_path.display()))?;
-
-    Ok(())
-}
-
 /// Pure logic: remove an MCP entry from an existing OpenCode config JSON string.
 fn remove_mcp_entry(existing_json: &str, name: &str) -> Result<String, String> {
     let mut config: serde_json::Value =
@@ -181,34 +202,6 @@ fn remove_mcp_entry(existing_json: &str, name: &str) -> Result<String, String> {
     }
 
     serde_json::to_string_pretty(&config).map_err(|e| format!("serialize config: {e}"))
-}
-
-/// Add an MCP server entry to ~/.config/opencode/opencode.json.
-/// Merges into existing config, preserving other entries.
-pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
-    use std::io::Write;
-
-    let config_dir = config_dir();
-    std::fs::create_dir_all(&config_dir)
-        .map_err(|e| format!("create {}: {e}", config_dir.display()))?;
-
-    let config_path = config_dir.join("opencode.json");
-
-    let existing = if config_path.exists() {
-        std::fs::read_to_string(&config_path)
-            .map_err(|e| format!("read {}: {e}", config_path.display()))?
-    } else {
-        "{}".to_string()
-    };
-
-    let output = merge_mcp_entry(&existing, entry)?;
-
-    let mut file = std::fs::File::create(&config_path)
-        .map_err(|e| format!("create {}: {e}", config_path.display()))?;
-    file.write_all(output.as_bytes())
-        .map_err(|e| format!("write {}: {e}", config_path.display()))?;
-
-    Ok(())
 }
 
 /// Pure logic: merge an MCP entry into an existing OpenCode config JSON string.

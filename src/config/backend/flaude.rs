@@ -3,14 +3,8 @@ use std::path::PathBuf;
 
 use super::{McpDecl, McpStatus, SessionOpts};
 
-/// Flaude exec records file.
-fn exec_record_path() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|h| {
-        std::path::Path::new(&h).join(".flaude-exec-records.jsonl")
-    })
-}
+pub(super) fn is_ready() -> bool { true }
 
-/// Record a session launch to `$HOME/.flaude-exec-records.jsonl`.
 pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     let Some(path) = exec_record_path() else {
         return Ok(());
@@ -35,21 +29,6 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-/// Flaude record file for MCP registrations.
-fn mcp_record_path() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|h| {
-        std::path::Path::new(&h).join(".flaude-mcp-records.jsonl")
-    })
-}
-
-/// Flaude MCP list file — one server name per line.
-fn mcp_list_path() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|h| {
-        std::path::Path::new(&h).join(".flaude-mcp-list")
-    })
-}
-
-/// Read registered MCP names from `$HOME/.flaude-mcp-list` (one per line).
 pub(super) fn mcp_list() -> HashSet<String> {
     let Some(path) = mcp_list_path() else {
         return HashSet::new();
@@ -67,14 +46,34 @@ pub(super) fn mcp_list() -> HashSet<String> {
         .collect()
 }
 
-/// Test fake: returns all servers as healthy.
-pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
-    Ok(names.iter()
-        .map(|n| McpStatus { name: n.clone(), ok: true })
-        .collect())
+pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
+    use std::io::Write;
+
+    let record_path = mcp_record_path()
+        .ok_or_else(|| "HOME not set".to_string())?;
+
+    let mut headers: Vec<(&String, &String)> = entry.headers.iter().collect();
+    headers.sort_by_key(|(k, _)| k.as_str());
+
+    let record = serde_json::json!({
+        "action": "mcp_add",
+        "name": entry.name,
+        "url": entry.url,
+        "headers": headers.iter()
+            .map(|(k, v)| format!("{k}: {v}"))
+            .collect::<Vec<_>>(),
+    });
+
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&record_path)
+        .map_err(|e| format!("open {}: {e}", record_path.display()))?;
+
+    writeln!(file, "{record}").map_err(|e| format!("write {}: {e}", record_path.display()))?;
+    Ok(())
 }
 
-/// Remove an MCP server by name. Appends a removal record and updates the list file.
 pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
     use std::io::Write;
 
@@ -115,31 +114,29 @@ pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Append a JSON record to `$HOME/.flaude-mcp-records.jsonl`.
-pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
-    use std::io::Write;
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
+    Ok(names.iter()
+        .map(|n| McpStatus { name: n.clone(), ok: true })
+        .collect())
+}
 
-    let record_path = mcp_record_path()
-        .ok_or_else(|| "HOME not set".to_string())?;
+/// Flaude exec records file.
+fn exec_record_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::Path::new(&h).join(".flaude-exec-records.jsonl")
+    })
+}
 
-    let mut headers: Vec<(&String, &String)> = entry.headers.iter().collect();
-    headers.sort_by_key(|(k, _)| k.as_str());
+/// Flaude record file for MCP registrations.
+fn mcp_record_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::Path::new(&h).join(".flaude-mcp-records.jsonl")
+    })
+}
 
-    let record = serde_json::json!({
-        "action": "mcp_add",
-        "name": entry.name,
-        "url": entry.url,
-        "headers": headers.iter()
-            .map(|(k, v)| format!("{k}: {v}"))
-            .collect::<Vec<_>>(),
-    });
-
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&record_path)
-        .map_err(|e| format!("open {}: {e}", record_path.display()))?;
-
-    writeln!(file, "{record}").map_err(|e| format!("write {}: {e}", record_path.display()))?;
-    Ok(())
+/// Flaude MCP list file — one server name per line.
+fn mcp_list_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::Path::new(&h).join(".flaude-mcp-list")
+    })
 }
