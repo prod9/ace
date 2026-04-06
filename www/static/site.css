@@ -190,10 +190,8 @@ td:last-child { color: #888; }
   display: none;
 }
 
-.matrix-column {
+.matrix-row {
   margin: 0;
-  width: 1ch;
-  flex: 0 0 1ch;
   font-family: var(--font-mono);
   font-size: var(--matrix-font-size);
   line-height: var(--matrix-line-height);
@@ -203,12 +201,12 @@ td:last-child { color: #888; }
 
 .matrix-cell {
   --matrix-mix: 0.15;
-  display: block;
   color: color-mix(
     in oklab,
-    #7c5a21 calc((1 - var(--matrix-mix)) * 100%),
-    #1f4a39 calc(var(--matrix-mix) * 100%)
+    #5a5a5a calc((1 - var(--matrix-mix)) * 100%),
+    #b7b7b7 calc(var(--matrix-mix) * 100%)
   );
+  transition: color 1.8s ease;
 }
 
 @media (min-width: 1240px) {
@@ -227,9 +225,7 @@ td:last-child { color: #888; }
   }
 
   .matrix-rail {
-    display: flex;
-    gap: 0;
-    align-items: stretch;
+    display: block;
     min-height: 100%;
     overflow: hidden;
     pointer-events: none;
