@@ -1,6 +1,6 @@
 # ACE Overview
 
-ACE (AI Coding Environment) is a CLI gateway into Claude Code, OpenCode, or Codex. It ensures the
+ACE (Augmented Coding Environment) is a CLI gateway into Claude Code or Codex. It ensures the
 development environment is properly configured and up-to-date before handing off to the
 underlying AI coding tool.
 
@@ -15,6 +15,10 @@ underlying AI coding tool.
 - [prompt-templating.md](prompt-templating.md) — Session prompt composition and template rendering.
 - [mcp.md](mcp.md) — MCP server design (remote-only, OAuth delegation).
 - [authentication.md](authentication.md) — Authentication (MCP OAuth, school repo access).
+- [backend.md](backend.md) — Backend abstraction contract.
+- [backend-install.md](backend-install.md) — Backend installation and readiness.
+- [backends/claude.md](backends/claude.md) — Claude backend: permission modes, MCP, linked folders.
+- [backends/codex.md](backends/codex.md) — Codex backend specifics.
 - [school/overview.md](school/overview.md) — School repository structure.
 - [school/school-toml.md](school/school-toml.md) — `school.toml` format reference.
 - [school/school-commands.md](school/school-commands.md) — `ace school` subcommands.
@@ -73,6 +77,6 @@ full details on specifiers, structure, and relationship to projects.
 7. **Select role** — if school defines `[[roles]]` and no role set, prompt user to pick (see [roles.md](roles.md))
 8. **Check tooling** — required CLI tools, language runtimes, etc.
 9. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
-10. **Select backend** — Claude Code, OpenCode, or Codex
+10. **Select backend** — Claude Code or Codex
 11. **Inject prompt** — prepend system context about skills, role, and school workflow
 12. **Exec** — replace process with the chosen tool

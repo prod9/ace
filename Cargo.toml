@@ -2,7 +2,7 @@
 name = "ace"
 version = "0.2.0"
 edition = "2024"
-description = "AI Coding Environment — setup and manage AI coding assistants"
+description = "Augmented Coding Environment — setup and manage AI coding assistants"
 repository = "https://github.com/prod9/ace"
 homepage = "https://prod9.github.io/ace"
 license = "MIT"

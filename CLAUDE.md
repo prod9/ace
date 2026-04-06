@@ -3,7 +3,7 @@ session through the `ace` command instead of running the backend directly.
 
 # ACE Project
 
-**ACE** (AI Coding Environment) - Automation tooling for setting up and keeping AI coding
+**ACE** (Augmented Coding Environment) - Automation tooling for setting up and keeping AI coding
 environments setup and up-to-date. Acts as entrypoint to Claude Code or OpenCode CLI.
 
 Core functions:

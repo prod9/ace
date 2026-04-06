@@ -10,9 +10,19 @@ Binary: `claude` | Dir: `.claude` | Instructions: `CLAUDE.md`
 
 Passed via `--system-prompt <prompt>` CLI flag.
 
-## Yolo Mode
+## Permission Modes
 
-`--dangerously-skip-permissions`
+| Trust     | Flag                                      |
+|-----------|-------------------------------------------|
+| Default   | *(none)*                                  |
+| Auto      | `--permission-mode auto`                  |
+| Yolo      | `--permission-mode bypassPermissions`     |
+
+**Auto mode availability**: Team, Enterprise, or API plans only — **not available on Pro or
+Max**. Requires admin opt-in on Team/Enterprise. Only works with Sonnet 4.6 / Opus 4.6 on
+Anthropic API (not Bedrock/Vertex/Foundry). Uses a background Sonnet 4.6 classifier to review
+each tool call; safe actions proceed, dangerous ones block. Adds latency and token cost per
+check.
 
 ## MCP Registration
 

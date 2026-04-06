@@ -27,7 +27,7 @@ use crate::git::GitError;
 #[derive(Parser)]
 #[command(
     name = "ace",
-    about = "AI Coding Environment",
+    about = "Augmented Coding Environment",
     version = concat!(env!("CARGO_PKG_VERSION"), " (", env!("ACE_GIT_HASH"), ")"),
 )]
 pub struct Cli {

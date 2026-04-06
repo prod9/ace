@@ -4,7 +4,7 @@
 ░▀░▀░▀▀▀░▀▀▀
 ```
 
-**ACE** (AI Coding Environment) — automation tooling for setting up and keeping AI coding
+**ACE** (Augmented Coding Environment) — automation tooling for setting up and keeping AI coding
 environments up-to-date. Acts as an entrypoint to supported AI coding backends such as
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and Codex.
 

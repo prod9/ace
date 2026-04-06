@@ -4,7 +4,7 @@
 ░▀░▀░▀▀▀░▀▀▀
 ```
 
-**ACE** (AI Coding Environment) — เครื่องมืออัตโนมัติสำหรับตั้งค่าและดูแลสภาพแวดล้อม AI coding
+**ACE** (Augmented Coding Environment) — เครื่องมืออัตโนมัติสำหรับตั้งค่าและดูแลสภาพแวดล้อม AI coding
 ให้พร้อมใช้งานอยู่เสมอ ทำหน้าที่เป็นจุดเริ่มต้นสู่ [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 หรือ [OpenCode](https://github.com/opencode-ai/opencode)
 
