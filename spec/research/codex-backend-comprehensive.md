@@ -48,12 +48,13 @@ Codex has **full headless support** via `codex exec`:
 | HTTP servers | Full |
 | STDIO servers | Full |
 | CLI management | `codex mcp add/remove/list` |
-| OAuth for MCP | Full (but explicit `codex mcp login <name>` required) |
+| OAuth for MCP | Full (managed in-session via `/mcp`) |
 | Token storage | `~/.codex/auth.json` or OS keyring |
 | Codex as MCP server | Full (can run Codex itself as MCP server over stdio) |
 
-Key difference from Claude/OpenCode: MCP auth is **explicit** (`codex mcp login <name>`),
-not automatic on 401. ACE must prompt users after registration.
+Key difference from Claude/OpenCode: Codex MCP auth and management are handled in-session via
+`/mcp`. ACE should register servers cleanly, then defer auth and ongoing MCP management to
+the backend.
 
 ## SDK / Programmatic Use
 
@@ -96,7 +97,7 @@ Sandboxing: Landlock/seccomp on Linux, Seatbelt on macOS. May need
 | Headless mode | `-p` flag | `opencode serve` (REST) | `codex exec --json` |
 | MCP in headless | **Broken** (#34131) | Full | Full |
 | Auth method | OAuth + API key | OAuth + API key | OAuth + API key |
-| MCP auth | Auto on 401 | Auto on 401 | Explicit `mcp login` |
+| MCP auth | Auto on 401 | Auto on 401 | In-session `/mcp` |
 | Token portability | No (keychain) | Yes (JSON file) | Yes (JSON file) |
 | SDK languages | Python, TypeScript | Go | TypeScript, Rust |
 | LiteLLM compat | Good | Good | Partial (tool call issues) |
@@ -106,18 +107,20 @@ Sandboxing: Landlock/seccomp on Linux, Seatbelt on macOS. May need
 
 ## Gaps in ACE's Codex Support
 
-1. **MCP registration not implemented** — must write `.codex/config.toml` directly
+1. **MCP registration not implemented** — should prefer `codex mcp add`, with direct
+   `config.toml` editing only as fallback if the CLI cannot express the needed config
 2. **Readiness check missing** — should verify `~/.codex/auth.json` or `OPENAI_API_KEY`
 3. **`--system-prompt` flag unverified** — ACE assumes it; needs confirmation
 4. **No integration tests** for any Codex flow
 5. **LiteLLM proxy issues** not documented — tool calls and MCP format mismatch
-6. **Post-registration MCP login step** not implemented (explicit `codex mcp login`)
+6. **Post-registration Codex MCP guidance** not implemented (should direct users to `/mcp`
+   inside Codex)
 
 ## Viability as Headless Backend
 
 **Viable with caveats.** Codex has better headless support than Claude Code (MCP works in
-`codex exec`, unlike Claude's `-p` mode). But LiteLLM compatibility issues and explicit MCP
-auth add friction.
+`codex exec`, unlike Claude's `-p` mode). But LiteLLM compatibility issues and backend-specific
+MCP behavior still add friction.
 
 ### Recommendation
 

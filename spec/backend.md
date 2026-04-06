@@ -39,6 +39,11 @@ Each backend must provide:
 - **`yolo_args()`** — CLI flags to skip permission prompts, or error if unsupported.
 - **`mcp_list()`** — list currently registered MCP server names.
 - **`mcp_add(entry)`** — register a remote MCP server.
+- **`mcp_remove(name)`** — unregister a remote MCP server by name.
+- **`mcp_check(names)`** — runtime usability check for registered MCP servers. This is not a
+  static config parse — the backend executes a one-shot prompt that exercises each server from
+  inside the backend's own environment (auth state, token storage, MCP client). Returns a list
+  of name/ok pairs. Best-effort: returns empty on failure or if unsupported.
 
 See per-backend specs for implementation details.
 
@@ -48,7 +53,10 @@ ACE registers `[[mcp]]` entries from `school.toml` into the active backend. All 
 remote MCP endpoints — see [mcp.md](mcp.md) for the remote-only design rationale.
 
 **Strategy: CLI-first.** Prefer invoking the backend's CLI to add MCP servers. Only fall back
-to writing config files when the CLI lacks non-interactive or user-scoped support.
+to writing config files when the CLI cannot express the needed configuration cleanly.
+
+ACE owns registration into the backend. Backend-native auth and MCP management should remain in
+the backend wherever possible.
 
 ## Linked Folders
 

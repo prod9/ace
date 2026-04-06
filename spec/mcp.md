@@ -65,7 +65,7 @@ stored by the backend (keychain, auth files, etc.).
 |----------|------------------------------------------|-------------------------------------------|
 | Claude   | Auto-prompts on 401                      | System keychain                           |
 | OpenCode | Auto-prompts on 401                      | `~/.local/share/opencode/mcp-auth.json`   |
-| Codex    | Requires explicit `codex mcp login <name>` | `~/.codex/auth.json` or OS keyring      |
+| Codex    | Managed in-session via `/mcp`            | `~/.codex/auth.json` or OS keyring        |
 
 ACE does not implement OAuth, store tokens, or manage token refresh.
 
@@ -73,14 +73,50 @@ ACE does not implement OAuth, store tokens, or manage token refresh.
 
 After registering MCP entries, ACE should prompt the user to authenticate any servers that
 haven't been authorized yet. For Claude and OpenCode this happens automatically on first use
-(401 triggers OAuth inline). For Codex, the user must run `codex mcp login <name>` explicitly.
+(401 triggers OAuth inline). For Codex, MCP auth and management happen inside the backend via
+`/mcp`.
 
 ACE detects newly registered entries (entries added since last run) and prints a message:
 
 - Claude/OpenCode: `"New MCP server '<name>' registered — you'll be prompted to authorize on first use."`
-- Codex: `"New MCP server '<name>' registered — run 'codex mcp login <name>' to authenticate."`
+- Codex: `"New MCP server '<name>' registered — use /mcp inside Codex to finish setup."`
 
 This is informational only — ACE does not block on auth completion.
+
+## Health Checks
+
+Registration and health are separate concerns.
+
+- `mcp_list()` answers whether a server appears to be registered with the backend.
+- `mcp_check()` answers whether the backend can actually use that server now.
+
+This distinction matters because a server may still be broken after successful registration,
+for example due to expired auth, revoked tokens, or stale backend-side state.
+
+### Mechanism
+
+ACE performs health checks by asking the backend to execute a one-shot prompt that exercises
+each MCP server. The backend runs a short non-interactive session (e.g. `claude -p`, `opencode
+run`, `droid exec`) instructing the LLM to call a tool on each named server and report success
+or failure as structured JSON.
+
+This approach verifies **effective usability** — not just config presence — because the check
+runs inside the backend's own environment with its own auth state, MCP client, and token
+storage. ACE does not inspect backend config files or attempt to contact MCP servers directly.
+
+Each backend owns its full check execution: prompt construction, output format, and result
+parsing. The shared contract is `mcp_check(names) -> Vec<McpStatus>` where `McpStatus` carries
+a server name and a boolean ok/not-ok status. See [backend.md](backend.md#backend-contract) for
+details.
+
+### Integration
+
+`ace mcp` runs health checks after registering missing servers and prompts the user to
+re-register broken ones. `ace mcp check` runs a read-only health report.
+
+Whether ACE automatically runs `mcp_check()` after registration in the shared startup flow
+(bare `ace` command) is a separate cross-backend decision. Currently health checks are only
+triggered via explicit `ace mcp` invocation.
 
 ## Transport
 

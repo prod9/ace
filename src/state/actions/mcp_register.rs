@@ -38,7 +38,7 @@ impl McpRegister<'_> {
             self.backend.mcp_add(target)
                 .map_err(|e| McpRegisterError::Register(format!("{}: {e}", entry.name)))?;
 
-            let msg = registration_message(&entry.name, entry.headers.is_empty());
+            let msg = registration_message(self.backend, &entry.name, entry.headers.is_empty());
             ace.done(&msg);
         }
 
@@ -54,7 +54,11 @@ fn unregistered<'a>(entries: &'a [McpDecl], registered: &HashSet<String>) -> Vec
         .collect()
 }
 
-fn registration_message(name: &str, no_headers: bool) -> String {
+fn registration_message(backend: Backend, name: &str, no_headers: bool) -> String {
+    if backend == Backend::Codex {
+        return format!("Registered MCP server '{name}' — use /mcp inside Codex to finish setup");
+    }
+
     if no_headers {
         format!("Registered MCP server '{name}' — you'll be prompted to authorize on first use")
     } else {
@@ -174,15 +178,22 @@ mod tests {
 
     #[test]
     fn message_oauth_mentions_authorize() {
-        let msg = registration_message("linear", true);
+        let msg = registration_message(Backend::Claude, "linear", true);
         assert!(msg.contains("authorize"), "OAuth message should mention authorize prompt");
     }
 
     #[test]
     fn message_with_headers_omits_authorize() {
-        let msg = registration_message("sentry", false);
+        let msg = registration_message(Backend::Claude, "sentry", false);
         assert!(!msg.contains("authorize"), "PAT message should not mention authorize");
         assert!(msg.contains("sentry"));
+    }
+
+    #[test]
+    fn message_codex_points_to_mcp() {
+        let msg = registration_message(Backend::Codex, "linear", true);
+        assert!(msg.contains("/mcp"));
+        assert!(msg.contains("Codex"));
     }
 
     // -- collect_placeholders --
