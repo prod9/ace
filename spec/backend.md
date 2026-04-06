@@ -34,7 +34,9 @@ Each backend must provide:
 - **`backend_dir()`** — project directory where school folders are linked.
 - **`instructions_file()`** — markdown file generated per-project during setup.
 - **`is_ready()`** — heuristic check that the backend is authenticated/configured.
-- **`trust_args(trust)`** — CLI flags for ACE trust modes, or error if unsupported.
+- **`supports_trust(trust)`** — validate whether the backend supports the given trust level.
+- **`exec_session(opts)`** — launch the backend session. Each backend builds its own Command
+  internally from `SessionOpts` (trust, session prompt, project dir, env, extra args).
 - **`mcp_list()`** — list currently registered MCP server names.
 - **`mcp_add(entry)`** — register a remote MCP server.
 - **`mcp_remove(name)`** — unregister a remote MCP server by name.
@@ -62,8 +64,8 @@ ACE links school folders (`skills/`, `rules/`, `commands/`, `agents/`) into the 
 backend directory. Not all backends support every folder — see per-backend specs for the
 support matrix.
 
-Some backends use different directory names (e.g. DROID uses `droids/` for `agents/`). The
-Link action handles remapping.
+Some backends may use different directory names for linked folders. The Link action handles
+remapping when needed.
 
 ## Session Prompt
 
