@@ -6,9 +6,7 @@ use crate::config::index_toml;
 use crate::git;
 use super::prepare_school::PrepareError;
 
-use super::write_config::WriteConfig;
-
-/// First-time school setup: git clone + write user config.
+/// First-time school setup: git clone + index update.
 pub struct Install<'a> {
     pub project_dir: &'a Path,
     pub specifier: &'a str,
@@ -42,9 +40,6 @@ impl Install<'_> {
         let school_toml_path = school_paths.root.join("school.toml");
         let school_toml = config::school_toml::load(&school_toml_path)?;
         ace.done(&format!("School: {}", school_toml.name));
-
-        let ace_paths = config::paths::resolve(self.project_dir)?;
-        WriteConfig::user(&ace_paths.user, self.specifier)?;
 
         Ok(())
     }

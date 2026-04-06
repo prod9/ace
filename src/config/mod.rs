@@ -6,7 +6,6 @@ pub mod school_paths;
 pub mod school_toml;
 pub mod skill_meta;
 pub mod tree;
-pub mod user_config;
 
 use std::collections::HashMap;
 

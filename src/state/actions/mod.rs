@@ -10,7 +10,6 @@ pub mod setup_project;
 pub mod update_cache;
 pub mod update_gitignore;
 pub mod update_school;
-pub mod write_config;
 
 use std::path::Path;
 

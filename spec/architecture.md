@@ -11,7 +11,6 @@ no business logic.
 
 - `AceToml` — shape of `ace.toml` / `ace.local.toml` / user `config.toml`
 - `SchoolToml` — shape of `school.toml`
-- `UserConfig` — shape of user credentials file
 - `AcePaths` — computes config file locations from project dir
 - `SchoolPaths` — computes school cache/root locations from specifier
 

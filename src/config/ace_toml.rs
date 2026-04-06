@@ -63,6 +63,13 @@ pub fn save(path: &Path, toml: &AceToml) -> Result<(), ConfigError> {
     Ok(())
 }
 
+/// Set the school specifier, preserving all other fields.
+pub fn set_school(path: &Path, specifier: &str) -> Result<(), ConfigError> {
+    let mut config = load_or_default(path)?;
+    config.school = specifier.to_string();
+    save(path, &config)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,5 +99,29 @@ mod tests {
         std::fs::write(&path, "not valid {{{{ toml").expect("write");
 
         assert!(load_or_default(&path).is_err());
+    }
+
+    #[test]
+    fn set_school_creates_new_file() {
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("ace.toml");
+
+        set_school(&path, "prod9/school").expect("set school");
+
+        let config = load(&path).expect("reload");
+        assert_eq!(config.school, "prod9/school");
+    }
+
+    #[test]
+    fn set_school_preserves_env() {
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("ace.toml");
+        std::fs::write(&path, "school = \"old\"\n\n[env]\nKEY = \"value\"\n").expect("write");
+
+        set_school(&path, "prod9/school").expect("set school");
+
+        let config = load(&path).expect("reload");
+        assert_eq!(config.school, "prod9/school");
+        assert_eq!(config.env.get("KEY").map(String::as_str), Some("value"));
     }
 }

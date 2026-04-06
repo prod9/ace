@@ -3,8 +3,6 @@ use std::path::Path;
 use crate::ace::Ace;
 use crate::config;
 
-use super::write_config::WriteConfig;
-
 #[derive(Debug, thiserror::Error)]
 pub enum SetupError {
     #[error("{0}")]
@@ -32,7 +30,7 @@ impl Setup<'_> {
             return Err(SetupError::AlreadySetUp);
         }
 
-        WriteConfig::project(&ace_paths.project, self.specifier)?;
+        config::ace_toml::set_school(&ace_paths.project, self.specifier)?;
         Ok(())
     }
 }
