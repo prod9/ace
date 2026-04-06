@@ -5,16 +5,29 @@
 </pre>
 <div class="subtitle">Augmented Coding Environment</div>
 
-<h2>// what it does</h2>
+<p>
+ACE helps teams scale judgment, not just tooling. It turns conventions, project context, and
+hard-won technical experience into a working coding environment so every session can start from
+what the team already knows, not from whatever one developer configured last.
+</p>
+
+<div class="note">
+Built for CTOs, product owners, and engineering managers who want AI tooling to reflect how
+their teams actually build software, not just how one developer happened to set up one machine.
+</div>
+
+<h2>// why teams use it</h2>
 <ul>
-  <li>Sets up AI coding tools from a shared project entrypoint</li>
-  <li>Manages shared skills &amp; conventions via schools</li>
-  <li>Configures supported backends (Claude Code, Codex)</li>
-  <li>Keeps environments in sync across your team</li>
+  <li>Make senior engineering judgment available across the team instead of trapped in a few people or repos</li>
+  <li>Bring product direction, technical standards, and project context into day-to-day coding work</li>
+  <li>Reduce setup drift by loading shared skills, MCP tools, and backend context from one source</li>
+  <li>Support different roles from the same foundation without forcing everyone into the same way of working</li>
 </ul>
 
 <h2>// quick start</h2>
 <div class="code-block">
+<span class="prompt">$</span> git clone https://github.com/prod9/ace.git<br>
+<span class="prompt">$</span> cd ace<br>
 <span class="prompt">$</span> cargo install --path .<br>
 <span class="prompt">$</span> ace setup prod9/school <span class="comment"># clone a school, register MCP, write config</span><br>
 <span class="prompt">$</span> ace <span class="comment"># launch your AI backend</span>
@@ -26,10 +39,18 @@
   <span>Codex</span>
 </div>
 
+<h2>// what a school gives you</h2>
+<ul>
+  <li>A shared home for prompts, coding skills, conventions, MCP endpoints, and project context</li>
+  <li>A practical way to spread your strongest technical practices beyond the people who already know them</li>
+  <li>A feedback loop where teams improve shared skills once and reuse those improvements across projects</li>
+</ul>
+
 <h2>// how it works</h2>
 <ol style="list-style:none; padding:0; color:#888;">
-  <li><span style="color:#00ff88;">1.</span> Resolves which school to use (from ace.toml)</li>
-  <li><span style="color:#00ff88;">2.</span> Fetches/updates the school repository</li>
-  <li><span style="color:#00ff88;">3.</span> Symlinks skills into your project</li>
-  <li><span style="color:#00ff88;">4.</span> Launches the configured backend</li>
+  <li><span style="color:#00ff88;">1.</span> ACE resolves the active school, backend, and project settings for the current repository</li>
+  <li><span style="color:#00ff88;">2.</span> It clones or updates the school cache and links shared folders into the backend workspace</li>
+  <li><span style="color:#00ff88;">3.</span> It registers the MCP tools the team expects to have available</li>
+  <li><span style="color:#00ff88;">4.</span> It composes session context from school guidance, project config, and role-specific prompts</li>
+  <li><span style="color:#00ff88;">5.</span> Then it hands off to Claude Code or Codex with the environment ready to work</li>
 </ol>
