@@ -12,7 +12,7 @@ const LAYOUT_PATH = join(ROOT, "layout.html");
 
 function titleFromFilename(filename: string): string {
   const name = basename(filename, extname(filename));
-  if (name === "index") return "AI Coding Environment";
+  if (name === "index") return "Augmented Coding Environment";
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
