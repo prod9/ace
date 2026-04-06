@@ -27,7 +27,7 @@ impl Exec {
             cmd.env(key, val);
         }
 
-        let args = build_exec_args(&self.session_prompt, &self.backend_args);
+        let args = build_exec_args(self.backend, &self.session_prompt, &self.backend_args);
         cmd.args(&args);
 
         use std::os::unix::process::CommandExt;
@@ -37,13 +37,22 @@ impl Exec {
 }
 
 /// Build the argument list for the backend CLI invocation.
-fn build_exec_args(session_prompt: &str, backend_args: &[String]) -> Vec<String> {
-    let mut args = vec![
-        "--system-prompt".to_string(),
-        session_prompt.to_string(),
-    ];
-    args.extend_from_slice(backend_args);
-    args
+fn build_exec_args(backend: Backend, session_prompt: &str, backend_args: &[String]) -> Vec<String> {
+    match backend {
+        Backend::Codex => {
+            let mut args = backend_args.to_vec();
+            args.push(session_prompt.to_string());
+            args
+        }
+        _ => {
+            let mut args = vec![
+                "--system-prompt".to_string(),
+                session_prompt.to_string(),
+            ];
+            args.extend_from_slice(backend_args);
+            args
+        }
+    }
 }
 
 /// Record the exec call to `$HOME/.flaude-exec-records.jsonl` for test assertions.
@@ -72,20 +81,28 @@ fn flaude_record_exec(backend_args: &[String]) -> Result<(), std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::backend::Backend;
 
     #[test]
     fn build_exec_args_includes_system_prompt() {
-        let args = build_exec_args("You are helpful.", &[]);
+        let args = build_exec_args(Backend::Claude, "You are helpful.", &[]);
         assert_eq!(args, vec!["--system-prompt", "You are helpful."]);
     }
 
     #[test]
     fn build_exec_args_appends_backend_args() {
         let backend_args = vec!["--yolo".to_string(), "--verbose".to_string()];
-        let args = build_exec_args("prompt", &backend_args);
+        let args = build_exec_args(Backend::Claude, "prompt", &backend_args);
         assert_eq!(
             args,
             vec!["--system-prompt", "prompt", "--yolo", "--verbose"]
         );
+    }
+
+    #[test]
+    fn build_exec_args_codex_uses_positional_prompt() {
+        let backend_args = vec!["--full-auto".to_string()];
+        let args = build_exec_args(Backend::Codex, "prompt", &backend_args);
+        assert_eq!(args, vec!["--full-auto", "prompt"]);
     }
 }

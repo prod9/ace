@@ -10,11 +10,12 @@ Binary: `codex` | Dir: `.agents` | Instructions: `AGENTS.md`
 
 ## Session Prompt
 
-Passed via `--system-prompt <prompt>` CLI flag.
+Passed as Codex's initial positional prompt. Codex does not support a `--system-prompt` flag.
 
-## Yolo Mode
+## Trust Modes
 
-Not supported.
+- `trust = "auto"` → `--full-auto`
+- `trust = "yolo"` → `--dangerously-bypass-approvals-and-sandbox`
 
 ## MCP Registration
 
@@ -47,8 +48,8 @@ Codex support should be completed in this order:
 3. `mcp_check()` — required in the same Codex pass because "registered" does not imply
    "working". MCP can be configured but unusable due to expired auth, invalid tokens, or
    backend-side state drift.
-
-`mcp_remove()` may follow later unless a user-facing ACE flow requires it sooner.
+4. `mcp_remove()` — required because `ace mcp reset` is already part of ACE's user-facing
+   command surface.
 
 Automatic post-registration health checks in ACE's shared main flow are a separate
 cross-backend product decision. Codex should implement `mcp_check()` now, but ACE should not
@@ -62,3 +63,7 @@ quietly introduce Codex-only auto-check behavior through the shared registration
 | `rules/`    | ✗         |
 | `commands/` | ✗         |
 | `agents/`   | ✗         |
+
+Codex uses ACE school skills through the current `AGENTS.md` plus linked-folder workflow.
+Unsupported entries here mean ACE should not assume richer native folder primitives for those
+other school directories.

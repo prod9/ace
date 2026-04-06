@@ -46,8 +46,9 @@ saving a few seconds.
 ## Skill Selection
 
 ACE does not decide which skills to apply. It syncs all skills from the school into the
-project. Skill selection is handled by the project's CLAUDE.md (hand-maintained, committed to
-the project repo), which tells Claude Code/OpenCode which skills to always load.
+project. Skill selection is handled by the project's backend instructions file (for example
+`CLAUDE.md` or `AGENTS.md`), which tells the backend what school content exists and how to use
+it.
 
 ## Symlinks Over Copies
 

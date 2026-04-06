@@ -79,6 +79,10 @@ impl Backend {
             (Backend::Droid, Trust::Yolo) => Ok(vec![
                 "--skip-permissions-unsafe".to_string(),
             ]),
+            (Backend::Codex, Trust::Auto) => Ok(vec!["--full-auto".to_string()]),
+            (Backend::Codex, Trust::Yolo) => Ok(vec![
+                "--dangerously-bypass-approvals-and-sandbox".to_string(),
+            ]),
             (_, trust) => Err(format!(
                 "trust={trust:?} not supported for {}",
                 self.binary(),
@@ -209,6 +213,18 @@ mod tests {
     fn trust_yolo_droid() {
         let args = Backend::Droid.trust_args(Trust::Yolo).expect("Droid supports Yolo");
         assert_eq!(args, vec!["--skip-permissions-unsafe"]);
+    }
+
+    #[test]
+    fn trust_auto_codex() {
+        let args = Backend::Codex.trust_args(Trust::Auto).expect("Codex supports Auto");
+        assert_eq!(args, vec!["--full-auto"]);
+    }
+
+    #[test]
+    fn trust_yolo_codex() {
+        let args = Backend::Codex.trust_args(Trust::Yolo).expect("Codex supports Yolo");
+        assert_eq!(args, vec!["--dangerously-bypass-approvals-and-sandbox"]);
     }
 
     #[test]

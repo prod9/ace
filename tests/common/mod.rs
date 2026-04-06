@@ -91,6 +91,19 @@ impl TestEnv {
         std::fs::write(&path, contents).expect("write file");
     }
 
+    pub fn write_executable(&self, rel: &str, contents: &str) {
+        use std::os::unix::fs::PermissionsExt;
+
+        self.write_file(rel, contents);
+
+        let path = self.path(rel);
+        let mut perms = std::fs::metadata(&path)
+            .expect("stat executable")
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&path, perms).expect("chmod executable");
+    }
+
     pub fn read_file(&self, rel: &str) -> String {
         std::fs::read_to_string(self.path(rel)).expect("read file")
     }
@@ -352,6 +365,18 @@ impl TestEnv {
         self.symlink("skills", ".claude/skills");
     }
 
+    /// Set up an embedded school with codex backend.
+    pub fn setup_codex_school(&self, school_toml: &str) {
+        self.git_init();
+        self.write_file("school.toml", school_toml);
+        self.write_file("ace.toml", "school = \".\"\nbackend = \"codex\"\n");
+        self.mkdir("skills/test-skill");
+        self.write_file("skills/test-skill/SKILL.md", "# Test\n");
+        self.write_file("AGENTS.md", "# Test\n");
+        self.mkdir(".agents");
+        self.symlink("skills", ".agents/skills");
+    }
+
     /// Returns an `assert_cmd::Command` for the `ace` binary, pre-configured
     /// with a clean environment and sandbox paths.
     pub fn ace(&self) -> Command {
@@ -364,6 +389,13 @@ impl TestEnv {
         cmd.env("GIT_TERMINAL_PROMPT", "0");
         cmd.env("TERM", "dumb");
         cmd.current_dir(self.root());
+        cmd
+    }
+
+    pub fn ace_with_path_prefix(&self, prefix: &Path) -> Command {
+        let mut cmd = self.ace();
+        let path = std::env::var("PATH").unwrap_or_default();
+        cmd.env("PATH", format!("{}:{path}", prefix.display()));
         cmd
     }
 }

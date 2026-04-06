@@ -4,6 +4,8 @@ use std::process::Command;
 
 use super::{McpDecl, McpStatus};
 
+const CHECK_SCHEMA: &str = r#"{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"]}}"#;
+
 /// Returns Codex's home directory (`$CODEX_HOME` or `~/.codex`).
 fn home_dir() -> Option<PathBuf> {
     std::env::var("CODEX_HOME")
@@ -14,6 +16,13 @@ fn home_dir() -> Option<PathBuf> {
 
 fn config_path() -> Option<PathBuf> {
     home_dir().map(|d| d.join("config.toml"))
+}
+
+fn ensure_home_dir() -> Result<PathBuf, String> {
+    let home = home_dir().ok_or("cannot resolve Codex home".to_string())?;
+    std::fs::create_dir_all(&home)
+        .map_err(|e| format!("create {}: {e}", home.display()))?;
+    Ok(home)
 }
 
 /// Check if Codex is ready: auth.json exists OR API key env var is set.
@@ -27,6 +36,98 @@ pub(super) fn is_ready() -> bool {
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
+    let _ = ensure_home_dir();
+
+    let output = Command::new("codex")
+        .args(["mcp", "list", "--json"])
+        .output();
+
+    match output {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            parse_list_output(&stdout)
+        }
+        _ => list_from_config(),
+    }
+}
+
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
+    let _ = ensure_home_dir();
+
+    let prompt = build_check_prompt(names);
+
+    let schema = tempfile::NamedTempFile::new()
+        .map_err(|e| format!("schema temp file: {e}"))?;
+    std::fs::write(schema.path(), CHECK_SCHEMA)
+        .map_err(|e| format!("write schema: {e}"))?;
+
+    let output_file = tempfile::NamedTempFile::new()
+        .map_err(|e| format!("output temp file: {e}"))?;
+
+    let output = Command::new("codex")
+        .args([
+            "exec",
+            "-o",
+            output_file.path().to_string_lossy().as_ref(),
+            "--output-schema",
+            schema.path().to_string_lossy().as_ref(),
+            &prompt,
+        ])
+        .output()
+        .map_err(|e| format!("codex: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("codex: {}", stderr.trim()));
+    }
+
+    let content = std::fs::read_to_string(output_file.path())
+        .unwrap_or_else(|_| String::from_utf8_lossy(&output.stdout).into_owned());
+
+    Ok(parse_check_output(&content))
+}
+
+pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
+    let _ = ensure_home_dir();
+
+    let args = build_mcp_remove_args(name);
+    let output = match Command::new("codex")
+        .args(&args)
+        .output()
+    {
+        Ok(output) => output,
+        Err(_) => return remove_from_config(name),
+    };
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(stderr.trim().to_string())
+}
+
+pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
+    let _ = ensure_home_dir();
+
+    if let Some(args) = build_mcp_add_args(entry) {
+        let output = Command::new("codex")
+            .args(&args)
+            .output()
+            .map_err(|e| format!("codex: {e}"))?;
+
+        if output.status.success() {
+            return Ok(());
+        }
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.trim().to_string());
+    }
+
+    add_to_config(entry)
+}
+
+fn list_from_config() -> HashSet<String> {
     let Some(path) = config_path() else {
         return HashSet::new();
     };
@@ -38,58 +139,7 @@ pub(super) fn mcp_list() -> HashSet<String> {
     parse_mcp_names(&content)
 }
 
-pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
-    let prompt = format!(
-        "You have MCP servers registered. For each of the following, call any tool to verify \
-         it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
-         Servers: {}",
-        names.join(", ")
-    );
-
-    let output = Command::new("codex")
-        .args(["exec", &prompt])
-        .output()
-        .map_err(|e| format!("codex: {e}"))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("codex: {}", stderr.trim()));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(parse_check_output(&stdout))
-}
-
-pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
-    use std::io::Write;
-
-    let Some(path) = config_path() else {
-        return Ok(());
-    };
-
-    let existing = if path.exists() {
-        std::fs::read_to_string(&path)
-            .map_err(|e| format!("read {}: {e}", path.display()))?
-    } else {
-        return Ok(());
-    };
-
-    let output = remove_mcp_entry(&existing, name)?;
-
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("create {}: {e}", parent.display()))?;
-    }
-
-    let mut file = std::fs::File::create(&path)
-        .map_err(|e| format!("create {}: {e}", path.display()))?;
-    file.write_all(output.as_bytes())
-        .map_err(|e| format!("write {}: {e}", path.display()))?;
-
-    Ok(())
-}
-
-pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
+fn add_to_config(entry: &McpDecl) -> Result<(), String> {
     use std::io::Write;
 
     let Some(path) = config_path() else {
@@ -104,6 +154,83 @@ pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
     };
 
     let output = merge_mcp_entry(&existing, entry)?;
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("create {}: {e}", parent.display()))?;
+    }
+
+    let mut file = std::fs::File::create(&path)
+        .map_err(|e| format!("create {}: {e}", path.display()))?;
+    file.write_all(output.as_bytes())
+        .map_err(|e| format!("write {}: {e}", path.display()))?;
+
+    Ok(())
+}
+
+fn build_mcp_add_args(entry: &McpDecl) -> Option<Vec<String>> {
+    if !entry.headers.is_empty() {
+        return None;
+    }
+
+    Some(vec![
+        "mcp".to_string(),
+        "add".to_string(),
+        entry.name.clone(),
+        "--url".to_string(),
+        entry.url.clone(),
+    ])
+}
+
+fn build_mcp_remove_args(name: &str) -> Vec<String> {
+    vec![
+        "mcp".to_string(),
+        "remove".to_string(),
+        name.to_string(),
+    ]
+}
+
+fn build_check_prompt(names: &[String]) -> String {
+    format!(
+        "You have MCP servers registered. For each of the following, call any tool to verify \
+         it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
+         Servers: {}",
+        names.join(", ")
+    )
+}
+
+fn parse_list_output(output: &str) -> HashSet<String> {
+    let parsed: serde_json::Value = match serde_json::from_str(output) {
+        Ok(v) => v,
+        Err(_) => return HashSet::new(),
+    };
+
+    let Some(entries) = parsed.as_array() else {
+        return HashSet::new();
+    };
+
+    entries
+        .iter()
+        .filter_map(|entry| entry.get("name").and_then(|v| v.as_str()))
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn remove_from_config(name: &str) -> Result<(), String> {
+    use std::io::Write;
+
+    let Some(path) = config_path() else {
+        return Ok(());
+    };
+
+    let existing = if path.exists() {
+        std::fs::read_to_string(&path)
+            .map_err(|e| format!("read {}: {e}", path.display()))?
+    } else {
+        return Ok(());
+    };
+
+    let output = remove_mcp_entry(&existing, name)?;
 
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
@@ -246,6 +373,70 @@ url = "https://api.githubcopilot.com/mcp/"
     }
 
     #[test]
+    fn build_mcp_add_args_without_headers_uses_cli() {
+        let entry = McpDecl {
+            name: "linear".to_string(),
+            url: "https://mcp.linear.app/mcp".to_string(),
+            headers: std::collections::HashMap::new(),
+            instructions: String::new(),
+        };
+
+        let args = build_mcp_add_args(&entry).expect("should use CLI");
+        assert_eq!(
+            args,
+            vec!["mcp", "add", "linear", "--url", "https://mcp.linear.app/mcp"]
+        );
+    }
+
+    #[test]
+    fn build_mcp_add_args_with_headers_requires_fallback() {
+        let mut headers = std::collections::HashMap::new();
+        headers.insert("Authorization".to_string(), "Bearer tok".to_string());
+
+        let entry = McpDecl {
+            name: "github".to_string(),
+            url: "https://api.githubcopilot.com/mcp/".to_string(),
+            headers,
+            instructions: String::new(),
+        };
+
+        assert!(build_mcp_add_args(&entry).is_none());
+    }
+
+    #[test]
+    fn build_mcp_remove_args_basic() {
+        let args = build_mcp_remove_args("linear");
+        assert_eq!(args, vec!["mcp", "remove", "linear"]);
+    }
+
+    #[test]
+    fn parse_list_output_extracts_names() {
+        let output = r#"[
+  {
+    "name": "linear",
+    "enabled": true,
+    "transport": {"type": "streamable_http", "url": "https://mcp.linear.app/mcp"}
+  },
+  {
+    "name": "github",
+    "enabled": false,
+    "transport": {"type": "streamable_http", "url": "https://api.githubcopilot.com/mcp/"}
+  }
+]"#;
+
+        let names = parse_list_output(output);
+        assert_eq!(names.len(), 2);
+        assert!(names.contains("linear"));
+        assert!(names.contains("github"));
+    }
+
+    #[test]
+    fn parse_list_output_invalid_returns_empty() {
+        assert!(parse_list_output("not json").is_empty());
+        assert!(parse_list_output("{}").is_empty());
+    }
+
+    #[test]
     fn merge_mcp_entry_basic() {
         let entry = McpDecl {
             name: "linear".to_string(),
@@ -324,5 +515,31 @@ url = "https://api.githubcopilot.com/mcp/"
     fn parse_check_output_invalid_returns_empty() {
         assert!(parse_check_output("not json").is_empty());
         assert!(parse_check_output("{}").is_empty());
+    }
+
+    #[test]
+    fn build_mcp_check_prompt_mentions_servers() {
+        let names = vec!["linear".to_string(), "github".to_string()];
+        let prompt = build_check_prompt(&names);
+        assert!(prompt.contains("linear"));
+        assert!(prompt.contains("github"));
+        assert!(prompt.contains("JSON array"));
+    }
+
+    #[test]
+    fn ensure_home_dir_creates_codex_home() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let codex_home = tmp.path().join("nested").join(".codex");
+
+        unsafe {
+            std::env::set_var("CODEX_HOME", &codex_home);
+        }
+        let result = ensure_home_dir();
+        unsafe {
+            std::env::remove_var("CODEX_HOME");
+        }
+
+        assert!(result.is_ok(), "should create CODEX_HOME");
+        assert!(codex_home.is_dir(), "CODEX_HOME directory should exist");
     }
 }
