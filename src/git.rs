@@ -82,7 +82,7 @@ impl<'a> Git<'a> {
     }
 
     fn run(&self, args: &[&str]) -> Result<(), GitError> {
-        let cmd_str = format!("git {}", args.join(" "));
+        let cmd_str = args.join(" ");
 
         let status = Command::new("git")
             .args(args)
@@ -105,7 +105,7 @@ impl<'a> Git<'a> {
     }
 
     fn output(&self, args: &[&str]) -> Result<String, GitError> {
-        let cmd_str = format!("git {}", args.join(" "));
+        let cmd_str = args.join(" ");
 
         let out = Command::new("git")
             .args(args)
@@ -135,7 +135,7 @@ pub fn clone_github(source: &str, dest: &Path) -> Result<(), GitError> {
 /// Standalone — no repo context needed.
 /// Performs a full clone (no `--depth`).
 pub fn clone_repo(url: &str, dest: &Path) -> Result<(), GitError> {
-    let cmd_str = format!("git clone --no-tags {url}");
+    let cmd_str = format!("clone --no-tags {url}");
 
     let status = Command::new("git")
         .args(["clone", "--no-tags", url])
