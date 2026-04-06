@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn resolve_backend_last_wins() {
         let mut user = ace("", &[]);
-        user.backend = Some(Backend::OpenCode);
+        user.backend = Some(Backend::Codex);
         let mut project = ace("", &[]);
         project.backend = Some(Backend::Claude);
 
@@ -238,10 +238,10 @@ mod tests {
     #[test]
     fn resolve_backend_school_toml_used() {
         let mut t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Backend::OpenCode);
+        t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t);
-        assert_eq!(r.backend, Backend::OpenCode);
+        assert_eq!(r.backend, Backend::Codex);
     }
 
     #[test]
@@ -250,7 +250,7 @@ mod tests {
         project.backend = Some(Backend::Claude);
 
         let mut t = tree(ace("", &[]), project, ace("", &[]));
-        t.school_backend = Some(Backend::OpenCode);
+        t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t);
         assert_eq!(r.backend, Backend::Claude);
@@ -262,7 +262,7 @@ mod tests {
         local.backend = Some(Backend::Claude);
 
         let mut t = tree(ace("", &[]), ace("", &[]), local);
-        t.school_backend = Some(Backend::OpenCode);
+        t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t);
         assert_eq!(r.backend, Backend::Claude);
@@ -274,10 +274,10 @@ mod tests {
         user.backend = Some(Backend::Claude);
 
         let mut t = tree(user, ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Backend::OpenCode);
+        t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t);
-        assert_eq!(r.backend, Backend::OpenCode);
+        assert_eq!(r.backend, Backend::Codex);
     }
 
     #[test]

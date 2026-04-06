@@ -1,3 +1,5 @@
+**Status: WIP — not currently implemented. Backend module removed to simplify codebase.**
+
 # Backend: Droid (Factory.ai)
 
 Binary: `droid` | Dir: `.factory` | Instructions: `AGENTS.md`

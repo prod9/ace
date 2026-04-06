@@ -163,13 +163,13 @@ mod tests {
 
     #[test]
     fn previous_skills_uses_backend_dir_name() {
-        let fix = TempDir::new("ace-test-prompt-opencode");
-        let skills = fix.path().join(".opencode").join("previous-skills");
+        let fix = TempDir::new("ace-test-prompt-agents");
+        let skills = fix.path().join(".agents").join("previous-skills");
         std::fs::create_dir_all(&skills).expect("create previous-skills dir");
 
-        let backend_dir = fix.path().join(".opencode");
+        let backend_dir = fix.path().join(".agents");
         let prompt = build_session_prompt("Acme", "", "", &backend_dir, &[], None, false);
-        assert!(prompt.contains(".opencode/previous-skills/"), "should use .opencode dir name");
+        assert!(prompt.contains(".agents/previous-skills/"), "should use .agents dir name");
         assert!(!prompt.contains(".claude/previous-skills/"), "should not contain .claude");
     }
 

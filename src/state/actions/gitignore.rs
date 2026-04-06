@@ -106,10 +106,10 @@ mod tests {
     }
 
     #[test]
-    fn build_block_opencode() {
-        let block = build_block(".opencode");
-        assert!(block.contains(".opencode/skills"));
-        assert!(block.contains(".opencode/agents"));
+    fn build_block_agents() {
+        let block = build_block(".agents");
+        assert!(block.contains(".agents/skills"));
+        assert!(block.contains(".agents/agents"));
         assert!(block.contains("ace.local.toml"));
     }
 

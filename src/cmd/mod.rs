@@ -37,7 +37,7 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub porcelain: bool,
 
-    /// Extra arguments passed through to the backend (claude/opencode), after --
+    /// Extra arguments passed through to the backend (claude/codex), after --
     #[arg(last = true)]
     backend_args: Vec<String>,
 }

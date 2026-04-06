@@ -5,9 +5,7 @@
 | Value      | Binary     | Backend Dir | Instructions File | Details                          |
 |------------|------------|-------------|-------------------|----------------------------------|
 | `claude`   | `claude`   | `.claude`   | `CLAUDE.md`       | [backends/claude.md](backends/claude.md)     |
-| `opencode` | `opencode` | `.opencode` | `AGENTS.md`       | [backends/opencode.md](backends/opencode.md) |
 | `codex`    | `codex`    | `.agents`   | `AGENTS.md`       | [backends/codex.md](backends/codex.md)       |
-| `droid`    | `droid`    | `.factory`  | `AGENTS.md`       | [backends/droid.md](backends/droid.md)       |
 
 ## TOML Syntax
 

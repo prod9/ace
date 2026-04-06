@@ -36,13 +36,11 @@ pub struct PrepareResult {
 
 // Backend support matrix — which folders each backend natively supports.
 //   claude:   skills ✓  rules ✓  commands ✓  agents ✓
-//   opencode: skills ✓  rules ✗  commands ✓  agents ✓
 //   codex:    skills ✓  rules ✗  commands ✗  agents ✗
 fn is_supported(backend: Backend, folder: &str) -> bool {
     match (backend, folder) {
         (_, "skills") => true,
         (Backend::Claude | Backend::Flaude, _) => true,
-        (Backend::OpenCode, "commands" | "agents") => true,
         _ => false,
     }
 }

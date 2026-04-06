@@ -215,27 +215,4 @@ fn setup_codex_backend() {
     env.assert_not_exists("CLAUDE.md");
 }
 
-#[test]
-fn setup_opencode_backend() {
-    let env = TestEnv::new();
-    env.git_init();
-
-    env.write_file(
-        "school.toml",
-        "name = \"jester\"\nbackend = \"opencode\"\n",
-    );
-    env.mkdir("skills/test-skill");
-    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
-
-    env.ace()
-        .args(["setup", "."])
-        .assert()
-        .success();
-
-    env.assert_symlink(".opencode/skills", "skills");
-    env.assert_exists("AGENTS.md");
-    env.assert_contains("AGENTS.md", "jester");
-    env.assert_not_exists("CLAUDE.md");
-}
-
 use predicates;

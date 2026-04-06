@@ -32,7 +32,7 @@ fn auto_writes_trust_to_local_toml() {
 fn yolo_preserves_existing_local_fields() {
     let env = TestEnv::new();
     env.setup_embedded("test-school");
-    env.write_file("ace.local.toml", "backend = \"opencode\"\n");
+    env.write_file("ace.local.toml", "backend = \"codex\"\n");
 
     env.ace()
         .arg("yolo")
@@ -40,7 +40,7 @@ fn yolo_preserves_existing_local_fields() {
         .success();
 
     env.assert_contains("ace.local.toml", "trust = \"yolo\"");
-    env.assert_contains("ace.local.toml", "backend = \"opencode\"");
+    env.assert_contains("ace.local.toml", "backend = \"codex\"");
 }
 
 #[test]

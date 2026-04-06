@@ -1,3 +1,5 @@
+**Status: WIP — not currently implemented. Backend module removed to simplify codebase.**
+
 # Backend: OpenCode
 
 Binary: `opencode` | Dir: `.opencode` | Instructions: `AGENTS.md`
