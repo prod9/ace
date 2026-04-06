@@ -111,7 +111,6 @@ pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
             "-p", &prompt,
             "--output-format", "json",
             "--json-schema", CHECK_SCHEMA,
-            "--bare",
         ])
         .output()
         .map_err(|e| format!("claude: {e}"))?;
