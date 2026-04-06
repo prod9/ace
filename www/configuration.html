@@ -17,6 +17,8 @@
   <a href="commands.html">Commands</a>
   <span class="sep">|</span>
   <a href="configuration.html">Config</a>
+  <span class="sep">|</span>
+  <a href="backends.html">Backends</a>
 </nav>
 
 <h1>// configuration</h1>
@@ -123,7 +125,7 @@ each school entry are reserved for future use.
 
 <p>
 Lives at the root of a school repository. Defines the school name,
-backend preference, MCP servers, projects, and skill imports.
+backend preference, MCP servers, and skill imports.
 </p>
 
 <div class="code-block"><pre><span class="comment"># school.toml example</span>
@@ -141,11 +143,6 @@ backend preference, MCP servers, projects, and skill imports.
 
 [<span class="key">mcp</span>.<span class="key">headers</span>]
 <span class="key">Authorization</span> = <span class="val">"Bearer {{ github_token }}"</span>
-
-[[<span class="key">projects</span>]]
-<span class="key">name</span> = <span class="val">"backend"</span>
-<span class="key">repo</span> = <span class="val">"org/backend"</span>
-<span class="key">description</span> = <span class="val">"Main API server"</span>
 
 [[<span class="key">imports</span>]]
 <span class="key">skill</span> = <span class="val">"docker"</span>
@@ -223,45 +220,6 @@ an MCP server for the backend to use.
     <td>string</td>
     <td><span style="color:#555;">(empty)</span></td>
     <td>Usage instructions passed to the backend for this server.</td>
-  </tr>
-</table>
-
-<h3>// [[projects]]</h3>
-
-<p>
-Project declarations associate repositories with the school.
-</p>
-
-<table>
-  <tr>
-    <th>Key</th>
-    <th>Type</th>
-    <th>Default</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>name</td>
-    <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
-    <td>Project display name.</td>
-  </tr>
-  <tr>
-    <td>repo</td>
-    <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
-    <td>Repository specifier, e.g. <span style="color:#c0c0c0;">"org/repo"</span>.</td>
-  </tr>
-  <tr>
-    <td>description</td>
-    <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
-    <td>Brief project description.</td>
-  </tr>
-  <tr>
-    <td>env</td>
-    <td>map (string &rarr; string)</td>
-    <td><span style="color:#555;">{}</span></td>
-    <td>Project-specific environment variables.</td>
   </tr>
 </table>
 
