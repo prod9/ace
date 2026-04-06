@@ -37,7 +37,7 @@ runs.
 
 1. **Is school cached?** (check `index.toml` for matching specifier)
    - **No** → **Install**: `git clone --depth 1` into `~/.cache/ace/repos/<owner>/<repo>/`, write
-     `index.toml` entry, parse `school.toml`, register MCP servers, write user config.
+     `index.toml` entry, parse `school.toml`, register MCP servers.
    - **Yes** → **Update**: `git pull` on the cached repo.
 2. **Link**: symlink school folders (`skills/`, `rules/`, `commands/`, `agents/`) from
    `<cache>/<folder>/` into `<project>/<backend_dir>/<folder>/`. One symlink per folder. Skips
@@ -51,7 +51,7 @@ When the user runs `ace` (no subcommand) in a project that already has `ace.toml
 1. Load state from `ace.toml`.
 2. Call **Prepare** (install-if-needed / update-if-cached, then link).
 3. Build system prompt from school config.
-4. Detect and exec backend (Claude Code / OpenCode).
+4. Detect and exec backend (Claude Code / Codex).
 
 ## Actions Summary
 
@@ -59,7 +59,7 @@ When the user runs `ace` (no subcommand) in a project that already has `ace.toml
 |-----------|---------------------------------------------------------|--------------------------|
 | Setup     | Guard checks, write `ace.toml`, call Prepare            | `ace setup <spec>`       |
 | Prepare   | Orchestrate Install/Update + Link                       | Setup and normal `ace`   |
-| Install   | `git clone`, index, register MCP, user config            | School not in cache      |
+| Install   | `git clone`, index, register MCP                         | School not in cache      |
 | Update    | `git pull --ff-only` on cached repo                     | School already cached    |
 | Link      | Symlink school folders from cache into project          | Always (after install/update) |
 

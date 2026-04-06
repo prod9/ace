@@ -4,7 +4,7 @@ session through the `ace` command instead of running the backend directly.
 # ACE Project
 
 **ACE** (Augmented Coding Environment) - Automation tooling for setting up and keeping AI coding
-environments setup and up-to-date. Acts as entrypoint to Claude Code or OpenCode CLI.
+environments setup and up-to-date. Acts as entrypoint to Claude Code or Codex.
 
 Core functions:
 - Check environment readiness
@@ -95,9 +95,6 @@ Metrics:
   any spec covering the feature area. Run `ls spec/` to see available specs.
 
 ## Documentation
-
-- `README.th.md` is the Thai translation of `README.md`. When updating README.md, update
-  README.th.md to match.
 
 ## CLI Conventions
 

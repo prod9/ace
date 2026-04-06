@@ -76,7 +76,7 @@ enum Command {
     Config,
     /// Print resolved filesystem paths ACE uses
     Paths {
-        /// Print only this key (e.g. "school", "config.user")
+        /// Print only this key (e.g. "project", "cache", "school")
         key: Option<String>,
     },
     /// Import a skill from an external repository into the school

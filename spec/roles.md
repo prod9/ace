@@ -77,9 +77,9 @@ This keeps role selection personal — different team members working on the sam
 have different roles without conflicting.
 
 `ace.toml` (project-committed) can also set `role` to provide a project-level default, but
-`ace.local.toml` overrides it. User-global `~/.config/ace/config.toml` can set it too.
+`ace.local.toml` overrides it.
 
-Resolution order: user-global < project-committed < project-local (last non-empty wins,
+Resolution order: project-committed < project-local (last non-empty wins,
 same as other fields).
 
 ## Resolution

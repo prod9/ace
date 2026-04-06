@@ -48,7 +48,6 @@ impl State {
     pub fn empty() -> Self {
         Self {
             config: Tree {
-                ace_user: AceToml::default(),
                 ace_project: AceToml::default(),
                 ace_local: AceToml::default(),
                 school_backend: None,
@@ -78,9 +77,9 @@ struct Resolved {
     trust: Trust,
 }
 
-/// Resolve effective values from layers. Order: user → project → local (last wins).
+/// Resolve effective values from layers. Order: project → local (last wins).
 fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
-    let layers = [&tree.ace_user, &tree.ace_project, &tree.ace_local];
+    let layers = [&tree.ace_project, &tree.ace_local];
 
     // school: last non-empty wins
     let school_specifier = layers
@@ -89,12 +88,11 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         .find(|l| !l.school.is_empty())
         .map(|l| l.school.clone());
 
-    // backend: local > project > school > user > fallback Claude
+    // backend: local > project > school > fallback Claude
     let backend = overrides.backend
         .or(tree.ace_local.backend)
         .or(tree.ace_project.backend)
         .or(tree.school_backend)
-        .or(tree.ace_user.backend)
         .unwrap_or_default();
 
     // session_prompt: last Some wins (Some("") is a valid override to empty)
@@ -146,9 +144,8 @@ mod tests {
         }
     }
 
-    fn tree(ace_user: AceToml, ace_project: AceToml, ace_local: AceToml) -> Tree {
+    fn tree(ace_project: AceToml, ace_local: AceToml) -> Tree {
         Tree {
-            ace_user,
             ace_project,
             ace_local,
             school_backend: None,
@@ -158,9 +155,8 @@ mod tests {
     }
 
     #[test]
-    fn resolve_school_last_wins() {
+    fn resolve_school_project_wins() {
         let t = tree(
-            ace("user-school", &[]),
             ace("project-school", &[]),
             ace("", &[]),
         );
@@ -171,7 +167,6 @@ mod tests {
     #[test]
     fn resolve_school_local_overrides() {
         let t = tree(
-            ace("user-school", &[]),
             ace("project-school", &[]),
             ace("local-school", &[]),
         );
@@ -181,26 +176,26 @@ mod tests {
 
     #[test]
     fn resolve_school_none_when_all_empty() {
-        let t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
+        let t = tree(ace("", &[]), ace("", &[]));
         let r = resolve_layers(&t, RuntimeOverrides::default());
         assert!(r.school_specifier.is_none());
     }
 
     #[test]
-    fn resolve_backend_last_wins() {
-        let mut user = ace("", &[]);
-        user.backend = Some(Backend::Codex);
+    fn resolve_backend_local_overrides_project() {
         let mut project = ace("", &[]);
-        project.backend = Some(Backend::Claude);
+        project.backend = Some(Backend::Codex);
+        let mut local = ace("", &[]);
+        local.backend = Some(Backend::Claude);
 
-        let t = tree(user, project, ace("", &[]));
+        let t = tree(project, local);
         let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Claude);
     }
 
     #[test]
     fn resolve_backend_fallback_claude() {
-        let t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
+        let t = tree(ace("", &[]), ace("", &[]));
         let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Claude);
     }
@@ -210,7 +205,6 @@ mod tests {
         let t = tree(
             ace("s", &[("A", "1")]),
             ace("s", &[("B", "2")]),
-            ace("s", &[]),
         );
         let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.env["A"], "1");
@@ -222,7 +216,6 @@ mod tests {
         let t = tree(
             ace("s", &[("KEY", "old"), ("KEEP", "yes")]),
             ace("s", &[("KEY", "new")]),
-            ace("s", &[]),
         );
         let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.env["KEY"], "new");
@@ -231,19 +224,17 @@ mod tests {
 
     #[test]
     fn resolve_session_prompt_last_wins() {
-        let mut user = ace("", &[]);
-        user.session_prompt = Some("user prompt".to_string());
         let mut project = ace("", &[]);
         project.session_prompt = Some("project prompt".to_string());
 
-        let t = tree(user, project, ace("", &[]));
+        let t = tree(project, ace("", &[]));
         let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.session_prompt, "project prompt");
     }
 
     #[test]
     fn resolve_backend_school_toml_used() {
-        let mut t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
+        let mut t = tree(ace("", &[]), ace("", &[]));
         t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
@@ -255,7 +246,7 @@ mod tests {
         let mut project = ace("", &[]);
         project.backend = Some(Backend::Claude);
 
-        let mut t = tree(ace("", &[]), project, ace("", &[]));
+        let mut t = tree(project, ace("", &[]));
         t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
@@ -267,7 +258,7 @@ mod tests {
         let mut local = ace("", &[]);
         local.backend = Some(Backend::Claude);
 
-        let mut t = tree(ace("", &[]), ace("", &[]), local);
+        let mut t = tree(ace("", &[]), local);
         t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
@@ -275,29 +266,14 @@ mod tests {
     }
 
     #[test]
-    fn resolve_backend_school_overrides_user() {
-        let mut user = ace("", &[]);
-        user.backend = Some(Backend::Claude);
-
-        let mut t = tree(user, ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Backend::Codex);
-
-        let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Backend::Codex);
-    }
-
-    #[test]
     fn resolve_backend_override_beats_all_layers() {
-        let mut user = ace("", &[]);
-        user.backend = Some(Backend::Claude);
-
         let mut project = ace("", &[]);
         project.backend = Some(Backend::Flaude);
 
         let mut local = ace("", &[]);
         local.backend = Some(Backend::Claude);
 
-        let mut t = tree(user, project, local);
+        let mut t = tree(project, local);
         t.school_backend = Some(Backend::Codex);
 
         let r = resolve_layers(

@@ -8,16 +8,15 @@ TOML.
 
 Resolved by merging (later overrides earlier):
 
-1. **User-global** `~/.config/ace/config.toml`
-2. **Project-committed** `ace.toml` (checked into git, shared)
-3. **Project-local** `ace.local.toml` (gitignored, per-machine)
+1. **Project-committed** `ace.toml` (checked into git, shared)
+2. **Project-local** `ace.local.toml` (gitignored, per-machine)
 
 ### Fields
 
 Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
-- `backend` — `"claude"`, `"opencode"`, or `"codex"` (highest-priority `Some` wins: local → project → user; fallback `claude`). See [backend.md](backend.md).
+- `backend` — `"claude"` or `"codex"` (highest-priority `Some` wins: local → project; fallback `claude`). See [backend.md](backend.md).
 - `role` — selected role name (last non-empty wins). Must match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)

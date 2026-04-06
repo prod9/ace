@@ -13,7 +13,7 @@
 backend = "claude"
 ```
 
-Valid in `ace.toml`, `ace.local.toml`, user `config.toml`, and `school.toml` (`[school]` section).
+Valid in `ace.toml`, `ace.local.toml`, and `school.toml` (`[school]` section).
 
 ## Resolution Order
 
@@ -24,7 +24,6 @@ First `Some` wins in this priority order (highest to lowest):
 2. Project-local — `ace.local.toml`
 3. Project-committed — `ace.toml`
 4. `school.toml` — school-level default
-5. User-global — `~/.config/ace/config.toml`
 
 Fallback if no layer specifies backend: `claude`.
 
