@@ -19,12 +19,18 @@ Valid in `ace.toml`, `ace.local.toml`, user `config.toml`, and `school.toml` (`[
 
 First `Some` wins in this priority order (highest to lowest):
 
-1. Project-local — `ace.local.toml`
-2. Project-committed — `ace.toml`
-3. `school.toml` — school-level default
-4. User-global — `~/.config/ace/config.toml`
+1. CLI override — `ace --backend <name>`, `ace -b <name>`, or convenience flags such as
+   `ace --claude` / `ace --codex`
+2. Project-local — `ace.local.toml`
+3. Project-committed — `ace.toml`
+4. `school.toml` — school-level default
+5. User-global — `~/.config/ace/config.toml`
 
 Fallback if no layer specifies backend: `claude`.
+
+The CLI override is runtime-only. It does not write any config file and applies to
+backend-dependent commands generally, including bare `ace`, `ace mcp`, `ace config`,
+`ace setup`, and `ace pull`.
 
 ## Backend Contract
 

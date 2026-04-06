@@ -62,3 +62,25 @@ fn exec_backcompat_yolo_true() {
     assert_eq!(records.len(), 1, "should record one exec call");
     assert_eq!(records[0].trust, "yolo", "yolo=true backcompat should record trust=yolo");
 }
+
+#[test]
+fn exec_backend_flag_overrides_configured_backend() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"test-school\"\n");
+    env.mkdir("bin");
+    env.write_executable(
+        "bin/codex",
+        r#"#!/bin/sh
+printf '%s\n' "$@" > "$HOME/codex-exec-args.txt"
+exit 0
+"#,
+    );
+
+    env.ace_with_path_prefix(&env.path("bin"))
+        .args(["--backend", "codex"])
+        .assert()
+        .success();
+
+    env.assert_exists("codex-exec-args.txt");
+    env.assert_not_exists(".flaude-exec-records.jsonl");
+}

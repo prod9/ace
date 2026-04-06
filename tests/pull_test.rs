@@ -60,3 +60,20 @@ fn pull_no_school_fails() {
 
     env.ace().args(["pull"]).assert().failure();
 }
+
+#[test]
+fn pull_backend_flag_relinks_for_overridden_backend() {
+    let env = TestEnv::new();
+    let school = env.setup_remote_school("test/school");
+
+    env.ace().assert().success();
+    push_to_origin(&env, &school, "skills/maverick/NEW.md", "# New\n");
+
+    env.ace()
+        .args(["--backend", "codex", "pull"])
+        .assert()
+        .success();
+
+    let link = std::fs::read_link(env.path(".agents/skills")).expect("read .agents/skills symlink");
+    assert_eq!(link, school.cache.join("skills"));
+}

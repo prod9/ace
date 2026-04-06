@@ -215,4 +215,23 @@ fn setup_codex_backend() {
     env.assert_not_exists("CLAUDE.md");
 }
 
+#[test]
+fn setup_backend_flag_overrides_configured_backend() {
+    let env = TestEnv::new();
+    env.git_init();
+
+    env.write_file("school.toml", "name = \"slider\"\n");
+    env.mkdir("skills/test-skill");
+    env.write_file("skills/test-skill/SKILL.md", "# Test\n");
+
+    env.ace()
+        .args(["--backend", "codex", "setup", "."])
+        .assert()
+        .success();
+
+    env.assert_symlink(".agents/skills", "skills");
+    env.assert_exists("AGENTS.md");
+    env.assert_not_exists("CLAUDE.md");
+}
+
 use predicates;

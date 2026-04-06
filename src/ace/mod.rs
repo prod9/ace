@@ -3,11 +3,12 @@ pub mod io;
 use std::path::{Path, PathBuf};
 
 use crate::config;
+use crate::config::backend::Backend;
 use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
 use crate::config::ConfigError;
 use crate::git::Git;
-use crate::state::State;
+use crate::state::{RuntimeOverrides, State};
 
 pub use io::{logo, IoError, OutputMode};
 use io::Io;
@@ -16,6 +17,7 @@ pub struct Ace {
     project_dir: PathBuf,
     state: Option<State>,
     school: Option<SchoolPaths>,
+    runtime_overrides: RuntimeOverrides,
     io: Io,
     mode: OutputMode,
 }
@@ -26,6 +28,7 @@ impl Ace {
             project_dir,
             state: None,
             school: None,
+            runtime_overrides: RuntimeOverrides::default(),
             io: Io::new(mode),
             mode,
         }
@@ -39,6 +42,11 @@ impl Ace {
         self.mode
     }
 
+    pub fn set_backend_override(&mut self, backend: Option<Backend>) {
+        self.runtime_overrides.backend = backend;
+        self.state = None;
+    }
+
     /// Lazy-load tree + school.toml + resolve. No-op if already loaded.
     pub fn require_state(&mut self) -> Result<&State, ConfigError> {
         if self.state.is_none() {
@@ -46,7 +54,7 @@ impl Ace {
             let mut tree = Tree::load(&paths)?;
             tree.load_school(&self.project_dir)?;
             self.school = tree.school_paths.take();
-            self.state = Some(State::resolve(tree));
+            self.state = Some(State::resolve(tree, self.runtime_overrides));
         }
         Ok(self.state.as_ref().expect("state was just set"))
     }
@@ -86,7 +94,7 @@ impl Ace {
         let mut tree = prev.config.clone();
         tree.load_school(&self.project_dir)?;
         self.school = tree.school_paths.take();
-        self.state = Some(State::resolve(tree));
+        self.state = Some(State::resolve(tree, self.runtime_overrides));
         Ok(self.state.as_ref().expect("state was just set"))
     }
 

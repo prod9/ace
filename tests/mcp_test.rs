@@ -166,3 +166,35 @@ fn mcp_register_with_headers() {
         records[0].headers
     );
 }
+
+#[test]
+fn mcp_backend_flag_uses_overridden_backend() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_OAUTH);
+    env.mkdir("bin");
+    env.write_executable(
+        "bin/codex",
+        r#"#!/bin/sh
+if [ "$1" = "mcp" ] && [ "$2" = "list" ] && [ "$3" = "--json" ]; then
+  printf '[]'
+  exit 0
+fi
+
+if [ "$1" = "mcp" ] && [ "$2" = "add" ]; then
+  printf '%s\n' "$@" > "$HOME/codex-mcp-add.txt"
+  exit 0
+fi
+
+echo "unexpected invocation: $*" >&2
+exit 1
+"#,
+    );
+
+    env.ace_with_path_prefix(&env.path("bin"))
+        .args(["--backend", "codex", "mcp"])
+        .assert()
+        .success();
+
+    env.assert_exists("codex-mcp-add.txt");
+    env.assert_not_exists(".flaude-mcp-records.jsonl");
+}

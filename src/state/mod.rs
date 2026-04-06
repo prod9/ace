@@ -9,6 +9,11 @@ use crate::config::ace_toml::{AceToml, Trust};
 use crate::config::backend::Backend;
 use crate::config::tree::Tree;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct RuntimeOverrides {
+    pub backend: Option<Backend>,
+}
+
 /// Resolved effective state, computed from config::Tree.
 pub struct State {
     pub config: Tree,
@@ -25,8 +30,8 @@ pub struct State {
 impl State {
     /// Full resolution: resolve all effective values from config layers.
     /// Tree must have `load_school()` called first if school.toml is needed.
-    pub fn resolve(tree: Tree) -> Self {
-        let resolved = resolve_layers(&tree);
+    pub fn resolve(tree: Tree, overrides: RuntimeOverrides) -> Self {
+        let resolved = resolve_layers(&tree, overrides);
         let school = tree.school_toml.as_ref().map(|st| School::from(st.clone()));
         Self {
             school_specifier: resolved.school_specifier,
@@ -74,7 +79,7 @@ struct Resolved {
 }
 
 /// Resolve effective values from layers. Order: user → project → local (last wins).
-fn resolve_layers(tree: &Tree) -> Resolved {
+fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
     let layers = [&tree.ace_user, &tree.ace_project, &tree.ace_local];
 
     // school: last non-empty wins
@@ -85,7 +90,8 @@ fn resolve_layers(tree: &Tree) -> Resolved {
         .map(|l| l.school.clone());
 
     // backend: local > project > school > user > fallback Claude
-    let backend = tree.ace_local.backend
+    let backend = overrides.backend
+        .or(tree.ace_local.backend)
         .or(tree.ace_project.backend)
         .or(tree.school_backend)
         .or(tree.ace_user.backend)
@@ -158,7 +164,7 @@ mod tests {
             ace("project-school", &[]),
             ace("", &[]),
         );
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.school_specifier.as_deref(), Some("project-school"));
     }
 
@@ -169,14 +175,14 @@ mod tests {
             ace("project-school", &[]),
             ace("local-school", &[]),
         );
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.school_specifier.as_deref(), Some("local-school"));
     }
 
     #[test]
     fn resolve_school_none_when_all_empty() {
         let t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert!(r.school_specifier.is_none());
     }
 
@@ -188,14 +194,14 @@ mod tests {
         project.backend = Some(Backend::Claude);
 
         let t = tree(user, project, ace("", &[]));
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Claude);
     }
 
     #[test]
     fn resolve_backend_fallback_claude() {
         let t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Claude);
     }
 
@@ -206,7 +212,7 @@ mod tests {
             ace("s", &[("B", "2")]),
             ace("s", &[]),
         );
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.env["A"], "1");
         assert_eq!(r.env["B"], "2");
     }
@@ -218,7 +224,7 @@ mod tests {
             ace("s", &[("KEY", "new")]),
             ace("s", &[]),
         );
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.env["KEY"], "new");
         assert_eq!(r.env["KEEP"], "yes");
     }
@@ -231,7 +237,7 @@ mod tests {
         project.session_prompt = Some("project prompt".to_string());
 
         let t = tree(user, project, ace("", &[]));
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.session_prompt, "project prompt");
     }
 
@@ -240,7 +246,7 @@ mod tests {
         let mut t = tree(ace("", &[]), ace("", &[]), ace("", &[]));
         t.school_backend = Some(Backend::Codex);
 
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Codex);
     }
 
@@ -252,7 +258,7 @@ mod tests {
         let mut t = tree(ace("", &[]), project, ace("", &[]));
         t.school_backend = Some(Backend::Codex);
 
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Claude);
     }
 
@@ -264,7 +270,7 @@ mod tests {
         let mut t = tree(ace("", &[]), ace("", &[]), local);
         t.school_backend = Some(Backend::Codex);
 
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
         assert_eq!(r.backend, Backend::Claude);
     }
 
@@ -276,7 +282,30 @@ mod tests {
         let mut t = tree(user, ace("", &[]), ace("", &[]));
         t.school_backend = Some(Backend::Codex);
 
-        let r = resolve_layers(&t);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert_eq!(r.backend, Backend::Codex);
+    }
+
+    #[test]
+    fn resolve_backend_override_beats_all_layers() {
+        let mut user = ace("", &[]);
+        user.backend = Some(Backend::Claude);
+
+        let mut project = ace("", &[]);
+        project.backend = Some(Backend::Flaude);
+
+        let mut local = ace("", &[]);
+        local.backend = Some(Backend::Claude);
+
+        let mut t = tree(user, project, local);
+        t.school_backend = Some(Backend::Codex);
+
+        let r = resolve_layers(
+            &t,
+            RuntimeOverrides {
+                backend: Some(Backend::Codex),
+            },
+        );
         assert_eq!(r.backend, Backend::Codex);
     }
 

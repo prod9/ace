@@ -5,6 +5,7 @@ mod flaude;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use super::ace_toml::Trust;
@@ -26,7 +27,7 @@ pub struct McpStatus {
     pub ok: bool,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum Backend {
     #[default]

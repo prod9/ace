@@ -83,3 +83,63 @@ fn config_no_ace_toml() {
         .assert()
         .failure();
 }
+
+#[test]
+fn config_backend_flag_overrides_effective_backend() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"phoenix\"\n");
+
+    let output = env.ace()
+        .args(["--backend", "codex", "config"])
+        .output()
+        .expect("ace config");
+
+    assert!(output.status.success(), "ace config should succeed");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("backend = \"codex\""), "backend override should appear in effective config");
+}
+
+#[test]
+fn config_backend_short_flag_overrides_effective_backend() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"phoenix\"\n");
+
+    let output = env.ace()
+        .args(["-b", "codex", "config"])
+        .output()
+        .expect("ace config");
+
+    assert!(output.status.success(), "ace config should succeed");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("backend = \"codex\""), "short backend override should appear in effective config");
+}
+
+#[test]
+fn config_backend_alias_flag_overrides_effective_backend() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"phoenix\"\n");
+
+    let output = env.ace()
+        .args(["--codex", "config"])
+        .output()
+        .expect("ace config");
+
+    assert!(output.status.success(), "ace config should succeed");
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("backend = \"codex\""), "backend alias should appear in effective config");
+}
+
+#[test]
+fn config_backend_alias_conflicts_with_backend_flag() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"phoenix\"\n");
+
+    env.ace()
+        .args(["--backend", "codex", "--claude", "config"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("cannot combine multiple backend override flags"));
+}

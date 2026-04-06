@@ -15,6 +15,7 @@ use clap::{Parser, Subcommand};
 
 use crate::ace::{Ace, IoError};
 use crate::config::ConfigError;
+use crate::config::backend::Backend;
 use crate::state::actions::import_skill::ImportError;
 use crate::state::actions::mcp_register::McpRegisterError;
 use crate::state::actions::prepare::PrepareError;
@@ -32,6 +33,22 @@ use crate::git::GitError;
 pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
+
+    /// Override the configured backend for this command invocation
+    #[arg(short = 'b', long, global = true, value_enum)]
+    backend: Option<Backend>,
+
+    /// Shortcut for `--backend claude`
+    #[arg(long, global = true)]
+    claude: bool,
+
+    /// Shortcut for `--backend codex`
+    #[arg(long, global = true)]
+    codex: bool,
+
+    /// Shortcut for `--backend flaude`
+    #[arg(long, global = true)]
+    flaude: bool,
 
     /// Machine-readable output (no colors, no spinners, no logo)
     #[arg(long, global = true)]
@@ -118,6 +135,16 @@ pub(crate) enum CmdError {
 }
 
 pub async fn run(ace: &mut Ace, cli: Cli) {
+    let backend_override = match resolve_backend_override(&cli) {
+        Ok(backend) => backend,
+        Err(err) => {
+            exit_on_err(ace, Err(err));
+            return;
+        }
+    };
+
+    ace.set_backend_override(backend_override);
+
     match cli.command {
         Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
         Some(Command::Import { source, skill }) => import::run(ace, &source, skill.as_deref()),
@@ -132,6 +159,33 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Yolo) => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Some(Command::Maverick) => maverick::run(ace),
         None => main::run(ace, cli.backend_args).await,
+    }
+}
+
+fn resolve_backend_override(cli: &Cli) -> Result<Option<Backend>, CmdError> {
+    let mut selected = Vec::new();
+
+    if let Some(backend) = cli.backend {
+        selected.push(backend);
+    }
+    if cli.claude {
+        selected.push(Backend::Claude);
+    }
+    if cli.codex {
+        selected.push(Backend::Codex);
+    }
+    if cli.flaude {
+        selected.push(Backend::Flaude);
+    }
+
+    selected.dedup();
+
+    match selected.as_slice() {
+        [] => Ok(None),
+        [backend] => Ok(Some(*backend)),
+        _ => Err(CmdError::Other(
+            "cannot combine multiple backend override flags".to_string(),
+        )),
     }
 }
 
