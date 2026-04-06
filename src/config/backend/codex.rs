@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::{McpDecl, McpStatus};
@@ -18,10 +18,14 @@ fn config_path() -> Option<PathBuf> {
     home_dir().map(|d| d.join("config.toml"))
 }
 
+fn ensure_dir(path: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(path)
+        .map_err(|e| format!("create {}: {e}", path.display()))
+}
+
 fn ensure_home_dir() -> Result<PathBuf, String> {
     let home = home_dir().ok_or("cannot resolve Codex home".to_string())?;
-    std::fs::create_dir_all(&home)
-        .map_err(|e| format!("create {}: {e}", home.display()))?;
+    ensure_dir(&home)?;
     Ok(home)
 }
 
@@ -36,6 +40,7 @@ pub(super) fn is_ready() -> bool {
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
+    // Best-effort: create home dir so CLI commands work.
     let _ = ensure_home_dir();
 
     let output = Command::new("codex")
@@ -52,7 +57,7 @@ pub(super) fn mcp_list() -> HashSet<String> {
 }
 
 pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
-    let _ = ensure_home_dir();
+    ensure_home_dir()?;
 
     let prompt = build_check_prompt(names);
 
@@ -82,20 +87,21 @@ pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     }
 
     let content = std::fs::read_to_string(output_file.path())
-        .unwrap_or_else(|_| String::from_utf8_lossy(&output.stdout).into_owned());
+        .map_err(|e| format!("read output file: {e}"))?;
 
     Ok(parse_check_output(&content))
 }
 
 pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
-    let _ = ensure_home_dir();
+    ensure_home_dir()?;
 
     let args = build_mcp_remove_args(name);
-    let output = match Command::new("codex")
+    let output = Command::new("codex")
         .args(&args)
-        .output()
-    {
-        Ok(output) => output,
+        .output();
+
+    let output = match output {
+        Ok(o) => o,
         Err(_) => return remove_from_config(name),
     };
 
@@ -108,7 +114,7 @@ pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
 }
 
 pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
-    let _ = ensure_home_dir();
+    ensure_home_dir()?;
 
     if let Some(args) = build_mcp_add_args(entry) {
         let output = Command::new("codex")
@@ -566,19 +572,10 @@ url = "https://api.githubcopilot.com/mcp/"
     }
 
     #[test]
-    fn ensure_home_dir_creates_codex_home() {
+    fn ensure_dir_creates_nested_path() {
         let tmp = tempfile::tempdir().expect("tempdir");
-        let codex_home = tmp.path().join("nested").join(".codex");
-
-        unsafe {
-            std::env::set_var("CODEX_HOME", &codex_home);
-        }
-        let result = ensure_home_dir();
-        unsafe {
-            std::env::remove_var("CODEX_HOME");
-        }
-
-        assert!(result.is_ok(), "should create CODEX_HOME");
-        assert!(codex_home.is_dir(), "CODEX_HOME directory should exist");
+        let nested = tmp.path().join("a").join("b").join("c");
+        ensure_dir(&nested).expect("should create nested dirs");
+        assert!(nested.is_dir(), "nested directory should exist");
     }
 }
