@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use super::McpDecl;
+use super::{McpDecl, McpStatus};
 
 /// Returns Codex's home directory (`$CODEX_HOME` or `~/.codex`).
 fn home_dir() -> Option<PathBuf> {
@@ -23,6 +23,10 @@ pub(super) fn is_ready() -> bool {
 
 pub(super) fn mcp_list() -> HashSet<String> {
     HashSet::new()
+}
+
+pub(super) fn mcp_check(_names: &[String]) -> Vec<McpStatus> {
+    Vec::new()
 }
 
 pub(super) fn mcp_remove(_name: &str) -> Result<(), String> {

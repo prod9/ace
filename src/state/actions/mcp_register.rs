@@ -64,7 +64,7 @@ fn registration_message(name: &str, no_headers: bool) -> String {
 
 /// Parse header values for `{{ placeholder }}` syntax, prompt the user, and return
 /// a resolved copy. Returns `None` if no placeholders were found.
-fn resolve_headers(entry: &McpDecl, ace: &mut Ace) -> Result<Option<McpDecl>, IoError> {
+pub(crate) fn resolve_headers(entry: &McpDecl, ace: &mut Ace) -> Result<Option<McpDecl>, IoError> {
     // -- collect unique placeholders --
 
     let all_placeholders = collect_placeholders(&entry.headers);

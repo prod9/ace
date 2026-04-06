@@ -3,8 +3,9 @@ use std::collections::HashSet;
 use clap::Subcommand;
 
 use crate::ace::Ace;
+use crate::config::backend::McpStatus;
 use crate::config::school_toml::McpDecl;
-use crate::state::actions::mcp_register::McpRegister;
+use crate::state::actions::mcp_register::{self, McpRegister};
 use crate::state::actions::mcp_remove::McpRemove;
 
 use super::CmdError;
@@ -35,7 +36,7 @@ pub fn run(ace: &mut Ace, command: Option<Command>) {
     super::exit_on_err(ace, result);
 }
 
-/// `ace mcp` — check health, add missing, prompt to re-register broken.
+/// `ace mcp` — add missing, check health, prompt to re-register broken.
 fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
     ace.require_state()?;
 
@@ -45,24 +46,68 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
         return Ok(());
     }
 
-    let registered = backend.mcp_list();
-
     // -- add missing --
 
-    let missing: Vec<_> = entries.iter()
-        .filter(|e| !registered.contains(&e.name))
-        .collect();
+    let registered = backend.mcp_list();
+    let has_missing = entries.iter().any(|e| !registered.contains(&e.name));
 
-    if !missing.is_empty() {
-        let names: Vec<&str> = missing.iter().map(|e| e.name.as_str()).collect();
-        ace.progress(&format!("Registering missing: {}", names.join(", ")));
+    if has_missing {
         McpRegister { backend, entries: &entries }.run(ace)?;
     }
 
-    // TODO: health check via one-shot backend prompt (PROD9-53)
+    // -- health check registered servers --
 
-    if missing.is_empty() {
-        ace.done("all MCP servers registered");
+    let registered = backend.mcp_list();
+    let check_names: Vec<String> = entries.iter()
+        .map(|e| e.name.clone())
+        .filter(|n| registered.contains(n))
+        .collect();
+
+    if check_names.is_empty() {
+        return Ok(());
+    }
+
+    ace.progress("Checking MCP server health...");
+    let statuses = backend.mcp_check(&check_names);
+
+    if statuses.is_empty() {
+        ace.warn("health check unavailable for this backend");
+        return Ok(());
+    }
+
+    report_statuses(ace, &statuses);
+
+    // -- prompt to re-register broken --
+
+    let broken: Vec<&McpStatus> = statuses.iter().filter(|s| !s.ok).collect();
+
+    for status in &broken {
+        let Some(entry) = entries.iter().find(|e| e.name == status.name) else {
+            continue;
+        };
+
+        let prompt = format!("Re-register '{}'?", status.name);
+        if !ace.prompt_confirm(&prompt, true)? {
+            continue;
+        }
+
+        // Remove and re-add
+        if let Err(e) = backend.mcp_remove(&status.name) {
+            ace.warn(&format!("remove '{}' failed: {e}", status.name));
+            continue;
+        }
+
+        let resolved = mcp_register::resolve_headers(entry, ace)?;
+        let target = resolved.as_ref().unwrap_or(entry);
+
+        match backend.mcp_add(target) {
+            Ok(()) => ace.done(&format!("Re-registered '{}'", status.name)),
+            Err(e) => ace.warn(&format!("re-register '{}' failed: {e}", status.name)),
+        }
+    }
+
+    if broken.is_empty() {
+        ace.done("all MCP servers healthy");
     }
 
     Ok(())
@@ -81,22 +126,42 @@ fn run_check(ace: &mut Ace) -> Result<(), CmdError> {
     let registered = backend.mcp_list();
     let school_names: HashSet<&str> = entries.iter().map(|e| e.name.as_str()).collect();
 
+    // -- report missing --
+
     for entry in &entries {
-        if registered.contains(&entry.name) {
-            ace.done(&format!("{}", entry.name));
-        } else {
+        if !registered.contains(&entry.name) {
             ace.warn(&format!("{} (not registered)", entry.name));
         }
     }
 
-    // Report registered servers not in school config
+    // -- health check registered --
+
+    let check_names: Vec<String> = entries.iter()
+        .map(|e| e.name.clone())
+        .filter(|n| registered.contains(n))
+        .collect();
+
+    if !check_names.is_empty() {
+        ace.progress("Checking MCP server health...");
+        let statuses = backend.mcp_check(&check_names);
+
+        if statuses.is_empty() {
+            // Backend doesn't support health check — just report registered status
+            for name in &check_names {
+                ace.done(&format!("{name} (registered)"));
+            }
+        } else {
+            report_statuses(ace, &statuses);
+        }
+    }
+
+    // -- report non-school servers --
+
     for name in &registered {
         if !school_names.contains(name.as_str()) {
             ace.hint(&format!("{name} (not in school, ignored)"));
         }
     }
-
-    // TODO: one-shot health check via backend prompt (PROD9-53)
 
     Ok(())
 }
@@ -131,9 +196,19 @@ fn run_reset(ace: &mut Ace, name: Option<String>) -> Result<(), CmdError> {
     };
 
     McpRemove { backend, names: &names }.run(ace)
-        .map_err(|e| CmdError::Other(e))?;
+        .map_err(CmdError::Other)?;
 
     Ok(())
+}
+
+fn report_statuses(ace: &mut Ace, statuses: &[McpStatus]) {
+    for status in statuses {
+        if status.ok {
+            ace.done(&format!("{}", status.name));
+        } else {
+            ace.error(&format!("{} (unhealthy)", status.name));
+        }
+    }
 }
 
 /// Load school MCP entries and backend from current state.

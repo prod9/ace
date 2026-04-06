@@ -65,6 +65,55 @@ fn mcp_clear_is_alias_for_reset() {
     assert!(!list_content.contains("linear"), "linear should be removed");
 }
 
+// -- ace mcp check --
+
+#[test]
+fn mcp_check_reports_registered_servers() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    env.write_flaude_mcp_list(&["linear", "github"]);
+
+    let output = env.ace().args(["mcp", "check"]).output().expect("should run");
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{stdout}{stderr}");
+    assert!(combined.contains("linear"), "should report linear status");
+    assert!(combined.contains("github"), "should report github status");
+}
+
+#[test]
+fn mcp_check_reports_missing_servers() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    // Only linear is registered
+    env.write_flaude_mcp_list(&["linear"]);
+
+    let output = env.ace().args(["mcp", "check"]).output().expect("should run");
+    assert!(output.status.success());
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let combined = format!("{stdout}{stderr}");
+    assert!(combined.contains("github"), "should mention github as missing");
+}
+
+// -- ace mcp (default) --
+
+#[test]
+fn mcp_default_registers_missing_and_checks() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    // Nothing registered yet
+
+    env.ace().args(["mcp"]).assert().success();
+
+    // Should have registered both servers
+    let records = env.read_flaude_mcp_records();
+    assert_eq!(records.len(), 2, "should register both missing servers");
+}
+
 const SCHOOL_TOML_OAUTH: &str = r#"
 name = "test-school"
 

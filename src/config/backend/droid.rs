@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::process::Command;
 
-use super::McpDecl;
+use super::{McpDecl, McpStatus};
 
 /// Check if DROID is ready: ~/.factory/settings.json exists.
 pub(super) fn is_ready() -> bool {
@@ -57,6 +57,48 @@ fn build_mcp_remove_args(name: &str) -> Vec<String> {
         "remove".to_string(),
         name.to_string(),
     ]
+}
+
+pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+    let prompt = format!(
+        "You have MCP servers registered. For each of the following, call any tool to verify \
+         it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
+         Servers: {}",
+        names.join(", ")
+    );
+
+    let output = Command::new("droid")
+        .args(["exec", &prompt, "-o", "json"])
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => return Vec::new(),
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_check_output(&stdout)
+}
+
+/// Parse Droid's `{"type":"result","result":"..."}` envelope.
+fn parse_check_output(output: &str) -> Vec<McpStatus> {
+    let parsed: serde_json::Value = match serde_json::from_str(output) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    if parsed.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false) {
+        return Vec::new();
+    }
+
+    match parsed.get("result") {
+        Some(serde_json::Value::String(s)) => super::parse_status_array(s),
+        Some(serde_json::Value::Array(_)) => {
+            let json = parsed["result"].to_string();
+            super::parse_status_array(&json)
+        }
+        _ => Vec::new(),
+    }
 }
 
 /// Build CLI args for `droid mcp add <name> <url> --type http [--header "K: V"]`.
@@ -122,6 +164,29 @@ mod tests {
                 "--header", "Authorization: Bearer tok",
             ]
         );
+    }
+
+    // -- parse_check_output --
+
+    #[test]
+    fn parse_check_valid() {
+        let output = r#"{"type":"result","result":"[{\"name\":\"linear\",\"ok\":true}]"}"#;
+        let result = parse_check_output(output);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "linear");
+        assert!(result[0].ok);
+    }
+
+    #[test]
+    fn parse_check_malformed_returns_empty() {
+        assert!(parse_check_output("not json").is_empty());
+        assert!(parse_check_output(r#"{"type":"result","result":"garbage"}"#).is_empty());
+    }
+
+    #[test]
+    fn parse_check_error_returns_empty() {
+        let output = r#"{"type":"result","subtype":"failure","is_error":true,"result":"Exec failed"}"#;
+        assert!(parse_check_output(output).is_empty());
     }
 
     // -- build_mcp_remove_args --

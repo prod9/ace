@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::process::Command;
 
-use super::McpDecl;
+use super::{McpDecl, McpStatus};
 
 /// Read `~/.claude.json` and extract keys from the `mcpServers` object.
 pub(super) fn mcp_list() -> HashSet<String> {
@@ -97,6 +97,56 @@ fn build_mcp_remove_args(name: &str) -> Vec<String> {
     ]
 }
 
+const CHECK_SCHEMA: &str = r#"{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"]}}"#;
+
+pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+    let prompt = format!(
+        "You have MCP servers registered. For each of the following, call any tool to verify \
+         it responds. Reply with only a JSON array. Servers: {}",
+        names.join(", ")
+    );
+
+    let output = Command::new("claude")
+        .args([
+            "-p", &prompt,
+            "--output-format", "json",
+            "--json-schema", CHECK_SCHEMA,
+            "--bare",
+        ])
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => return Vec::new(),
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_check_output(&stdout)
+}
+
+/// Parse Claude's `{"type":"result","result":"..."}` envelope.
+fn parse_check_output(output: &str) -> Vec<McpStatus> {
+    let parsed: serde_json::Value = match serde_json::from_str(output) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    // Error results
+    if parsed.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false) {
+        return Vec::new();
+    }
+
+    // result can be a JSON string or a direct array
+    match parsed.get("result") {
+        Some(serde_json::Value::String(s)) => super::parse_status_array(s),
+        Some(serde_json::Value::Array(_)) => {
+            let json = parsed["result"].to_string();
+            super::parse_status_array(&json)
+        }
+        _ => Vec::new(),
+    }
+}
+
 #[allow(dead_code)]
 pub(super) fn is_ready() -> bool {
     let home = match std::env::var("HOME") {
@@ -179,6 +229,41 @@ mod tests {
                 "-H", "Authorization: Bearer tok",
             ]
         );
+    }
+
+    // -- parse_check_output --
+
+    #[test]
+    fn parse_check_valid() {
+        let output = r#"{"type":"result","result":"[{\"name\":\"linear\",\"ok\":true},{\"name\":\"github\",\"ok\":false}]"}"#;
+        let result = parse_check_output(output);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].name, "linear");
+        assert!(result[0].ok);
+        assert_eq!(result[1].name, "github");
+        assert!(!result[1].ok);
+    }
+
+    #[test]
+    fn parse_check_result_is_raw_json_array() {
+        // Claude with --json-schema may return the array directly in result
+        let output = r#"{"type":"result","result":[{"name":"linear","ok":true}]}"#;
+        let result = parse_check_output(output);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "linear");
+    }
+
+    #[test]
+    fn parse_check_malformed_returns_empty() {
+        assert!(parse_check_output("not json").is_empty());
+        assert!(parse_check_output("{}").is_empty());
+        assert!(parse_check_output(r#"{"type":"result","result":"not json"}"#).is_empty());
+    }
+
+    #[test]
+    fn parse_check_error_result_returns_empty() {
+        let output = r#"{"type":"result","subtype":"failure","is_error":true,"result":"Exec failed"}"#;
+        assert!(parse_check_output(output).is_empty());
     }
 
     // -- build_mcp_remove_args --

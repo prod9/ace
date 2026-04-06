@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::process::Command;
 
-use super::McpDecl;
+use super::{McpDecl, McpStatus};
 
 /// Returns OpenCode's data directory (~/.local/share/opencode or $OPENCODE_HOME).
 #[allow(dead_code)]
@@ -69,6 +70,65 @@ fn parse_mcp_names(json: &str) -> HashSet<String> {
         })
         .map(|(k, _)| k.clone())
         .collect()
+}
+
+pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+    let prompt = format!(
+        "You have MCP servers registered. For each of the following, call any tool to verify \
+         it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
+         Servers: {}",
+        names.join(", ")
+    );
+
+    let output = Command::new("opencode")
+        .args(["run", &prompt, "--format", "json"])
+        .output();
+
+    let output = match output {
+        Ok(o) if o.status.success() => o,
+        _ => return Vec::new(),
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_check_output(&stdout)
+}
+
+/// Parse OpenCode's JSONL stream — concatenate "text" type parts.
+fn parse_check_output(output: &str) -> Vec<McpStatus> {
+    let mut text = String::new();
+
+    for line in output.lines() {
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(line) else {
+            continue;
+        };
+
+        if v.get("type").and_then(|t| t.as_str()) == Some("text") {
+            if let Some(t) = v.pointer("/part/text").and_then(|t| t.as_str()) {
+                text.push_str(t);
+            }
+        }
+    }
+
+    // The concatenated text should contain a JSON array
+    extract_json_array(&text)
+}
+
+/// Try to find and parse a JSON array from text that may contain surrounding prose.
+fn extract_json_array(text: &str) -> Vec<McpStatus> {
+    // Try direct parse first
+    let result = super::parse_status_array(text);
+    if !result.is_empty() {
+        return result;
+    }
+
+    // Try extracting array from within the text
+    if let Some(start) = text.find('[') {
+        if let Some(end) = text.rfind(']') {
+            return super::parse_status_array(&text[start..=end]);
+        }
+    }
+
+    Vec::new()
 }
 
 /// Remove an MCP server entry from ~/.config/opencode/opencode.json.
@@ -245,6 +305,39 @@ mod tests {
             parsed["mcp"]["linear"]["type"], "remote",
             "should add new MCP"
         );
+    }
+
+    // -- parse_check_output --
+
+    #[test]
+    fn parse_check_valid() {
+        let output = concat!(
+            r#"{"type":"step_start","timestamp":123,"sessionID":"ses_1","part":{"type":"step-start"}}"#, "\n",
+            r#"{"type":"text","timestamp":124,"sessionID":"ses_1","part":{"type":"text","text":"[{\"name\":\"linear\",\"ok\":true}]"}}"#, "\n",
+            r#"{"type":"step_finish","timestamp":125,"sessionID":"ses_1","part":{"type":"step-finish"}}"#, "\n",
+        );
+        let result = parse_check_output(output);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "linear");
+        assert!(result[0].ok);
+    }
+
+    #[test]
+    fn parse_check_multi_text_parts() {
+        let output = concat!(
+            r#"{"type":"text","timestamp":1,"sessionID":"s","part":{"type":"text","text":"[{\"name\":\"a\",\"ok\""}}"#, "\n",
+            r#"{"type":"text","timestamp":2,"sessionID":"s","part":{"type":"text","text":":true}]"}}"#, "\n",
+        );
+        let result = parse_check_output(output);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "a");
+        assert!(result[0].ok);
+    }
+
+    #[test]
+    fn parse_check_malformed_returns_empty() {
+        assert!(parse_check_output("not json").is_empty());
+        assert!(parse_check_output("").is_empty());
     }
 
     // -- remove_mcp_entry --

@@ -10,6 +10,13 @@ use serde::{Deserialize, Serialize};
 
 use super::school_toml::McpDecl;
 
+/// Health check result for a single MCP server.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct McpStatus {
+    pub name: String,
+    pub ok: bool,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Backend {
@@ -114,6 +121,21 @@ impl Backend {
         }
     }
 
+    /// Health-check registered MCP servers via one-shot backend prompt.
+    /// Best-effort: returns empty vec on failure (same convention as mcp_list).
+    pub fn mcp_check(&self, names: &[String]) -> Vec<McpStatus> {
+        if names.is_empty() {
+            return Vec::new();
+        }
+        match self {
+            Backend::Claude => claude::mcp_check(names),
+            Backend::OpenCode => opencode::mcp_check(names),
+            Backend::Droid => droid::mcp_check(names),
+            Backend::Flaude => flaude::mcp_check(names),
+            Backend::Codex => codex::mcp_check(names),
+        }
+    }
+
     /// Register an MCP server entry with the backend.
     pub fn mcp_add(&self, entry: &McpDecl) -> Result<(), String> {
         match self {
@@ -124,6 +146,26 @@ impl Backend {
             Backend::Codex => codex::mcp_add(entry),
         }
     }
+}
+
+/// Parse `[{"name":"...","ok":bool}]` JSON into McpStatus vec.
+/// Shared helper — each backend extracts the JSON string from its own output format,
+/// then calls this to parse the common shape.
+pub(super) fn parse_status_array(json: &str) -> Vec<McpStatus> {
+    #[derive(serde::Deserialize)]
+    struct Entry {
+        name: String,
+        ok: bool,
+    }
+
+    let entries: Vec<Entry> = match serde_json::from_str(json) {
+        Ok(v) => v,
+        Err(_) => return Vec::new(),
+    };
+
+    entries.into_iter()
+        .map(|e| McpStatus { name: e.name, ok: e.ok })
+        .collect()
 }
 
 #[cfg(test)]

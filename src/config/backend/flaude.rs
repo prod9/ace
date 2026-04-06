@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use super::McpDecl;
+use super::{McpDecl, McpStatus};
 
 /// Flaude record file for MCP registrations.
 fn mcp_record_path() -> Option<PathBuf> {
@@ -32,6 +32,13 @@ pub(super) fn mcp_list() -> HashSet<String> {
         .lines()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// Test fake: returns all servers as healthy.
+pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+    names.iter()
+        .map(|n| McpStatus { name: n.clone(), ok: true })
         .collect()
 }
 
