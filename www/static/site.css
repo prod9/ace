@@ -203,8 +203,8 @@ td:last-child { color: #888; }
   --matrix-mix: 0.15;
   color: color-mix(
     in oklab,
-    #5a5a5a calc((1 - var(--matrix-mix)) * 100%),
-    #b7b7b7 calc(var(--matrix-mix) * 100%)
+    #242424 calc((1 - var(--matrix-mix)) * 100%),
+    #5c5c5c calc(var(--matrix-mix) * 100%)
   );
   transition: color 1.8s ease;
 }

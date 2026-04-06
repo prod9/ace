@@ -2,7 +2,7 @@
   const rail = document.querySelector(".matrix-rail");
   if (!rail) return;
 
-  const glyphs = [".", "·", "░", "▀", "█"];
+  const glyphs = [".", "·", "˙", ":", "░"];
   const rows = [];
   let tickCount = 0;
   let cursorRow = 0;
