@@ -64,7 +64,6 @@ stored by the backend (keychain, auth files, etc.).
 | Backend  | Auth behavior                              | Token storage                             |
 |----------|------------------------------------------|-------------------------------------------|
 | Claude   | Auto-prompts on 401                      | System keychain                           |
-| OpenCode | Auto-prompts on 401                      | `~/.local/share/opencode/mcp-auth.json`   |
 | Codex    | Managed in-session via `/mcp`            | `~/.codex/auth.json` or OS keyring        |
 
 ACE does not implement OAuth, store tokens, or manage token refresh.
@@ -72,13 +71,13 @@ ACE does not implement OAuth, store tokens, or manage token refresh.
 ### First-Run Auth Prompt
 
 After registering MCP entries, ACE should prompt the user to authenticate any servers that
-haven't been authorized yet. For Claude and OpenCode this happens automatically on first use
+haven't been authorized yet. For Claude this happens automatically on first use
 (401 triggers OAuth inline). For Codex, MCP auth and management happen inside the backend via
 `/mcp`.
 
 ACE detects newly registered entries (entries added since last run) and prints a message:
 
-- Claude/OpenCode: `"New MCP server '<name>' registered — you'll be prompted to authorize on first use."`
+- Claude: `"New MCP server '<name>' registered — you'll be prompted to authorize on first use."`
 - Codex: `"New MCP server '<name>' registered — use /mcp inside Codex to finish setup."`
 
 This is informational only — ACE does not block on auth completion.
@@ -96,8 +95,8 @@ for example due to expired auth, revoked tokens, or stale backend-side state.
 ### Mechanism
 
 ACE performs health checks by asking the backend to execute a one-shot prompt that exercises
-each MCP server. The backend runs a short non-interactive session (e.g. `claude -p`, `opencode
-run`, `droid exec`) instructing the LLM to call a tool on each named server and report success
+each MCP server. The backend runs a short non-interactive session (e.g. `claude -p`,
+`codex exec`) instructing the LLM to call a tool on each named server and report success
 or failure as structured JSON.
 
 This approach verifies **effective usability** — not just config presence — because the check

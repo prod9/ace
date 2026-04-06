@@ -2,14 +2,13 @@
 
 ## MCP Server Authentication
 
-ACE delegates MCP authentication entirely to the backend. All three supported backends
-(Claude Code, OpenCode, Codex) handle OAuth discovery, token acquisition, storage, and refresh
+ACE delegates MCP authentication entirely to the backend. Supported backends
+(Claude Code, Codex) handle OAuth discovery, token acquisition, storage, and refresh
 for remote MCP servers. See [mcp.md](mcp.md) for full details on the remote-only MCP design.
 
 | Backend  | Auth behavior                              | Token storage                             |
 |----------|--------------------------------------------|-------------------------------------------|
 | Claude   | Auto-prompts on 401                        | System keychain                           |
-| OpenCode | Auto-prompts on 401                        | `~/.local/share/opencode/mcp-auth.json`   |
 | Codex    | Managed in-session via `/mcp`              | `~/.codex/auth.json` or OS keyring        |
 
 ACE does not implement OAuth, store tokens, or manage token refresh.

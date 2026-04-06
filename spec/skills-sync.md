@@ -21,12 +21,12 @@ linked — absent folders are silently skipped.
 Not all backends natively support every folder. ACE links regardless and warns for unsupported
 combos:
 
-| Folder     | Claude | OpenCode | Codex |
-|------------|--------|----------|-------|
-| `skills/`  | ✓      | ✓        | ✓     |
-| `rules/`   | ✓      | ✗        | ✗     |
-| `commands/`| ✓      | ✓        | ✗     |
-| `agents/`  | ✓      | ✓        | ✗     |
+| Folder     | Claude | Codex |
+|------------|--------|-------|
+| `skills/`  | ✓      | ✓     |
+| `rules/`   | ✓      | ✗     |
+| `commands/`| ✓      | ✗     |
+| `agents/`  | ✓      | ✗     |
 
 Linking still happens for unsupported combos — the warning is informational only (linked for
 future compatibility).

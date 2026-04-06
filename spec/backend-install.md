@@ -53,13 +53,6 @@ Detect OS and architecture from `uname`:
 2. Download binary: `GET {bucket}/{version}/{os}-{arch}/claude` → raw executable.
 3. No extraction needed.
 
-**OpenCode**
-
-1. Download: `GET https://github.com/anomalyco/opencode/releases/latest/download/opencode-{os}-{arch}.tar.gz`
-   - OS: `linux`, `mac` (not `darwin`)
-   - Arch: `x86_64`, `arm64`
-2. Extract `opencode` binary from tar.gz.
-
 **Codex**
 
 1. Download: `GET https://github.com/openai/codex/releases/latest/download/codex-{arch}-{target}.tar.gz`

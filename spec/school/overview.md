@@ -37,7 +37,7 @@ skills, conventions, and agent configurations — regardless of which project th
 school.toml              # School metadata and configuration (see school-toml.md)
 skills/
   <name>/
-    SKILL.md             # Skill definition (standard Claude/OpenCode skill format)
+    SKILL.md             # Skill definition (standard Claude Code skill format)
 rules/
   <name>.md              # Convention/rule files
 commands/
