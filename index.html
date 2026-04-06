@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ACE - AI Coding Environment</title>
+<title>ACE - Augmented Coding Environment</title>
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -27,27 +27,26 @@
 ░█▀█░█░░░█▀▀
 ░▀░▀░▀▀▀░▀▀▀
 </pre>
-<div class="subtitle">AI Coding Environment</div>
+<div class="subtitle">Augmented Coding Environment</div>
 
 <h2>// what it does</h2>
 <ul>
-  <li>Sets up AI coding tools in one command</li>
+  <li>Sets up AI coding tools from a shared project entrypoint</li>
   <li>Manages shared skills &amp; conventions via schools</li>
-  <li>Configures LLM backends (Claude Code, OpenCode, Codex)</li>
+  <li>Configures supported backends (Claude Code, Codex)</li>
   <li>Keeps environments in sync across your team</li>
 </ul>
 
 <h2>// quick start</h2>
 <div class="code-block">
-<span class="prompt">$</span> cargo install ace<br>
-<span class="prompt">$</span> ace setup prod9/school <span class="comment"># clone a school, write config</span><br>
+<span class="prompt">$</span> cargo install --path .<br>
+<span class="prompt">$</span> ace setup prod9/school <span class="comment"># clone a school, register MCP, write config</span><br>
 <span class="prompt">$</span> ace <span class="comment"># launch your AI backend</span>
 </div>
 
 <h2>// supported backends</h2>
 <div class="backends">
   <span>Claude Code</span>
-  <span>OpenCode</span>
   <span>Codex</span>
 </div>
 

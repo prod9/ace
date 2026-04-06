@@ -33,18 +33,19 @@ for AI coding tools. Everyone on the same school shares the same skill set.
 
 <div class="code-block"><pre class="tree"><span class="dir">my-school/</span>
 ├── <span class="file">school.toml</span>      <span class="comment"># school metadata &amp; config</span>
-├── <span class="dir">skills/</span>          <span class="comment"># shared AI skills</span>
-│   ├── <span class="file">commit.md</span>
-│   ├── <span class="file">review.md</span>
+├── <span class="dir">skills/</span>          <span class="comment"># skill directories</span>
+│   ├── <span class="dir">commit/</span>
+│   │   └── <span class="file">SKILL.md</span>
+│   ├── <span class="dir">review/</span>
+│   │   └── <span class="file">SKILL.md</span>
 │   └── <span class="file">...</span>
-├── <span class="dir">rules/</span>           <span class="comment"># coding conventions</span>
-│   ├── <span class="file">rust-coding.md</span>
-│   └── <span class="file">...</span>
-└── <span class="file">CLAUDE.md</span>        <span class="comment"># session prompt template</span></pre></div>
+├── <span class="dir">rules/</span>           <span class="comment"># optional coding conventions</span>
+├── <span class="dir">commands/</span>        <span class="comment"># optional slash commands</span>
+└── <span class="dir">agents/</span>          <span class="comment"># optional agent configs</span></pre></div>
 
 <p>
 <span style="color:#c0c0c0;">school.toml</span> defines the school name, services
-(GitHub, Linear), MCP servers, and project-specific overrides.
+(GitHub, Linear), MCP servers, roles, imports, and project catalog entries.
 </p>
 
 <h2>// create a school</h2>
@@ -53,12 +54,12 @@ for AI coding tools. Everyone on the same school shares the same skill set.
 <span class="prompt">$</span> mkdir my-school && cd my-school<br>
 <span class="prompt">$</span> git init<br>
 <span class="prompt">$</span> ace school init<br>
-<span class="comment"># generates school.toml, skills/, rules/, CLAUDE.md</span>
+<span class="comment"># generates school.toml and starter school files</span>
 </div>
 
 <p>
-Add skills as markdown files in <span style="color:#c0c0c0;">skills/</span>.
-Add coding conventions in <span style="color:#c0c0c0;">rules/</span>.
+Add skills as folders under <span style="color:#c0c0c0;">skills/</span> with a <span style="color:#c0c0c0;">SKILL.md</span> file.
+Add conventions, commands, or agent configs in the optional sibling folders.
 Push to a git remote.
 </p>
 
@@ -73,12 +74,13 @@ Push to a git remote.
 
 <p>
 Skills are symlinked from the school cache into your project. Edits go
-directly to the cached school repo. To propose changes back:
+directly to the cached school repo. Review changes with
+<span style="color:#c0c0c0;">ace diff</span>, then branch and commit in the school cache before opening a PR.
 </p>
 
 <div class="code-block">
 <span class="prompt">$</span> ace diff <span class="comment"># see what you changed</span><br>
-<span class="prompt">$</span> ace school propose <span class="comment"># branch, commit, push, open PR</span>
+<span class="comment"># then use git in the school cache to branch, commit, and push</span>
 </div>
 
 
