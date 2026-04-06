@@ -10,6 +10,8 @@
   --size-h3: 20px;
   --size-ui: 15px;
   --size-micro: 11px;
+  --matrix-font-size: 24px;
+  --matrix-line-height: 1;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -19,6 +21,10 @@ body {
   font-family: var(--font-mono);
   font-size: var(--size-body);
   line-height: 1.75;
+}
+.page-shell {
+  display: block;
+  min-height: 100vh;
 }
 .container {
   max-width: 860px;
@@ -179,6 +185,63 @@ td:last-child { color: #888; }
 /* -- layout -- */
 
 .line { border-top: 1px solid #333; margin: 36px 0; }
+
+.matrix-rail {
+  display: none;
+}
+
+.matrix-column {
+  margin: 0;
+  width: 1ch;
+  flex: 0 0 1ch;
+  font-family: var(--font-mono);
+  font-size: var(--matrix-font-size);
+  line-height: var(--matrix-line-height);
+  user-select: none;
+  white-space: pre;
+}
+
+.matrix-cell {
+  --matrix-mix: 0.15;
+  display: block;
+  color: color-mix(
+    in oklab,
+    #7c5a21 calc((1 - var(--matrix-mix)) * 100%),
+    #1f4a39 calc(var(--matrix-mix) * 100%)
+  );
+}
+
+@media (min-width: 1240px) {
+  .page-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 860px) minmax(180px, 1fr);
+    gap: 48px;
+    align-items: stretch;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  .container {
+    margin: 0;
+    padding-right: 0;
+  }
+
+  .matrix-rail {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    min-height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    mask-image: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.9) 12%, rgba(0, 0, 0, 0.9) 88%, transparent 100%);
+  }
+}
+
+@media (min-width: 1480px) {
+  .page-shell {
+    max-width: none;
+  }
+}
 
 /* -- footer -- */
 
