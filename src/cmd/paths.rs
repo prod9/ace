@@ -40,6 +40,7 @@ fn build_paths(
     out.push(("config.user".into(), p.user.display().to_string()));
     out.push(("config.local".into(), p.local.display().to_string()));
     out.push(("config.project".into(), p.project.display().to_string()));
+    out.push(("cache.root".into(), p.cache.display().to_string()));
 
     if let Some(spec) = ace.state().school_specifier.as_deref() {
         let sp = school_paths::resolve(ace.project_dir(), spec)?;
@@ -64,7 +65,8 @@ fn lookup_key<'a>(all: &'a [(String, String)], key: &str) -> Option<&'a str> {
     // Shorthand aliases
     let full_key = match key {
         "school" => "school.cache",
-        "cache" => "school.cache",
+        "cache" => "cache.root",
+        "school-cache" => "school.cache",
         "root" => "school.root",
         "user" => "config.user",
         "local" => "config.local",

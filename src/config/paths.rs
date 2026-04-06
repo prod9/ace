@@ -6,14 +6,16 @@ pub struct AcePaths {
     pub user: PathBuf,
     pub local: PathBuf,
     pub project: PathBuf,
+    pub cache: PathBuf,
 }
 
 pub fn resolve(project_dir: &std::path::Path) -> Result<AcePaths, ConfigError> {
     let user = config_dir()?.join("ace").join("config.toml");
     let local = project_dir.join("ace.local.toml");
     let project = project_dir.join("ace.toml");
+    let cache = cache_dir()?.join("ace");
 
-    Ok(AcePaths { user, local, project })
+    Ok(AcePaths { user, local, project, cache })
 }
 
 pub(super) fn home_dir() -> Option<PathBuf> {
