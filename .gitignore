@@ -20,5 +20,8 @@ wheels/
 # Local config
 ace.local.toml
 
+# Session scratch
+.tasks.md
+
 # Added by cargo
 /target
