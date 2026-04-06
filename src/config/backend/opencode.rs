@@ -72,7 +72,7 @@ fn parse_mcp_names(json: &str) -> HashSet<String> {
         .collect()
 }
 
-pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     let prompt = format!(
         "You have MCP servers registered. For each of the following, call any tool to verify \
          it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
@@ -82,15 +82,16 @@ pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
 
     let output = Command::new("opencode")
         .args(["run", &prompt, "--format", "json"])
-        .output();
+        .output()
+        .map_err(|e| format!("opencode: {e}"))?;
 
-    let output = match output {
-        Ok(o) if o.status.success() => o,
-        _ => return Vec::new(),
-    };
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("opencode: {}", stderr.trim()));
+    }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    parse_check_output(&stdout)
+    Ok(parse_check_output(&stdout))
 }
 
 /// Parse OpenCode's JSONL stream — concatenate "text" type parts.

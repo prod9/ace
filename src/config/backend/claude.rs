@@ -99,7 +99,7 @@ fn build_mcp_remove_args(name: &str) -> Vec<String> {
 
 const CHECK_SCHEMA: &str = r#"{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"]}}"#;
 
-pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     let prompt = format!(
         "You have MCP servers registered. For each of the following, call any tool to verify \
          it responds. Reply with only a JSON array. Servers: {}",
@@ -113,37 +113,37 @@ pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
             "--json-schema", CHECK_SCHEMA,
             "--bare",
         ])
-        .output();
-
-    let output = match output {
-        Ok(o) if o.status.success() => o,
-        _ => return Vec::new(),
-    };
+        .output()
+        .map_err(|e| format!("claude: {e}"))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Claude returns JSON even on failure (is_error in envelope).
+    // Try to extract error from JSON before checking exit code.
     parse_check_output(&stdout)
 }
 
 /// Parse Claude's `{"type":"result","result":"..."}` envelope.
-fn parse_check_output(output: &str) -> Vec<McpStatus> {
-    let parsed: serde_json::Value = match serde_json::from_str(output) {
-        Ok(v) => v,
-        Err(_) => return Vec::new(),
-    };
+fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
+    let parsed: serde_json::Value = serde_json::from_str(output)
+        .map_err(|_| "failed to parse claude output".to_string())?;
 
-    // Error results
+    // Error results — extract the message
     if parsed.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false) {
-        return Vec::new();
+        let msg = parsed.get("result")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown error");
+        return Err(format!("claude: {msg}"));
     }
 
     // result can be a JSON string or a direct array
     match parsed.get("result") {
-        Some(serde_json::Value::String(s)) => super::parse_status_array(s),
+        Some(serde_json::Value::String(s)) => Ok(super::parse_status_array(s)),
         Some(serde_json::Value::Array(_)) => {
             let json = parsed["result"].to_string();
-            super::parse_status_array(&json)
+            Ok(super::parse_status_array(&json))
         }
-        _ => Vec::new(),
+        _ => Ok(Vec::new()),
     }
 }
 
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn parse_check_valid() {
         let output = r#"{"type":"result","result":"[{\"name\":\"linear\",\"ok\":true},{\"name\":\"github\",\"ok\":false}]"}"#;
-        let result = parse_check_output(output);
+        let result = parse_check_output(output).expect("should parse");
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name, "linear");
         assert!(result[0].ok);
@@ -248,22 +248,34 @@ mod tests {
     fn parse_check_result_is_raw_json_array() {
         // Claude with --json-schema may return the array directly in result
         let output = r#"{"type":"result","result":[{"name":"linear","ok":true}]}"#;
-        let result = parse_check_output(output);
+        let result = parse_check_output(output).expect("should parse");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, "linear");
     }
 
     #[test]
-    fn parse_check_malformed_returns_empty() {
-        assert!(parse_check_output("not json").is_empty());
-        assert!(parse_check_output("{}").is_empty());
-        assert!(parse_check_output(r#"{"type":"result","result":"not json"}"#).is_empty());
+    fn parse_check_malformed_returns_err() {
+        assert!(parse_check_output("not json").is_err());
     }
 
     #[test]
-    fn parse_check_error_result_returns_empty() {
+    fn parse_check_empty_object_returns_empty() {
+        let result = parse_check_output("{}").expect("valid JSON, no error");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_check_bad_result_string_returns_empty() {
+        let result = parse_check_output(r#"{"type":"result","result":"not json"}"#)
+            .expect("valid envelope, no is_error");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn parse_check_error_result_returns_err() {
         let output = r#"{"type":"result","subtype":"failure","is_error":true,"result":"Exec failed"}"#;
-        assert!(parse_check_output(output).is_empty());
+        let err = parse_check_output(output).expect_err("should be error");
+        assert!(err.contains("Exec failed"), "error should contain the message");
     }
 
     // -- build_mcp_remove_args --

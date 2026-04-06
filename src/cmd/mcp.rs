@@ -68,10 +68,16 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
     }
 
     ace.progress("Checking MCP server health...");
-    let statuses = backend.mcp_check(&check_names);
+    let statuses = match backend.mcp_check(&check_names) {
+        Ok(s) => s,
+        Err(e) => {
+            ace.warn(&format!("health check failed: {e}"));
+            return Ok(());
+        }
+    };
 
     if statuses.is_empty() {
-        ace.warn("health check unavailable for this backend");
+        ace.warn("health check returned no results");
         return Ok(());
     }
 
@@ -143,15 +149,14 @@ fn run_check(ace: &mut Ace) -> Result<(), CmdError> {
 
     if !check_names.is_empty() {
         ace.progress("Checking MCP server health...");
-        let statuses = backend.mcp_check(&check_names);
-
-        if statuses.is_empty() {
-            // Backend doesn't support health check — just report registered status
-            for name in &check_names {
-                ace.done(&format!("{name} (registered)"));
+        match backend.mcp_check(&check_names) {
+            Err(e) => ace.warn(&format!("health check failed: {e}")),
+            Ok(statuses) if statuses.is_empty() => {
+                for name in &check_names {
+                    ace.done(&format!("{name} (registered)"));
+                }
             }
-        } else {
-            report_statuses(ace, &statuses);
+            Ok(statuses) => report_statuses(ace, &statuses),
         }
     }
 

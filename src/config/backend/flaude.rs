@@ -36,10 +36,10 @@ pub(super) fn mcp_list() -> HashSet<String> {
 }
 
 /// Test fake: returns all servers as healthy.
-pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
-    names.iter()
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
+    Ok(names.iter()
         .map(|n| McpStatus { name: n.clone(), ok: true })
-        .collect()
+        .collect())
 }
 
 /// Remove an MCP server by name. Appends a removal record and updates the list file.

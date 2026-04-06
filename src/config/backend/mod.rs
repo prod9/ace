@@ -122,10 +122,10 @@ impl Backend {
     }
 
     /// Health-check registered MCP servers via one-shot backend prompt.
-    /// Best-effort: returns empty vec on failure (same convention as mcp_list).
-    pub fn mcp_check(&self, names: &[String]) -> Vec<McpStatus> {
+    /// Returns Ok(statuses) on success, Err(reason) when the check itself fails.
+    pub fn mcp_check(&self, names: &[String]) -> Result<Vec<McpStatus>, String> {
         if names.is_empty() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
         match self {
             Backend::Claude => claude::mcp_check(names),

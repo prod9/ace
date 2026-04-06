@@ -38,7 +38,7 @@ pub(super) fn mcp_list() -> HashSet<String> {
     parse_mcp_names(&content)
 }
 
-pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
+pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     let prompt = format!(
         "You have MCP servers registered. For each of the following, call any tool to verify \
          it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
@@ -48,15 +48,16 @@ pub(super) fn mcp_check(names: &[String]) -> Vec<McpStatus> {
 
     let output = Command::new("codex")
         .args(["exec", &prompt])
-        .output();
+        .output()
+        .map_err(|e| format!("codex: {e}"))?;
 
-    let output = match output {
-        Ok(o) if o.status.success() => o,
-        _ => return Vec::new(),
-    };
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("codex: {}", stderr.trim()));
+    }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    parse_check_output(&stdout)
+    Ok(parse_check_output(&stdout))
 }
 
 pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
