@@ -4,7 +4,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::config::index_toml;
 use crate::git;
-use super::prepare::PrepareError;
+use super::prepare_school::PrepareError;
 
 use super::write_config::WriteConfig;
 

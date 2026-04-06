@@ -5,8 +5,8 @@ use clap::Subcommand;
 use crate::ace::Ace;
 use crate::config::backend::McpStatus;
 use crate::config::school_toml::McpDecl;
-use crate::state::actions::mcp_register::{self, McpRegister};
-use crate::state::actions::mcp_remove::McpRemove;
+use crate::state::actions::register_mcp::{self, McpRegister};
+use crate::state::actions::remove_mcp::McpRemove;
 
 use super::CmdError;
 
@@ -103,7 +103,7 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
             continue;
         }
 
-        let resolved = mcp_register::resolve_headers(entry, ace)?;
+        let resolved = register_mcp::resolve_headers(entry, ace)?;
         let target = resolved.as_ref().unwrap_or(entry);
 
         match backend.mcp_add(target) {

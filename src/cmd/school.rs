@@ -6,8 +6,8 @@ use crate::ace::Ace;
 use crate::config::skill_meta;
 use crate::config::school_toml;
 use crate::ace::OutputMode;
-use crate::state::actions::school_init::{SchoolInit, SchoolInitError};
-use crate::state::actions::school_update::{SchoolUpdate, SchoolUpdateResult};
+use crate::state::actions::init_school::{SchoolInit, SchoolInitError};
+use crate::state::actions::update_school::{SchoolUpdate, SchoolUpdateResult};
 
 use super::CmdError;
 

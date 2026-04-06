@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::time::Duration;
 
-use super::prepare::PrepareError;
+use super::prepare_school::PrepareError;
 use crate::ace::Ace;
 use crate::config;
 

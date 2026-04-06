@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use super::prepare::PrepareError;
+use super::prepare_school::PrepareError;
 
 /// Folders that ACE links from the school cache into the project.
 pub const SCHOOL_FOLDERS: &[&str] = &["skills", "rules", "commands", "agents"];

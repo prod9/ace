@@ -1,8 +1,8 @@
 use crate::ace::Ace;
 use crate::config::school_paths;
 use crate::config::ConfigError;
-use crate::state::actions::link::Link;
-use crate::state::actions::update::Update;
+use crate::state::actions::link_school::Link;
+use crate::state::actions::update_cache::Update;
 
 use super::CmdError;
 

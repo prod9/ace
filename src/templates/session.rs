@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::templates::builtins;
 use crate::templates::Template;
-use crate::state::actions::update::{ChangeKind, SkillChange};
+use crate::state::actions::update_cache::{ChangeKind, SkillChange};
 
 /// Build the session prompt from built-in + school + project layers.
 pub fn build_session_prompt(

@@ -6,9 +6,9 @@ use crate::config::index_toml;
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
-use super::install::Install;
-use super::link::Link;
-use super::update::{SkillChange, Update, UpdateOutcome};
+use super::install_school::Install;
+use super::link_school::Link;
+use super::update_cache::{SkillChange, Update, UpdateOutcome};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrepareError {

@@ -17,11 +17,11 @@ use crate::ace::{Ace, IoError};
 use crate::config::ConfigError;
 use crate::config::backend::Backend;
 use crate::state::actions::import_skill::ImportError;
-use crate::state::actions::mcp_register::McpRegisterError;
-use crate::state::actions::prepare::PrepareError;
-use crate::state::actions::school_init::SchoolInitError;
-use crate::state::actions::school_update::SchoolUpdateError;
-use crate::state::actions::setup::SetupError;
+use crate::state::actions::register_mcp::McpRegisterError;
+use crate::state::actions::prepare_school::PrepareError;
+use crate::state::actions::init_school::SchoolInitError;
+use crate::state::actions::update_school::SchoolUpdateError;
+use crate::state::actions::setup_project::SetupError;
 use crate::git::GitError;
 
 #[derive(Parser)]

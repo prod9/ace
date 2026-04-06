@@ -1,15 +1,15 @@
 pub mod discover_skill;
-pub mod gitignore;
 pub mod import_skill;
-pub mod install;
-pub mod link;
-pub mod mcp_register;
-pub mod mcp_remove;
-pub mod prepare;
-pub mod school_init;
-pub mod school_update;
-pub mod setup;
-pub mod update;
+pub mod init_school;
+pub mod install_school;
+pub mod link_school;
+pub mod prepare_school;
+pub mod register_mcp;
+pub mod remove_mcp;
+pub mod setup_project;
+pub mod update_cache;
+pub mod update_gitignore;
+pub mod update_school;
 pub mod write_config;
 
 use std::path::Path;
