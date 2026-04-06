@@ -2,6 +2,7 @@
   const rail = document.querySelector(".matrix-rail");
   if (!rail) return;
 
+  const SEED_KEY = "ace.matrix.seed";
   const glyphs = [".", "·", "˙", ":", "░"];
   const rows = [];
   let tickCount = 0;
@@ -11,9 +12,35 @@
   let stepColumn = 1;
   let lastFrameTime = 0;
   let nextStepDelay = 0;
+  let randomState = loadSeed();
+
+  function loadSeed() {
+    const stored = window.sessionStorage.getItem(SEED_KEY);
+    if (stored) {
+      const parsed = Number.parseInt(stored, 10);
+      if (Number.isFinite(parsed) && parsed !== 0) {
+        return parsed >>> 0;
+      }
+    }
+
+    const seed = (Date.now() & 0xffffffff) >>> 0 || 1;
+    window.sessionStorage.setItem(SEED_KEY, String(seed));
+    return seed;
+  }
+
+  function nextRandom() {
+    randomState ^= randomState << 13;
+    randomState ^= randomState >>> 17;
+    randomState ^= randomState << 5;
+    randomState >>>= 0;
+    if (randomState === 0) {
+      randomState = 1;
+    }
+    return randomState / 0x100000000;
+  }
 
   function randomGlyph() {
-    return glyphs[Math.floor(Math.random() * glyphs.length)];
+    return glyphs[Math.floor(nextRandom() * glyphs.length)];
   }
 
   function easeOutSpring(t) {
@@ -28,18 +55,19 @@
   }
 
   function colorMixForCell(rowIndex, columnIndex) {
-    const phase = tickCount * 0.18 + rowIndex * 0.55 + columnIndex * 0.08;
-    const mix = (Math.sin(phase) + Math.sin(phase * 0.42)) * 0.25 + 0.5;
+    const phase = tickCount * 0.08 + rowIndex * 0.16 + columnIndex * 0.02;
+    const wave = (Math.sin(phase) + Math.sin(phase * 0.38)) * 0.5;
+    const mix = Math.pow(wave * 0.5 + 0.5, 1.8);
     return mix.toFixed(3);
   }
 
   function advanceCursor(rowCount, columnCount) {
-    if (Math.random() < 0.08) {
-      stepRow = Math.random() < 0.5 ? -1 : 1;
+    if (nextRandom() < 0.08) {
+      stepRow = nextRandom() < 0.5 ? -1 : 1;
     }
 
-    if (Math.random() < 0.08) {
-      stepColumn = Math.random() < 0.5 ? -1 : 1;
+    if (nextRandom() < 0.08) {
+      stepColumn = nextRandom() < 0.5 ? -1 : 1;
     }
 
     cursorRow += stepRow;
