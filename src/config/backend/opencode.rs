@@ -71,6 +71,41 @@ fn parse_mcp_names(json: &str) -> HashSet<String> {
         .collect()
 }
 
+/// Remove an MCP server entry from ~/.config/opencode/opencode.json.
+pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
+    use std::io::Write;
+
+    let config_path = config_dir().join("opencode.json");
+
+    let existing = if config_path.exists() {
+        std::fs::read_to_string(&config_path)
+            .map_err(|e| format!("read {}: {e}", config_path.display()))?
+    } else {
+        return Ok(());
+    };
+
+    let output = remove_mcp_entry(&existing, name)?;
+
+    let mut file = std::fs::File::create(&config_path)
+        .map_err(|e| format!("create {}: {e}", config_path.display()))?;
+    file.write_all(output.as_bytes())
+        .map_err(|e| format!("write {}: {e}", config_path.display()))?;
+
+    Ok(())
+}
+
+/// Pure logic: remove an MCP entry from an existing OpenCode config JSON string.
+fn remove_mcp_entry(existing_json: &str, name: &str) -> Result<String, String> {
+    let mut config: serde_json::Value =
+        serde_json::from_str(existing_json).map_err(|e| format!("parse config: {e}"))?;
+
+    if let Some(mcp) = config.get_mut("mcp").and_then(|v| v.as_object_mut()) {
+        mcp.remove(name);
+    }
+
+    serde_json::to_string_pretty(&config).map_err(|e| format!("serialize config: {e}"))
+}
+
 /// Add an MCP server entry to ~/.config/opencode/opencode.json.
 /// Merges into existing config, preserving other entries.
 pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
@@ -210,6 +245,42 @@ mod tests {
             parsed["mcp"]["linear"]["type"], "remote",
             "should add new MCP"
         );
+    }
+
+    // -- remove_mcp_entry --
+
+    #[test]
+    fn remove_existing_entry() {
+        let existing = r#"{"mcp": {"linear": {"type": "remote", "url": "https://mcp.linear.app/mcp"}, "github": {"type": "remote", "url": "https://github.com/mcp"}}}"#;
+        let result = remove_mcp_entry(existing, "linear").expect("should remove");
+        let parsed: serde_json::Value = serde_json::from_str(&result).expect("should parse");
+
+        assert!(parsed["mcp"]["linear"].is_null(), "linear should be removed");
+        assert_eq!(parsed["mcp"]["github"]["type"], "remote", "github should remain");
+    }
+
+    #[test]
+    fn remove_missing_entry_is_ok() {
+        let existing = r#"{"mcp": {"linear": {"type": "remote", "url": "https://mcp.linear.app/mcp"}}}"#;
+        let result = remove_mcp_entry(existing, "nonexistent").expect("should succeed");
+        let parsed: serde_json::Value = serde_json::from_str(&result).expect("should parse");
+        assert_eq!(parsed["mcp"]["linear"]["type"], "remote", "linear should remain");
+    }
+
+    #[test]
+    fn remove_preserves_non_mcp_fields() {
+        let existing = r#"{"model": "claude", "mcp": {"linear": {"type": "remote", "url": "https://mcp.linear.app/mcp"}}}"#;
+        let result = remove_mcp_entry(existing, "linear").expect("should remove");
+        let parsed: serde_json::Value = serde_json::from_str(&result).expect("should parse");
+
+        assert_eq!(parsed["model"], "claude", "should preserve non-mcp fields");
+    }
+
+    #[test]
+    fn remove_from_no_mcp_section() {
+        let result = remove_mcp_entry(r#"{"model": "claude"}"#, "linear").expect("should succeed");
+        let parsed: serde_json::Value = serde_json::from_str(&result).expect("should parse");
+        assert_eq!(parsed["model"], "claude");
     }
 
     #[test]

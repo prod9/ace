@@ -103,6 +103,17 @@ impl Backend {
         }
     }
 
+    /// Remove a registered MCP server by name.
+    pub fn mcp_remove(&self, name: &str) -> Result<(), String> {
+        match self {
+            Backend::Claude => claude::mcp_remove(name),
+            Backend::Flaude => flaude::mcp_remove(name),
+            Backend::Droid => droid::mcp_remove(name),
+            Backend::OpenCode => opencode::mcp_remove(name),
+            Backend::Codex => codex::mcp_remove(name),
+        }
+    }
+
     /// Register an MCP server entry with the backend.
     pub fn mcp_add(&self, entry: &McpDecl) -> Result<(), String> {
         match self {

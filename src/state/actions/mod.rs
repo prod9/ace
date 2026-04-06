@@ -5,6 +5,7 @@ pub mod import_skill;
 pub mod install;
 pub mod link;
 pub mod mcp_register;
+pub mod mcp_remove;
 pub mod prepare;
 pub mod school_init;
 pub mod school_update;

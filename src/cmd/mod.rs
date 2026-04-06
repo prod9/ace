@@ -4,6 +4,7 @@ mod maverick;
 mod fmt;
 mod import;
 mod main;
+mod mcp;
 mod paths;
 mod pull;
 mod school;
@@ -69,6 +70,11 @@ enum Command {
         #[arg(long)]
         skill: Option<String>,
     },
+    /// Manage MCP server registrations
+    Mcp {
+        #[command(subcommand)]
+        command: Option<mcp::Command>,
+    },
     /// Manage schools
     School {
         #[command(subcommand)]
@@ -119,6 +125,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Fmt) | Some(Command::Format) => fmt::run(ace),
         Some(Command::Config) => config::run(ace).await,
         Some(Command::Paths { key }) => paths::run(ace, key.as_deref()).await,
+        Some(Command::Mcp { command }) => mcp::run(ace, command),
         Some(Command::School { command }) => school::run(ace, command).await,
         Some(Command::Pull) => pull::run(ace),
         Some(Command::Auto) => yolo::run(ace, crate::config::ace_toml::Trust::Auto),

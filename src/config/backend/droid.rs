@@ -35,6 +35,30 @@ pub(super) fn mcp_add(entry: &McpDecl) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn mcp_remove(name: &str) -> Result<(), String> {
+    let args = build_mcp_remove_args(name);
+
+    let output = Command::new("droid")
+        .args(&args)
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.trim().to_string());
+    }
+
+    Ok(())
+}
+
+fn build_mcp_remove_args(name: &str) -> Vec<String> {
+    vec![
+        "mcp".to_string(),
+        "remove".to_string(),
+        name.to_string(),
+    ]
+}
+
 /// Build CLI args for `droid mcp add <name> <url> --type http [--header "K: V"]`.
 fn build_mcp_add_args(entry: &McpDecl) -> Vec<String> {
     let mut args = vec![
@@ -98,6 +122,14 @@ mod tests {
                 "--header", "Authorization: Bearer tok",
             ]
         );
+    }
+
+    // -- build_mcp_remove_args --
+
+    #[test]
+    fn remove_args_basic() {
+        let args = build_mcp_remove_args("linear");
+        assert_eq!(args, vec!["mcp", "remove", "linear"]);
     }
 
     #[test]

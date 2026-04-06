@@ -2,6 +2,69 @@ mod common;
 
 use common::TestEnv;
 
+// -- ace mcp reset --
+
+const SCHOOL_TOML_TWO_SERVERS: &str = r#"
+name = "test-school"
+
+[[mcp]]
+name = "linear"
+url = "https://mcp.linear.app/mcp"
+
+[[mcp]]
+name = "github"
+url = "https://api.githubcopilot.com/mcp/"
+"#;
+
+#[test]
+fn mcp_reset_removes_all_registered() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    env.write_flaude_mcp_list(&["linear", "github"]);
+
+    env.ace().args(["mcp", "reset"]).assert().success();
+
+    // After reset, both should be removed from the list
+    let list_content = env.read_file(".flaude-mcp-list");
+    assert!(!list_content.contains("linear"), "linear should be removed");
+    assert!(!list_content.contains("github"), "github should be removed");
+}
+
+#[test]
+fn mcp_reset_removes_specific_server() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    env.write_flaude_mcp_list(&["linear", "github"]);
+
+    env.ace().args(["mcp", "reset", "linear"]).assert().success();
+
+    // Only linear should be removed
+    let list_content = env.read_file(".flaude-mcp-list");
+    assert!(!list_content.contains("linear"), "linear should be removed");
+    assert!(list_content.contains("github"), "github should remain");
+}
+
+#[test]
+fn mcp_reset_noop_when_nothing_registered() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    // No flaude-mcp-list → nothing registered
+
+    env.ace().args(["mcp", "reset"]).assert().success();
+}
+
+#[test]
+fn mcp_clear_is_alias_for_reset() {
+    let env = TestEnv::new();
+    env.setup_flaude_school(SCHOOL_TOML_TWO_SERVERS);
+    env.write_flaude_mcp_list(&["linear"]);
+
+    env.ace().args(["mcp", "clear"]).assert().success();
+
+    let list_content = env.read_file(".flaude-mcp-list");
+    assert!(!list_content.contains("linear"), "linear should be removed");
+}
+
 const SCHOOL_TOML_OAUTH: &str = r#"
 name = "test-school"
 

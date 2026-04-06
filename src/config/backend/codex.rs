@@ -25,6 +25,10 @@ pub(super) fn mcp_list() -> HashSet<String> {
     HashSet::new()
 }
 
+pub(super) fn mcp_remove(_name: &str) -> Result<(), String> {
+    Err("MCP removal not yet implemented for this backend".to_string())
+}
+
 pub(super) fn mcp_add(_entry: &McpDecl) -> Result<(), String> {
     Err("MCP registration not yet implemented for this backend".to_string())
 }
