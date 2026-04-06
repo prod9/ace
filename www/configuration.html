@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACE - Configuration</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #c0c0c0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .container { max-width: 720px; margin: 0 auto; padding: 20px; }
+  nav {
+    padding: 12px 0;
+    margin-bottom: 40px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+  }
+  nav a { color: #00ff88; text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  nav .sep { color: #555; margin: 0 8px; }
+  h1, h2, h3 { color: #ffaa00; font-weight: normal; }
+  h1 { font-size: 18px; margin-bottom: 24px; }
+  h2 { margin: 32px 0 12px; font-size: 15px; }
+  h3 { margin: 24px 0 8px; font-size: 14px; }
+  a { color: #00ff88; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  p { margin: 8px 0; color: #888; }
+  .code-block {
+    background: #111;
+    border: 1px solid #333;
+    padding: 12px 16px;
+    margin: 12px 0;
+    overflow-x: auto;
+  }
+  .code-block .comment { color: #555; }
+  .code-block .key { color: #00ff88; }
+  .code-block .val { color: #c0c0c0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+  }
+  th {
+    text-align: left;
+    color: #ffaa00;
+    border-bottom: 1px solid #333;
+    padding: 8px 12px 8px 0;
+    font-weight: normal;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  td {
+    padding: 6px 12px 6px 0;
+    border-bottom: 1px solid #1a1a1a;
+    vertical-align: top;
+  }
+  td:first-child {
+    color: #00ff88;
+    white-space: nowrap;
+    width: 1%;
+  }
+  .tag {
+    display: inline-block;
+    border: 1px solid #333;
+    padding: 1px 6px;
+    font-size: 11px;
+    color: #888;
+    margin: 1px 2px;
+  }
+  .note {
+    background: #111;
+    border-left: 2px solid #ffaa00;
+    padding: 8px 12px;
+    margin: 12px 0;
+    color: #888;
+    font-size: 13px;
+  }
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #333;
+    font-size: 12px;
+    color: #555;
+  }
+  footer a { color: #555; }
+  footer a:hover { color: #00ff88; }
+  .line { border-top: 1px solid #333; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<nav>
+  <a href="index.html">ACE</a>
+  <span class="sep">|</span>
+  <a href="schools.html">Schools</a>
+  <span class="sep">|</span>
+  <a href="commands.html">Commands</a>
+  <span class="sep">|</span>
+  <a href="configuration.html">Config</a>
+</nav>
+
+<h1>// configuration</h1>
+
+<p>
+All configuration is TOML. ACE merges multiple layers into one effective
+config, with later layers overriding earlier ones.
+</p>
+
+<h2>// layer merge order</h2>
+
+<div class="code-block"><pre><span class="comment"># 1. School defaults (read-only, from school.toml)</span>
+<span class="comment"># 2. User-global config</span>
+<span class="val">~/.config/ace/config.toml</span>
+
+<span class="comment"># 3. Project config (checked into git, shared)</span>
+<span class="val">ace.toml</span>
+
+<span class="comment"># 4. Project-local config (gitignored, per-machine)</span>
+<span class="val">ace.local.toml</span></pre></div>
+
+<div class="note">
+Local overrides project, project overrides user-global,
+user-global overrides school defaults. For <span style="color:#00ff88;">env</span>,
+maps merge additively &mdash; later keys override earlier keys.
+For all other fields, last non-empty value wins.
+</div>
+
+<h2>// ace.toml / ace.local.toml</h2>
+
+<p>
+Project and local config share the same schema. Local config is
+gitignored and holds machine-specific values like trust level.
+</p>
+
+<div class="code-block"><pre><span class="comment"># ace.toml example</span>
+<span class="key">school</span> = <span class="val">"org/school"</span>
+<span class="key">backend</span> = <span class="val">"claude"</span>
+<span class="key">trust</span> = <span class="val">"auto"</span>
+<span class="key">session_prompt</span> = <span class="val">"Always run tests before committing."</span>
+
+[<span class="key">env</span>]
+<span class="key">RUSTFLAGS</span> = <span class="val">"-D warnings"</span></pre></div>
+
+<table>
+  <tr>
+    <th>Key</th>
+    <th>Type / Values</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>school</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>School specifier, e.g. <span style="color:#c0c0c0;">"org/repo"</span>. Last non-empty wins across layers.</td>
+  </tr>
+  <tr>
+    <td>backend</td>
+    <td><span class="tag">claude</span> <span class="tag">opencode</span> <span class="tag">codex</span> <span class="tag">flaude</span> <span class="tag">droid</span></td>
+    <td><span style="color:#c0c0c0;">claude</span></td>
+    <td>Which AI backend to launch. Highest-priority <span style="color:#c0c0c0;">Some</span> wins (local &rarr; project &rarr; user).</td>
+  </tr>
+  <tr>
+    <td>trust</td>
+    <td><span class="tag">default</span> <span class="tag">auto</span> <span class="tag">yolo</span></td>
+    <td><span style="color:#c0c0c0;">default</span></td>
+    <td>Backend permission mode. <span style="color:#c0c0c0;">auto</span> = auto-accept safe operations. <span style="color:#c0c0c0;">yolo</span> = bypass all permission prompts.</td>
+  </tr>
+  <tr>
+    <td>session_prompt</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Additional prompt text prepended to the backend session. Last non-empty wins.</td>
+  </tr>
+  <tr>
+    <td>env</td>
+    <td>map (string &rarr; string)</td>
+    <td><span style="color:#555;">{}</span></td>
+    <td>Environment variables passed to the backend. Merges additively across layers.</td>
+  </tr>
+  <tr>
+    <td>yolo</td>
+    <td>bool</td>
+    <td><span style="color:#c0c0c0;">false</span></td>
+    <td><span style="color:#555;">Deprecated.</span> Use <span style="color:#00ff88;">trust = "yolo"</span> instead. Kept for backwards compatibility; <span style="color:#c0c0c0;">yolo = true</span> resolves to <span style="color:#c0c0c0;">trust = "yolo"</span>.</td>
+  </tr>
+</table>
+
+<h2>// ~/.config/ace/config.toml</h2>
+
+<p>
+User-global config. Top-level keys are school identifiers. Currently
+used to track which schools the user has registered. Fields inside
+each school entry are reserved for future use.
+</p>
+
+<div class="code-block"><pre><span class="comment"># ~/.config/ace/config.toml</span>
+[<span class="val">"org/school"</span>]
+
+[<span class="val">"myuser/personal-school"</span>]</pre></div>
+
+<h2>// school.toml</h2>
+
+<p>
+Lives at the root of a school repository. Defines the school name,
+backend preference, MCP servers, projects, and skill imports.
+</p>
+
+<div class="code-block"><pre><span class="comment"># school.toml example</span>
+<span class="key">name</span> = <span class="val">"acme-school"</span>
+<span class="key">backend</span> = <span class="val">"claude"</span>
+<span class="key">session_prompt</span> = <span class="val">"Follow ACME conventions."</span>
+
+[<span class="key">env</span>]
+<span class="key">EDITOR</span> = <span class="val">"nvim"</span>
+
+[[<span class="key">mcp</span>]]
+<span class="key">name</span> = <span class="val">"github"</span>
+<span class="key">url</span> = <span class="val">"https://mcp.example.com/github"</span>
+<span class="key">instructions</span> = <span class="val">"Use for all GitHub operations."</span>
+
+[<span class="key">mcp</span>.<span class="key">headers</span>]
+<span class="key">Authorization</span> = <span class="val">"Bearer {{ github_token }}"</span>
+
+[[<span class="key">projects</span>]]
+<span class="key">name</span> = <span class="val">"backend"</span>
+<span class="key">repo</span> = <span class="val">"org/backend"</span>
+<span class="key">description</span> = <span class="val">"Main API server"</span>
+
+[[<span class="key">imports</span>]]
+<span class="key">skill</span> = <span class="val">"docker"</span>
+<span class="key">source</span> = <span class="val">"other-org/school"</span></pre></div>
+
+<h3>// top-level keys</h3>
+
+<table>
+  <tr>
+    <th>Key</th>
+    <th>Type / Values</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>name</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>School display name. Must be non-empty (validated after load).</td>
+  </tr>
+  <tr>
+    <td>backend</td>
+    <td><span class="tag">claude</span> <span class="tag">opencode</span> <span class="tag">codex</span> <span class="tag">flaude</span> <span class="tag">droid</span></td>
+    <td><span style="color:#555;">None</span></td>
+    <td>Default backend for the school. Overridden by ace.toml layers.</td>
+  </tr>
+  <tr>
+    <td>session_prompt</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Prompt text prepended to every session using this school.</td>
+  </tr>
+  <tr>
+    <td>env</td>
+    <td>map (string &rarr; string)</td>
+    <td><span style="color:#555;">{}</span></td>
+    <td>Environment variables. Merged with ace.toml env (ace.toml wins on conflict).</td>
+  </tr>
+</table>
+
+<h3>// [[mcp]]</h3>
+
+<p>
+MCP (Model Context Protocol) server declarations. Each entry registers
+an MCP server for the backend to use.
+</p>
+
+<table>
+  <tr>
+    <th>Key</th>
+    <th>Type</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>name</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Server identifier. Must be unique across all MCP entries.</td>
+  </tr>
+  <tr>
+    <td>url</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Server URL (SSE endpoint).</td>
+  </tr>
+  <tr>
+    <td>headers</td>
+    <td>map (string &rarr; string)</td>
+    <td><span style="color:#555;">{}</span></td>
+    <td>HTTP headers sent with requests. Values support <span style="color:#00ff88;">{{ placeholder }}</span> syntax for user-prompted secrets.</td>
+  </tr>
+  <tr>
+    <td>instructions</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Usage instructions passed to the backend for this server.</td>
+  </tr>
+</table>
+
+<h3>// [[projects]]</h3>
+
+<p>
+Project declarations associate repositories with the school.
+</p>
+
+<table>
+  <tr>
+    <th>Key</th>
+    <th>Type</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>name</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Project display name.</td>
+  </tr>
+  <tr>
+    <td>repo</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Repository specifier, e.g. <span style="color:#c0c0c0;">"org/repo"</span>.</td>
+  </tr>
+  <tr>
+    <td>description</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Brief project description.</td>
+  </tr>
+  <tr>
+    <td>env</td>
+    <td>map (string &rarr; string)</td>
+    <td><span style="color:#555;">{}</span></td>
+    <td>Project-specific environment variables.</td>
+  </tr>
+</table>
+
+<h3>// [[imports]]</h3>
+
+<p>
+Import skills from other school repositories.
+</p>
+
+<table>
+  <tr>
+    <th>Key</th>
+    <th>Type</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>skill</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>Name of the skill to import.</td>
+  </tr>
+  <tr>
+    <td>source</td>
+    <td>string</td>
+    <td><span style="color:#555;">(empty)</span></td>
+    <td>School specifier to import from, e.g. <span style="color:#c0c0c0;">"org/school"</span>.</td>
+  </tr>
+</table>
+
+<h2>// placeholder syntax</h2>
+
+<p>
+String values in config (currently MCP headers) support placeholder
+substitution. Placeholders are resolved at runtime by prompting the user.
+</p>
+
+<div class="code-block"><pre><span class="comment"># Prompts user for "github_token" on first run</span>
+<span class="key">Authorization</span> = <span class="val">"Bearer {{ github_token }}"</span>
+
+<span class="comment"># Whitespace is flexible</span>
+<span class="val">"{{name}}"</span>  <span class="val">"{{ name }}"</span>  <span class="val">"{{  name  }}"</span>  <span class="comment"># all equivalent</span>
+
+<span class="comment"># Names must be alphanumeric + underscore</span>
+<span class="val">"{{ my_api_key_2 }}"</span>  <span class="comment"># valid</span></pre></div>
+
+<div class="line"></div>
+
+<footer>
+  PRODIGY9 &mdash; <a href="https://github.com/nicecai/ace">GitHub</a> &mdash; MIT License
+</footer>
+
+</div>
+</body>
+</html>
