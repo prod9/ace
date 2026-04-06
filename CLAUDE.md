@@ -60,6 +60,9 @@ Metrics:
 
 ## Coding Style
 
+- **`simplify` skill**: Must load and adhere to all coding skill principles (`general-coding`,
+  `rust-coding`, etc.) before proposing changes. Simplification that violates a coding
+  principle is a regression, not an improvement.
 - See `rust-coding` skill for general Rust conventions (error handling, serde, Option/Result)
 - Error enums: `ConfigError` for `src/config/`, `SetupError`/`PrepareError` for
   `src/state/actions/`, `CmdError` for `src/cmd/`. Action-specific errors
