@@ -13,6 +13,9 @@ wheels/
 # Claude Code
 .claude/
 
+# Codex
+.agents/
+
 # Local config
 ace.local.toml
 
