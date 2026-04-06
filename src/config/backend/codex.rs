@@ -4,7 +4,7 @@ use std::process::Command;
 
 use super::{McpDecl, McpStatus};
 
-const CHECK_SCHEMA: &str = r#"{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"]}}"#;
+const CHECK_SCHEMA: &str = r#"{"type":"object","properties":{"statuses":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"],"additionalProperties":false}}},"required":["statuses"],"additionalProperties":false}"#;
 
 /// Returns Codex's home directory (`$CODEX_HOME` or `~/.codex`).
 fn home_dir() -> Option<PathBuf> {
@@ -193,7 +193,8 @@ fn build_mcp_remove_args(name: &str) -> Vec<String> {
 fn build_check_prompt(names: &[String]) -> String {
     format!(
         "You have MCP servers registered. For each of the following, call any tool to verify \
-         it responds. Reply with only a JSON array: [{{\"name\":\"...\",\"ok\":true/false}}]. \
+         it responds. Reply with only a JSON object matching this shape: \
+         {{\"statuses\":[{{\"name\":\"...\",\"ok\":true/false}}]}}. \
          Servers: {}",
         names.join(", ")
     )
@@ -322,9 +323,27 @@ fn parse_or_empty_table(existing_toml: &str) -> Result<toml::Value, String> {
 }
 
 fn parse_check_output(output: &str) -> Vec<McpStatus> {
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(output) {
+        if let Some(statuses) = parsed.get("statuses") {
+            let result = super::parse_status_array(&statuses.to_string());
+            if !result.is_empty() {
+                return result;
+            }
+        }
+    }
+
     let result = super::parse_status_array(output);
     if !result.is_empty() {
         return result;
+    }
+
+    if let Some(statuses_pos) = output.find("\"statuses\"") {
+        if let Some(start) = output[statuses_pos..].find('[') {
+            let start = statuses_pos + start;
+            if let Some(end) = output[start..].find(']') {
+                return super::parse_status_array(&output[start..=start + end]);
+            }
+        }
     }
 
     if let Some(start) = output.find('[') {
@@ -503,8 +522,28 @@ url = "https://api.githubcopilot.com/mcp/"
     }
 
     #[test]
+    fn parse_check_output_valid_json_object() {
+        let output = r#"{"statuses":[{"name":"linear","ok":true},{"name":"github","ok":false}]}"#;
+        let statuses = parse_check_output(output);
+        assert_eq!(statuses.len(), 2);
+        assert_eq!(statuses[0].name, "linear");
+        assert!(statuses[0].ok);
+        assert_eq!(statuses[1].name, "github");
+        assert!(!statuses[1].ok);
+    }
+
+    #[test]
     fn parse_check_output_extracts_embedded_array() {
         let output = r#"Health check complete: [{"name":"linear","ok":true}]"#;
+        let statuses = parse_check_output(output);
+        assert_eq!(statuses.len(), 1);
+        assert_eq!(statuses[0].name, "linear");
+        assert!(statuses[0].ok);
+    }
+
+    #[test]
+    fn parse_check_output_extracts_embedded_statuses_array() {
+        let output = r#"Health check complete: {"statuses":[{"name":"linear","ok":true}]}"#;
         let statuses = parse_check_output(output);
         assert_eq!(statuses.len(), 1);
         assert_eq!(statuses[0].name, "linear");
@@ -523,7 +562,7 @@ url = "https://api.githubcopilot.com/mcp/"
         let prompt = build_check_prompt(&names);
         assert!(prompt.contains("linear"));
         assert!(prompt.contains("github"));
-        assert!(prompt.contains("JSON array"));
+        assert!(prompt.contains("\"statuses\""));
     }
 
     #[test]

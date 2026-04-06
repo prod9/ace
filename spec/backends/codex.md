@@ -10,7 +10,13 @@ Binary: `codex` | Dir: `.agents` | Instructions: `AGENTS.md`
 
 ## Session Prompt
 
-Passed as Codex's initial positional prompt. Codex does not support a `--system-prompt` flag.
+Do not pass ACE's session prompt as Codex's initial positional prompt in interactive mode.
+That positional prompt is a user message and triggers a reply, which is not the intended
+behavior for ACE's ambient session instructions.
+
+For interactive Codex runs, ACE should pass the session prompt through Codex's native config
+override surface as `-c developer_instructions=...`. Codex does not support a
+`--system-prompt` flag.
 
 ## Trust Modes
 

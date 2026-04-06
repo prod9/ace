@@ -29,7 +29,7 @@ Authorization = "Bearer test-token-123"
 "#;
 
 #[test]
-fn codex_exec_uses_positional_prompt_and_auto_flag() {
+fn codex_exec_does_not_send_session_prompt_and_uses_auto_flag() {
     let env = TestEnv::new();
     env.setup_codex_school(SCHOOL_TOML_BASIC);
     env.write_file("ace.local.toml", "trust = \"auto\"\n");
@@ -42,8 +42,34 @@ for arg in "$@"; do
     echo "unexpected --system-prompt" >&2
     exit 1
   fi
+  if [ "$arg" = "School: test-school" ]; then
+    echo "unexpected session prompt as positional message" >&2
+    exit 1
+  fi
 done
+
+found_override=0
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = "-c" ] && printf '%s' "$arg" | grep -q '^developer_instructions='; then
+    found_override=1
+  fi
+  prev="$arg"
+done
+
+if [ "$found_override" -ne 1 ]; then
+  echo "missing developer_instructions override" >&2
+  printf '%s\n' "$@" >&2
+  exit 1
+fi
+
 printf '%s\n' "$@" > "$HOME/codex-exec-args.txt"
+printf 'argc=%s\n' "$#" > "$HOME/codex-exec-meta.txt"
+idx=1
+for arg in "$@"; do
+  printf '__ARG_%s_START__\n%s\n__ARG_%s_END__\n' "$idx" "$arg" "$idx" >> "$HOME/codex-exec-meta.txt"
+  idx=$((idx + 1))
+done
 exit 0
 "#,
     );
@@ -53,8 +79,14 @@ exit 0
         .success();
 
     let args = env.read_file("codex-exec-args.txt");
+    let meta = env.read_file("codex-exec-meta.txt");
     assert!(args.contains("--full-auto"), "expected Codex auto flag, got:\n{args}");
+    assert!(args.contains("developer_instructions="), "should pass developer_instructions override:\n{args}");
     assert!(!args.contains("--system-prompt"), "should not pass unsupported flag");
+    assert!(meta.contains("argc=3"), "expected exactly 3 argv entries, got:\n{meta}");
+    assert!(meta.contains("__ARG_1_START__\n--full-auto\n__ARG_1_END__"), "unexpected argv layout:\n{meta}");
+    assert!(meta.contains("__ARG_2_START__\n-c\n__ARG_2_END__"), "unexpected argv layout:\n{meta}");
+    assert!(meta.contains("__ARG_3_START__\ndeveloper_instructions="), "expected developer_instructions arg, got:\n{meta}");
 }
 
 #[test]

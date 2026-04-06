@@ -41,7 +41,11 @@ fn build_exec_args(backend: Backend, session_prompt: &str, backend_args: &[Strin
     match backend {
         Backend::Codex => {
             let mut args = backend_args.to_vec();
-            args.push(session_prompt.to_string());
+            args.push("-c".to_string());
+            args.push(format!(
+                "developer_instructions={}",
+                toml::Value::String(session_prompt.to_string())
+            ));
             args
         }
         _ => {
@@ -100,9 +104,16 @@ mod tests {
     }
 
     #[test]
-    fn build_exec_args_codex_uses_positional_prompt() {
+    fn build_exec_args_codex_does_not_send_prompt_as_user_message() {
         let backend_args = vec!["--full-auto".to_string()];
         let args = build_exec_args(Backend::Codex, "prompt", &backend_args);
-        assert_eq!(args, vec!["--full-auto", "prompt"]);
+        assert_eq!(
+            args,
+            vec![
+                "--full-auto",
+                "-c",
+                "developer_instructions=\"prompt\"",
+            ]
+        );
     }
 }
