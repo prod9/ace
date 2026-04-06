@@ -1,7 +1,31 @@
 use std::collections::HashSet;
 use std::process::Command;
 
-use super::{McpDecl, McpStatus};
+use super::{McpDecl, McpStatus, SessionOpts};
+use crate::config::ace_toml::Trust;
+
+/// Launch a Claude session. Replaces the current process via exec().
+pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+    let mut cmd = Command::new("claude");
+    cmd.current_dir(&opts.project_dir);
+
+    for (key, val) in &opts.env {
+        cmd.env(key, val);
+    }
+
+    cmd.args(["--system-prompt", &opts.session_prompt]);
+
+    match opts.trust {
+        Trust::Auto => { cmd.args(["--permission-mode", "auto"]); }
+        Trust::Yolo => { cmd.args(["--permission-mode", "bypassPermissions"]); }
+        Trust::Default => {}
+    }
+
+    cmd.args(&opts.extra_args);
+
+    use std::os::unix::process::CommandExt;
+    Err(cmd.exec())
+}
 
 /// Read `~/.claude.json` and extract keys from the `mcpServers` object.
 pub(super) fn mcp_list() -> HashSet<String> {

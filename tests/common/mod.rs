@@ -12,7 +12,8 @@ pub struct FlaudeRecord {
     pub name: String,
     pub url: String,
     pub headers: Vec<String>,
-    pub backend_args: Vec<String>,
+    pub trust: String,
+    pub session_prompt: String,
 }
 
 fn parse_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
@@ -38,14 +39,8 @@ fn parse_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
                             .collect()
                     })
                     .unwrap_or_default(),
-                backend_args: v["backend_args"]
-                    .as_array()
-                    .map(|a| {
-                        a.iter()
-                            .filter_map(|v| v.as_str().map(String::from))
-                            .collect()
-                    })
-                    .unwrap_or_default(),
+                trust: v["trust"].as_str().unwrap_or_default().to_string(),
+                session_prompt: v["session_prompt"].as_str().unwrap_or_default().to_string(),
             }
         })
         .collect()

@@ -4,11 +4,22 @@ mod droid;
 mod flaude;
 mod opencode;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+use super::ace_toml::Trust;
 use super::school_toml::McpDecl;
+
+/// Everything a backend needs to launch a session.
+pub struct SessionOpts {
+    pub trust: Trust,
+    pub session_prompt: String,
+    pub project_dir: PathBuf,
+    pub env: HashMap<String, String>,
+    pub extra_args: Vec<String>,
+}
 
 /// Health check result for a single MCP server.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,36 +68,31 @@ impl Backend {
         }
     }
 
-    // TODO: Re-analyze the abstraction boundary between ACE and backends. Currently
-    // ACE knows backend-specific flags (yolo, system-prompt, etc.) scattered across
-    // Exec and here. Consider whether backends should own their full arg construction
-    // (a BackendOpts struct or trait) instead of ACE assembling args piecemeal.
-
-    /// Extra CLI args for the given trust level.
-    /// Returns an error message if the backend doesn't support it.
-    pub fn trust_args(&self, trust: super::ace_toml::Trust) -> Result<Vec<String>, String> {
-        use super::ace_toml::Trust;
+    /// Check whether the backend supports the given trust level.
+    /// Returns Ok(()) if supported, Err(message) if not.
+    pub fn supports_trust(&self, trust: Trust) -> Result<(), String> {
         match (self, trust) {
-            (_, Trust::Default) => Ok(vec![]),
-            (Backend::Claude, Trust::Auto) => Ok(vec![
-                "--permission-mode".to_string(), "auto".to_string(),
-            ]),
-            (Backend::Claude, Trust::Yolo) => Ok(vec![
-                "--permission-mode".to_string(), "bypassPermissions".to_string(),
-            ]),
-            (Backend::Flaude, Trust::Auto) => Ok(vec!["--auto".to_string()]),
-            (Backend::Flaude, Trust::Yolo) => Ok(vec!["--yolo".to_string()]),
-            (Backend::Droid, Trust::Yolo) => Ok(vec![
-                "--skip-permissions-unsafe".to_string(),
-            ]),
-            (Backend::Codex, Trust::Auto) => Ok(vec!["--full-auto".to_string()]),
-            (Backend::Codex, Trust::Yolo) => Ok(vec![
-                "--dangerously-bypass-approvals-and-sandbox".to_string(),
-            ]),
+            (_, Trust::Default) => Ok(()),
+            (Backend::Claude, Trust::Auto | Trust::Yolo) => Ok(()),
+            (Backend::Flaude, Trust::Auto | Trust::Yolo) => Ok(()),
+            (Backend::Droid, Trust::Yolo) => Ok(()),
+            (Backend::Codex, Trust::Auto | Trust::Yolo) => Ok(()),
             (_, trust) => Err(format!(
                 "trust={trust:?} not supported for {}",
                 self.binary(),
             )),
+        }
+    }
+
+    /// Launch a backend session. Each backend builds its own Command internally.
+    /// Flaude records to JSONL instead of exec'ing (test fake).
+    pub fn exec_session(&self, opts: SessionOpts) -> Result<(), std::io::Error> {
+        match self {
+            Backend::Claude => claude::exec_session(opts),
+            Backend::Codex => codex::exec_session(opts),
+            Backend::Droid => droid::exec_session(opts),
+            Backend::Flaude => flaude::exec_session(opts),
+            Backend::OpenCode => opencode::exec_session(opts),
         }
     }
 
@@ -178,64 +184,57 @@ mod tests {
     use crate::config::ace_toml::Trust;
 
     #[test]
-    fn trust_default_returns_empty() {
+    fn supports_trust_default_all() {
         for backend in [Backend::Claude, Backend::Flaude, Backend::Droid, Backend::OpenCode, Backend::Codex] {
-            let args = backend.trust_args(Trust::Default).expect("Default should always succeed");
-            assert!(args.is_empty(), "{:?} should return empty vec for Default", backend);
+            backend.supports_trust(Trust::Default)
+                .unwrap_or_else(|_| panic!("{:?} should support Default", backend));
         }
     }
 
     #[test]
-    fn trust_auto_claude() {
-        let args = Backend::Claude.trust_args(Trust::Auto).expect("Claude supports Auto");
-        assert_eq!(args, vec!["--permission-mode", "auto"]);
+    fn supports_trust_auto_claude() {
+        Backend::Claude.supports_trust(Trust::Auto).expect("Claude supports Auto");
     }
 
     #[test]
-    fn trust_yolo_claude() {
-        let args = Backend::Claude.trust_args(Trust::Yolo).expect("Claude supports Yolo");
-        assert_eq!(args, vec!["--permission-mode", "bypassPermissions"]);
+    fn supports_trust_yolo_claude() {
+        Backend::Claude.supports_trust(Trust::Yolo).expect("Claude supports Yolo");
     }
 
     #[test]
-    fn trust_yolo_flaude() {
-        let args = Backend::Flaude.trust_args(Trust::Yolo).expect("Flaude supports Yolo");
-        assert_eq!(args, vec!["--yolo"]);
+    fn supports_trust_auto_flaude() {
+        Backend::Flaude.supports_trust(Trust::Auto).expect("Flaude supports Auto");
     }
 
     #[test]
-    fn trust_auto_flaude() {
-        let args = Backend::Flaude.trust_args(Trust::Auto).expect("Flaude supports Auto");
-        assert_eq!(args, vec!["--auto"]);
+    fn supports_trust_yolo_flaude() {
+        Backend::Flaude.supports_trust(Trust::Yolo).expect("Flaude supports Yolo");
     }
 
     #[test]
-    fn trust_yolo_droid() {
-        let args = Backend::Droid.trust_args(Trust::Yolo).expect("Droid supports Yolo");
-        assert_eq!(args, vec!["--skip-permissions-unsafe"]);
+    fn supports_trust_yolo_droid() {
+        Backend::Droid.supports_trust(Trust::Yolo).expect("Droid supports Yolo");
     }
 
     #[test]
-    fn trust_auto_codex() {
-        let args = Backend::Codex.trust_args(Trust::Auto).expect("Codex supports Auto");
-        assert_eq!(args, vec!["--full-auto"]);
+    fn supports_trust_auto_codex() {
+        Backend::Codex.supports_trust(Trust::Auto).expect("Codex supports Auto");
     }
 
     #[test]
-    fn trust_yolo_codex() {
-        let args = Backend::Codex.trust_args(Trust::Yolo).expect("Codex supports Yolo");
-        assert_eq!(args, vec!["--dangerously-bypass-approvals-and-sandbox"]);
+    fn supports_trust_yolo_codex() {
+        Backend::Codex.supports_trust(Trust::Yolo).expect("Codex supports Yolo");
     }
 
     #[test]
-    fn trust_auto_unsupported() {
-        let err = Backend::Droid.trust_args(Trust::Auto).expect_err("Droid should not support Auto");
+    fn supports_trust_auto_droid_unsupported() {
+        let err = Backend::Droid.supports_trust(Trust::Auto).expect_err("Droid should not support Auto");
         assert!(err.contains("droid"), "error should mention the backend name");
     }
 
     #[test]
-    fn trust_auto_opencode_unsupported() {
-        let err = Backend::OpenCode.trust_args(Trust::Auto).expect_err("OpenCode should not support Auto");
+    fn supports_trust_auto_opencode_unsupported() {
+        let err = Backend::OpenCode.supports_trust(Trust::Auto).expect_err("OpenCode should not support Auto");
         assert!(err.contains("opencode"), "error should mention the backend name");
     }
 }

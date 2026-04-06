@@ -1,7 +1,39 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use super::{McpDecl, McpStatus};
+use super::{McpDecl, McpStatus, SessionOpts};
+
+/// Flaude exec records file.
+fn exec_record_path() -> Option<PathBuf> {
+    std::env::var("HOME").ok().map(|h| {
+        std::path::Path::new(&h).join(".flaude-exec-records.jsonl")
+    })
+}
+
+/// Record a session launch to `$HOME/.flaude-exec-records.jsonl`.
+pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+    let Some(path) = exec_record_path() else {
+        return Ok(());
+    };
+
+    use std::io::Write;
+
+    let record = serde_json::json!({
+        "action": "exec",
+        "trust": opts.trust,
+        "session_prompt": opts.session_prompt,
+        "project_dir": opts.project_dir.to_string_lossy(),
+        "extra_args": opts.extra_args,
+    });
+
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)?;
+
+    writeln!(file, "{record}")?;
+    Ok(())
+}
 
 /// Flaude record file for MCP registrations.
 fn mcp_record_path() -> Option<PathBuf> {

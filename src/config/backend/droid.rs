@@ -1,7 +1,30 @@
 use std::collections::HashSet;
 use std::process::Command;
 
-use super::{McpDecl, McpStatus};
+use super::{McpDecl, McpStatus, SessionOpts};
+use crate::config::ace_toml::Trust;
+
+/// Launch a Droid session. Replaces the current process via exec().
+pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+    let mut cmd = Command::new("droid");
+    cmd.current_dir(&opts.project_dir);
+
+    for (key, val) in &opts.env {
+        cmd.env(key, val);
+    }
+
+    cmd.args(["--system-prompt", &opts.session_prompt]);
+
+    match opts.trust {
+        Trust::Yolo => { cmd.arg("--skip-permissions-unsafe"); }
+        Trust::Auto | Trust::Default => {}
+    }
+
+    cmd.args(&opts.extra_args);
+
+    use std::os::unix::process::CommandExt;
+    Err(cmd.exec())
+}
 
 /// Check if DROID is ready: ~/.factory/settings.json exists.
 pub(super) fn is_ready() -> bool {

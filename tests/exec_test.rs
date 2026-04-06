@@ -3,7 +3,7 @@ mod common;
 use common::TestEnv;
 
 #[test]
-fn exec_records_backend_args() {
+fn exec_records_session() {
     let env = TestEnv::new();
     env.setup_flaude_school("name = \"test-school\"\n");
 
@@ -11,10 +11,12 @@ fn exec_records_backend_args() {
 
     let records = env.read_flaude_exec_records();
     assert_eq!(records.len(), 1, "should record one exec call");
+    assert_eq!(records[0].trust, "default", "default trust level");
+    assert!(!records[0].session_prompt.is_empty(), "session prompt should be non-empty");
 }
 
 #[test]
-fn exec_yolo_passes_flag() {
+fn exec_yolo_records_trust() {
     let env = TestEnv::new();
     env.setup_flaude_school("name = \"test-school\"\n");
     env.write_file("ace.local.toml", "trust = \"yolo\"\n");
@@ -28,16 +30,11 @@ fn exec_yolo_passes_flag() {
 
     let records = env.read_flaude_exec_records();
     assert_eq!(records.len(), 1, "should record one exec call");
-
-    assert!(
-        records[0].backend_args.contains(&"--yolo".to_string()),
-        "backend_args should contain --yolo, got: {:?}",
-        records[0].backend_args,
-    );
+    assert_eq!(records[0].trust, "yolo", "trust should be yolo");
 }
 
 #[test]
-fn exec_auto_passes_flag() {
+fn exec_auto_records_trust() {
     let env = TestEnv::new();
     env.setup_flaude_school("name = \"test-school\"\n");
     env.write_file("ace.local.toml", "trust = \"auto\"\n");
@@ -48,12 +45,7 @@ fn exec_auto_passes_flag() {
 
     let records = env.read_flaude_exec_records();
     assert_eq!(records.len(), 1, "should record one exec call");
-
-    assert!(
-        records[0].backend_args.contains(&"--auto".to_string()),
-        "backend_args should contain --auto, got: {:?}",
-        records[0].backend_args,
-    );
+    assert_eq!(records[0].trust, "auto", "trust should be auto");
 }
 
 #[test]
@@ -68,10 +60,5 @@ fn exec_backcompat_yolo_true() {
 
     let records = env.read_flaude_exec_records();
     assert_eq!(records.len(), 1, "should record one exec call");
-
-    assert!(
-        records[0].backend_args.contains(&"--yolo".to_string()),
-        "yolo=true backcompat should pass --yolo, got: {:?}",
-        records[0].backend_args,
-    );
+    assert_eq!(records[0].trust, "yolo", "yolo=true backcompat should record trust=yolo");
 }

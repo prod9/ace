@@ -2,7 +2,35 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::{McpDecl, McpStatus};
+use super::{McpDecl, McpStatus, SessionOpts};
+use crate::config::ace_toml::Trust;
+
+/// Launch a Codex session. Replaces the current process via exec().
+pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+    let mut cmd = Command::new("codex");
+    cmd.current_dir(&opts.project_dir);
+
+    for (key, val) in &opts.env {
+        cmd.env(key, val);
+    }
+
+    match opts.trust {
+        Trust::Auto => { cmd.arg("--full-auto"); }
+        Trust::Yolo => { cmd.arg("--dangerously-bypass-approvals-and-sandbox"); }
+        Trust::Default => {}
+    }
+
+    cmd.arg("-c");
+    cmd.arg(format!(
+        "developer_instructions={}",
+        toml::Value::String(opts.session_prompt),
+    ));
+
+    cmd.args(&opts.extra_args);
+
+    use std::os::unix::process::CommandExt;
+    Err(cmd.exec())
+}
 
 const CHECK_SCHEMA: &str = r#"{"type":"object","properties":{"statuses":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"],"additionalProperties":false}}},"required":["statuses"],"additionalProperties":false}"#;
 

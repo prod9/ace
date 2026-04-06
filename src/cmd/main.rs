@@ -1,6 +1,6 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
-use crate::state::actions::exec::Exec;
+use crate::config::backend::SessionOpts;
 use crate::state::actions::mcp_register::McpRegister;
 use crate::state::actions::prepare::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
@@ -12,7 +12,7 @@ pub async fn run(ace: &mut Ace, backend_args: Vec<String>) {
     super::exit_on_err(ace, result);
 }
 
-async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), CmdError> {
+async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdError> {
     ace.require_state()?;
 
     let specifier = ace.state().school_specifier.clone()
@@ -41,9 +41,8 @@ async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), C
     let backend = ace.state().backend;
     let trust = ace.state().trust;
     if !trust.is_default() {
-        match backend.trust_args(trust) {
-            Ok(args) => {
-                backend_args.extend(args);
+        match backend.supports_trust(trust) {
+            Ok(()) => {
                 let label = match trust {
                     crate::config::ace_toml::Trust::Auto => "auto mode — AI decides approvals",
                     crate::config::ace_toml::Trust::Yolo => "yolo mode — permission prompts disabled",
@@ -57,14 +56,13 @@ async fn run_inner(ace: &mut Ace, mut backend_args: Vec<String>) -> Result<(), C
 
     ace.separator();
 
-    Exec {
-        backend,
+    backend.exec_session(SessionOpts {
+        trust,
         session_prompt,
         project_dir,
         env: ace.state().env.clone(),
-        backend_args,
-    }
-    .run(ace)?;
+        extra_args: backend_args,
+    })?;
 
     Ok(())
 }

@@ -2,7 +2,23 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Command;
 
-use super::{McpDecl, McpStatus};
+use super::{McpDecl, McpStatus, SessionOpts};
+
+/// Launch an OpenCode session. Replaces the current process via exec().
+pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+    let mut cmd = Command::new("opencode");
+    cmd.current_dir(&opts.project_dir);
+
+    for (key, val) in &opts.env {
+        cmd.env(key, val);
+    }
+
+    cmd.args(["--system-prompt", &opts.session_prompt]);
+    cmd.args(&opts.extra_args);
+
+    use std::os::unix::process::CommandExt;
+    Err(cmd.exec())
+}
 
 /// Returns OpenCode's data directory (~/.local/share/opencode or $OPENCODE_HOME).
 #[allow(dead_code)]
