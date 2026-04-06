@@ -97,12 +97,13 @@ fn build_mcp_remove_args(name: &str) -> Vec<String> {
     ]
 }
 
-const CHECK_SCHEMA: &str = r#"{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"]}}"#;
+const CHECK_SCHEMA: &str = r#"{"type":"object","properties":{"statuses":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"ok":{"type":"boolean"}},"required":["name","ok"],"additionalProperties":false}}},"required":["statuses"],"additionalProperties":false}"#;
 
 pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
     let prompt = format!(
         "You have MCP servers registered. For each of the following, call any tool to verify \
-         it responds. Reply with only a JSON array. Servers: {}",
+         it responds. Reply with only a JSON object matching this shape: \
+         {{\"statuses\":[{{\"name\":\"...\",\"ok\":true/false}}]}}. Servers: {}",
         names.join(", ")
     );
 
@@ -135,15 +136,22 @@ fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
         return Err(format!("claude: {msg}"));
     }
 
-    // result can be a JSON string or a direct array
-    match parsed.get("result") {
-        Some(serde_json::Value::String(s)) => Ok(super::parse_status_array(s)),
-        Some(serde_json::Value::Array(_)) => {
-            let json = parsed["result"].to_string();
-            Ok(super::parse_status_array(&json))
+    // result is a JSON string or object containing {"statuses":[...]}
+    let result_str = match parsed.get("result") {
+        Some(serde_json::Value::String(s)) => s.clone(),
+        Some(v) => v.to_string(),
+        None => return Ok(Vec::new()),
+    };
+
+    // Try parsing as {"statuses":[...]} object
+    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&result_str) {
+        if let Some(statuses) = obj.get("statuses") {
+            return Ok(super::parse_status_array(&statuses.to_string()));
         }
-        _ => Ok(Vec::new()),
     }
+
+    // Fallback: bare array
+    Ok(super::parse_status_array(&result_str))
 }
 
 #[allow(dead_code)]
@@ -244,9 +252,26 @@ mod tests {
     }
 
     #[test]
-    fn parse_check_result_is_raw_json_array() {
-        // Claude with --json-schema may return the array directly in result
-        let output = r#"{"type":"result","result":[{"name":"linear","ok":true}]}"#;
+    fn parse_check_statuses_object_in_string() {
+        let output = r#"{"type":"result","result":"{\"statuses\":[{\"name\":\"linear\",\"ok\":true}]}"}"#;
+        let result = parse_check_output(output).expect("should parse");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "linear");
+        assert!(result[0].ok);
+    }
+
+    #[test]
+    fn parse_check_statuses_object_direct() {
+        let output = r#"{"type":"result","result":{"statuses":[{"name":"linear","ok":true}]}}"#;
+        let result = parse_check_output(output).expect("should parse");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "linear");
+    }
+
+    #[test]
+    fn parse_check_bare_array_fallback() {
+        // Backwards compat: bare array still works
+        let output = r#"{"type":"result","result":"[{\"name\":\"linear\",\"ok\":true}]"}"#;
         let result = parse_check_output(output).expect("should parse");
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, "linear");
