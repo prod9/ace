@@ -70,17 +70,17 @@ cd www
 ```
 
 `publish.sh` does not run the build for you. It expects `dist/` to already contain the site you
-want to publish.
+want to publish, and it assumes those `www/dist` changes are already committed on `main`.
 
 Internally it:
 
-1. stages `www/dist`
-2. creates a temporary commit object from the staged site output
-3. runs `git subtree split --prefix=www/dist`
-4. updates the local `gh-pages` branch to that split commit
-5. force-pushes that commit to `origin/gh-pages`
+1. verifies you are publishing from `main`
+2. verifies `www/dist` has no uncommitted changes
+3. runs `git subtree push --prefix=www/dist --rejoin gh gh-pages`
 
-This keeps `gh-pages` as generated output only, with no manual file copying between branches.
+This keeps `publish.sh` focused on publishing only. Build and commit the generated site output
+before running it. `--rejoin` may add the subtree join commit on `main` so later publishes do
+not need to recompute the split from scratch.
 
 ## Next Step
 
