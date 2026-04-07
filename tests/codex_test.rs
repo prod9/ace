@@ -37,32 +37,7 @@ fn codex_exec_does_not_send_session_prompt_and_uses_auto_flag() {
     env.write_executable(
         "bin/codex",
         r#"#!/bin/sh
-for arg in "$@"; do
-  if [ "$arg" = "--system-prompt" ]; then
-    echo "unexpected --system-prompt" >&2
-    exit 1
-  fi
-  if [ "$arg" = "School: test-school" ]; then
-    echo "unexpected session prompt as positional message" >&2
-    exit 1
-  fi
-done
-
-found_override=0
-prev=""
-for arg in "$@"; do
-  if [ "$prev" = "-c" ] && printf '%s' "$arg" | grep -q '^developer_instructions='; then
-    found_override=1
-  fi
-  prev="$arg"
-done
-
-if [ "$found_override" -ne 1 ]; then
-  echo "missing developer_instructions override" >&2
-  printf '%s\n' "$@" >&2
-  exit 1
-fi
-
+# Record all args for assertion
 printf '%s\n' "$@" > "$HOME/codex-exec-args.txt"
 printf 'argc=%s\n' "$#" > "$HOME/codex-exec-meta.txt"
 idx=1
@@ -74,19 +49,27 @@ exit 0
 "#,
     );
 
+    // Default: resume mode — should get `resume --last --full-auto`
     env.ace_with_path_prefix(&env.path("bin"))
         .assert()
         .success();
 
     let args = env.read_file("codex-exec-args.txt");
-    let meta = env.read_file("codex-exec-meta.txt");
-    assert!(args.contains("--full-auto"), "expected Codex auto flag, got:\n{args}");
-    assert!(args.contains("developer_instructions="), "should pass developer_instructions override:\n{args}");
-    assert!(!args.contains("--system-prompt"), "should not pass unsupported flag");
-    assert!(meta.contains("argc=3"), "expected exactly 3 argv entries, got:\n{meta}");
-    assert!(meta.contains("__ARG_1_START__\n--full-auto\n__ARG_1_END__"), "unexpected argv layout:\n{meta}");
-    assert!(meta.contains("__ARG_2_START__\n-c\n__ARG_2_END__"), "unexpected argv layout:\n{meta}");
-    assert!(meta.contains("__ARG_3_START__\ndeveloper_instructions="), "expected developer_instructions arg, got:\n{meta}");
+    assert!(args.contains("resume"), "expected resume subcommand, got:\n{args}");
+    assert!(args.contains("--last"), "expected --last flag, got:\n{args}");
+    assert!(args.contains("--full-auto"), "expected auto flag, got:\n{args}");
+    assert!(!args.contains("developer_instructions="), "resume should skip developer_instructions:\n{args}");
+
+    // New session: should get `--full-auto -c developer_instructions=...`
+    env.ace_with_path_prefix(&env.path("bin"))
+        .args(["new"])
+        .assert()
+        .success();
+
+    let args = env.read_file("codex-exec-args.txt");
+    assert!(!args.contains("resume"), "new should not resume, got:\n{args}");
+    assert!(args.contains("--full-auto"), "expected auto flag, got:\n{args}");
+    assert!(args.contains("developer_instructions="), "new should pass developer_instructions:\n{args}");
 }
 
 #[test]

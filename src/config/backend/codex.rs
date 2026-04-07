@@ -21,17 +21,23 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
         cmd.env(key, val);
     }
 
+    if opts.resume {
+        cmd.args(["resume", "--last"]);
+    }
+
     match opts.trust {
         Trust::Auto => { cmd.arg("--full-auto"); }
         Trust::Yolo => { cmd.arg("--dangerously-bypass-approvals-and-sandbox"); }
         Trust::Default => {}
     }
 
-    cmd.arg("-c");
-    cmd.arg(format!(
-        "developer_instructions={}",
-        toml::Value::String(opts.session_prompt),
-    ));
+    if !opts.resume {
+        cmd.arg("-c");
+        cmd.arg(format!(
+            "developer_instructions={}",
+            toml::Value::String(opts.session_prompt),
+        ));
+    }
 
     cmd.args(&opts.extra_args);
 

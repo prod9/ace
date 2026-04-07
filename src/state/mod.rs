@@ -25,6 +25,7 @@ pub struct State {
     pub env: HashMap<String, String>,
     pub school: Option<School>,
     pub trust: Trust,
+    pub resume: bool,
 }
 
 impl State {
@@ -39,6 +40,7 @@ impl State {
             session_prompt: resolved.session_prompt,
             env: resolved.env,
             trust: resolved.trust,
+            resume: resolved.resume,
             school,
             config: tree,
         }
@@ -59,6 +61,7 @@ impl State {
             session_prompt: String::new(),
             env: HashMap::new(),
             trust: Trust::Default,
+            resume: true,
             school: None,
         }
     }
@@ -75,6 +78,7 @@ struct Resolved {
     session_prompt: String,
     env: HashMap<String, String>,
     trust: Trust,
+    resume: bool,
 }
 
 /// Resolve effective values from layers. Order: project → local (last wins).
@@ -120,12 +124,16 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         Trust::Default
     };
 
+    // resume: local layer only (personal preference). Default true.
+    let resume = tree.ace_local.resume.unwrap_or(true);
+
     Resolved {
         school_specifier,
         backend,
         session_prompt,
         env,
         trust,
+        resume,
     }
 }
 
@@ -140,6 +148,7 @@ mod tests {
             session_prompt: None,
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
             trust: Trust::Default,
+            resume: None,
             yolo: false,
         }
     }
@@ -303,5 +312,30 @@ mod tests {
         let mut state = State::empty();
         state.school_specifier = Some("prod9/school".to_string());
         assert!(state.has_school());
+    }
+
+    #[test]
+    fn resume_defaults_true() {
+        let t = tree(ace("s", &[]), ace("s", &[]));
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(r.resume);
+    }
+
+    #[test]
+    fn resume_local_false_disables() {
+        let mut local = ace("s", &[]);
+        local.resume = Some(false);
+        let t = tree(ace("s", &[]), local);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(!r.resume);
+    }
+
+    #[test]
+    fn resume_project_ignored() {
+        let mut project = ace("s", &[]);
+        project.resume = Some(false);
+        let t = tree(project, ace("s", &[]));
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(r.resume, "project-level resume=false should be ignored");
     }
 }

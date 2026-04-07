@@ -18,6 +18,7 @@ pub struct SessionOpts {
     pub project_dir: PathBuf,
     pub env: HashMap<String, String>,
     pub extra_args: Vec<String>,
+    pub resume: bool,
 }
 
 /// Health check result for a single MCP server.

@@ -99,6 +99,8 @@ enum Command {
     },
     /// Fetch latest school changes (force, ignoring cooldown)
     Pull,
+    /// Start a fresh session (skip auto-resume)
+    New,
     /// Enable auto trust mode (AI decides which actions need approval)
     Auto,
     /// Enable yolo trust mode (skip all permission prompts)
@@ -155,10 +157,11 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Some(Command::Mcp { command }) => mcp::run(ace, command),
         Some(Command::School { command }) => school::run(ace, command).await,
         Some(Command::Pull) => pull::run(ace),
+        Some(Command::New) => main::run(ace, cli.backend_args, false).await,
         Some(Command::Auto) => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Some(Command::Yolo) => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Some(Command::Maverick) => maverick::run(ace),
-        None => main::run(ace, cli.backend_args).await,
+        None => main::run(ace, cli.backend_args, true).await,
     }
 }
 

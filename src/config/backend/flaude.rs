@@ -15,6 +15,7 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     let record = serde_json::json!({
         "action": "exec",
         "trust": opts.trust,
+        "resume": opts.resume,
         "session_prompt": opts.session_prompt,
         "project_dir": opts.project_dir.to_string_lossy(),
         "extra_args": opts.extra_args,

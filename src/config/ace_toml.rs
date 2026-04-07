@@ -36,6 +36,10 @@ pub struct AceToml {
     #[serde(skip_serializing_if = "Trust::is_default")]
     pub trust: Trust,
 
+    /// Auto-resume previous session. Personal-only (local config).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resume: Option<bool>,
+
     /// Deprecated: use `trust = "yolo"` instead. Kept for backcompat.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub yolo: bool,

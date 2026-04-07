@@ -20,7 +20,11 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
         cmd.env(key, val);
     }
 
-    cmd.args(["--system-prompt", &opts.session_prompt]);
+    if opts.resume {
+        cmd.arg("--continue");
+    } else {
+        cmd.args(["--system-prompt", &opts.session_prompt]);
+    }
 
     match opts.trust {
         Trust::Auto => { cmd.args(["--permission-mode", "auto"]); }

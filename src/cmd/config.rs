@@ -22,6 +22,7 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
         },
         env: state.env.clone(),
         trust: state.trust,
+        resume: if state.resume { None } else { Some(false) },
         yolo: false,
     };
 

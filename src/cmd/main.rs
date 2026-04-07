@@ -7,12 +7,12 @@ use crate::templates::session::build_session_prompt;
 
 use super::CmdError;
 
-pub async fn run(ace: &mut Ace, backend_args: Vec<String>) {
-    let result = run_inner(ace, backend_args).await;
+pub async fn run(ace: &mut Ace, backend_args: Vec<String>, auto_resume: bool) {
+    let result = run_inner(ace, backend_args, auto_resume).await;
     super::exit_on_err(ace, result);
 }
 
-async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdError> {
+async fn run_inner(ace: &mut Ace, backend_args: Vec<String>, auto_resume: bool) -> Result<(), CmdError> {
     ace.require_state()?;
 
     let specifier = ace.state().school_specifier.clone()
@@ -54,6 +54,8 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         }
     }
 
+    let resume = auto_resume && ace.state().resume;
+
     ace.separator();
 
     backend.exec_session(SessionOpts {
@@ -62,6 +64,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>) -> Result<(), CmdEr
         project_dir,
         env: ace.state().env.clone(),
         extra_args: backend_args,
+        resume,
     })?;
 
     Ok(())
