@@ -88,8 +88,11 @@ enum Command {
     Fmt,
     /// Format ace.toml / school.toml (alias for fmt)
     Format,
-    /// Print effective configuration
-    Config,
+    /// Print effective configuration, or get/set individual keys
+    Config {
+        #[command(subcommand)]
+        command: Option<config::Command>,
+    },
     /// Print resolved filesystem paths ACE uses
     Paths {
         /// Print only this key (e.g. "project", "cache", "school")
@@ -181,7 +184,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Command::Import { source, skill } => import::run(ace, &source, skill.as_deref()),
         Command::Diff => diff::run(ace).await,
         Command::Fmt | Command::Format => fmt::run(ace),
-        Command::Config => config::run(ace).await,
+        Command::Config { command } => config::run(ace, command).await,
         Command::Paths { key } => paths::run(ace, key.as_deref()).await,
         Command::Mcp { command } => mcp::run(ace, command),
         Command::School { command } => school::run(ace, command).await,

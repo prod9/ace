@@ -25,7 +25,6 @@ pub enum Scope {
 impl Scope {
     /// Default scope when no explicit flag is given, inferred from the key.
     /// Personal-only fields → Local, shared fields → Project.
-    #[allow(dead_code)] // used by config set command (PROD9-61)
     pub fn default_for_key(key: &str) -> Self {
         match key {
             "trust" | "resume" => Scope::Local,
@@ -45,7 +44,6 @@ impl Scope {
 
 /// Parsed config key for get/set operations.
 #[derive(Debug, PartialEq, Eq)]
-#[allow(dead_code)] // used by config get/set commands (PROD9-61)
 pub enum ConfigKey {
     School,
     Backend,
@@ -55,7 +53,6 @@ pub enum ConfigKey {
     Env(String),
 }
 
-#[allow(dead_code)] // used by config get/set commands (PROD9-61)
 impl ConfigKey {
     pub fn parse(key: &str) -> Option<Self> {
         if let Some(env_key) = key.strip_prefix("env.") {
