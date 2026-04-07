@@ -9,7 +9,7 @@ Three layers, each with a single responsibility:
 Dumb I/O. Loads files from disk, parses TOML, writes back. No merging, no resolution,
 no business logic.
 
-- `AceToml` — shape of `ace.toml` / `ace.local.toml`
+- `AceToml` — shape of `ace.toml` / `ace.local.toml` / `~/.config/ace/ace.toml`
 - `SchoolToml` — shape of `school.toml`
 - `AcePaths` — computes config file locations from project dir
 - `SchoolPaths` — computes school cache/root locations from specifier

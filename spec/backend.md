@@ -13,7 +13,8 @@
 backend = "claude"
 ```
 
-Valid in `ace.toml`, `ace.local.toml`, and `school.toml` (`[school]` section).
+Valid in `~/.config/ace/ace.toml` (user), `ace.toml` (project), `ace.local.toml` (local),
+and `school.toml` (`[school]` section).
 
 ## Resolution Order
 
@@ -21,9 +22,10 @@ First `Some` wins in this priority order (highest to lowest):
 
 1. CLI override — `ace --backend <name>`, `ace -b <name>`, or convenience flags such as
    `ace --claude` / `ace --codex`
-2. Project-local — `ace.local.toml`
-3. Project-committed — `ace.toml`
-4. `school.toml` — school-level default
+2. Local — `ace.local.toml`
+3. Project — `ace.toml`
+4. User — `~/.config/ace/ace.toml`
+5. `school.toml` — school-level default
 
 Fallback if no layer specifies backend: `claude`.
 

@@ -76,11 +76,10 @@ role = "backend-engineer"
 This keeps role selection personal — different team members working on the same repo can
 have different roles without conflicting.
 
-`ace.toml` (project-committed) can also set `role` to provide a project-level default, but
-`ace.local.toml` overrides it.
+`ace.toml` (project) or `~/.config/ace/ace.toml` (user) can also set `role` to provide a
+default, but `ace.local.toml` overrides both.
 
-Resolution order: project-committed < project-local (last non-empty wins,
-same as other fields).
+Resolution order: user < project < local (last non-empty wins, same as other fields).
 
 ## Resolution
 

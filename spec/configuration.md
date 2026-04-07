@@ -8,29 +8,69 @@ TOML.
 
 Resolved by merging (later overrides earlier):
 
-1. **Project-committed** `ace.toml` (checked into git, shared)
-2. **Project-local** `ace.local.toml` (gitignored, per-machine)
+1. **User** `~/.config/ace/ace.toml` (or `$XDG_CONFIG_HOME/ace/ace.toml`) — personal defaults across all projects
+2. **Project** `ace.toml` (checked into git, shared with team)
+3. **Local** `ace.local.toml` (gitignored, per-machine overrides)
 
 ### Fields
 
 Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
-- `backend` — `"claude"` or `"codex"` (highest-priority `Some` wins: local → project; fallback `claude`). See [backend.md](backend.md).
+- `backend` — `"claude"` or `"codex"` (highest-priority `Some` wins: local → project → user; fallback `claude`). See [backend.md](backend.md).
 - `role` — selected role name (last non-empty wins). Must match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
 
 ### Personal-only fields
 
-These fields are resolved from `ace.local.toml` only — never from project-committed `ace.toml`
-or `school.toml`. They are personal workflow preferences.
+These fields are resolved from the **user** and **local** layers only — never from
+project-committed `ace.toml` or `school.toml`. They are personal workflow preferences.
 
 - `trust` — permission mode: `"default"`, `"auto"`, or `"yolo"`. Default: `"default"`.
 - `resume` — auto-resume previous session on `ace` launch. Default: `true`.
   When `true`, `ace` passes resume flags to the backend if a previous session exists for
   the current project directory. `ace --new` (or `ace -n`) forces a fresh session regardless.
   Backends that don't support resume start fresh silently.
+
+Resolution for personal-only fields: local wins over user. Project layer is skipped entirely.
+
+## Scope Flags
+
+Write commands (`ace config set`, `ace auto`, `ace yolo`) accept a scope flag to choose
+which layer to write to:
+
+- `--user` (alias: `--global`) — write to user-level `~/.config/ace/ace.toml`
+- `--project` — write to project `ace.toml`
+- `--local` — write to `ace.local.toml`
+
+When no scope flag is given, the default is inferred from the key:
+
+- Personal-only fields (`trust`, `resume`) → `--local`
+- Shared fields (`school`, `backend`, `session_prompt`, `env.*`) → `--project`
+
+An explicit scope flag always overrides inference.
+
+## Config Commands
+
+### `ace config`
+
+Bare `ace config` prints the effective resolved configuration (all layers merged).
+
+### `ace config get <key>`
+
+Print the effective resolved value for a single key. Outputs the raw value, one line.
+
+Keys: `school`, `backend`, `trust`, `resume`, `session_prompt`, `env.KEY`.
+
+### `ace config set <key> <value> [--user|--project|--local]`
+
+Write a single field to the appropriate layer. Loads the target file, modifies the field,
+saves back. Other fields in that file are preserved.
+
+Key syntax:
+- Simple fields: `backend`, `school`, `trust`, `resume`, `session_prompt`
+- Env map entries: `env.KEY` — dot-path into the `[env]` table (e.g. `ace config set env.ANTHROPIC_API_KEY sk-...`)
 
 ## Loading vs Validation
 

@@ -18,7 +18,8 @@ Built by concatenating layers, separated by blank lines:
    [roles.md](roles.md).
 3. **School** — `session_prompt` field in `school.toml`. Domain-specific instructions from the
    school maintainer. Injected verbatim (no template substitution).
-4. **Project** — `session_prompt` field in `ace.toml`. Project-specific overrides or additions.
+4. **Project** — `session_prompt` field in `ace.toml` (or user-level `~/.config/ace/ace.toml`).
+   Resolved across config layers (user < project < local, last wins).
    Injected verbatim (no template substitution).
 5. **Skill change summary** — `prompt_changes.md`, only when skills changed since last session.
    Lists added, updated, and removed skills. Rendered with `{{ changes }}`.
