@@ -1,6 +1,8 @@
 # MCP Servers
 
-Remote-only. See [decisions/002-remote-only-mcp.md](decisions/002-remote-only-mcp.md) for rationale.
+Remote MCP servers. See [decisions/002-remote-only-mcp.md](decisions/002-remote-only-mcp.md) for
+original remote-only rationale. [Local stdio servers](local-mcp.md) were added later — see
+[decisions/004-local-mcp-servers.md](decisions/004-local-mcp-servers.md).
 
 ## school.toml Format
 

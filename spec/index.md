@@ -13,7 +13,9 @@ underlying AI coding tool.
 - [roles.md](roles.md) — Role definitions, selection, prompt injection.
 - [skills-sync.md](skills-sync.md) — School folder sync (skills, rules, commands, agents).
 - [prompt-templating.md](prompt-templating.md) — Session prompt composition and template rendering.
-- [mcp.md](mcp.md) — MCP server design (remote-only, OAuth delegation).
+- [mcp.md](mcp.md) — MCP server design (remote, OAuth delegation).
+- [local-mcp.md](local-mcp.md) — Local stdio MCP server support.
+- [hooks.md](hooks.md) — School-managed backend hooks.
 - [authentication.md](authentication.md) — Authentication (MCP OAuth, school repo access).
 - [backend.md](backend.md) — Backend abstraction contract.
 - [backend-install.md](backend-install.md) — Backend installation and readiness.
