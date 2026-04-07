@@ -23,6 +23,8 @@ pub enum ConfigError {
     Encode(#[from] toml::ser::Error),
 
     // paths
+    #[error("neither XDG_CONFIG_HOME nor HOME is set")]
+    NoConfigDir,
     #[error("neither XDG_CACHE_HOME nor HOME is set")]
     NoCacheDir,
 

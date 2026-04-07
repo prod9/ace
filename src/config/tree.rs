@@ -10,6 +10,7 @@ use super::ConfigError;
 /// Raw config layers, preserved for write-back and inspection.
 #[derive(Clone)]
 pub struct Tree {
+    pub ace_user: AceToml,
     pub ace_project: AceToml,
     pub ace_local: AceToml,
     /// Backend from school.toml, applied after load when school is known.
@@ -20,9 +21,11 @@ pub struct Tree {
 
 impl Tree {
     pub fn load(paths: &AcePaths) -> Result<Self, ConfigError> {
+        let ace_user = load_or_default(&paths.user)?;
         let ace_project = load_or_default(&paths.project)?;
         let ace_local = load_or_default(&paths.local)?;
 
+        // User layer alone doesn't mean a project is set up.
         let any_found = [&paths.project, &paths.local]
             .iter()
             .any(|p| p.exists());
@@ -31,6 +34,7 @@ impl Tree {
         }
 
         Ok(Tree {
+            ace_user,
             ace_project,
             ace_local,
             school_backend: None,
@@ -41,7 +45,7 @@ impl Tree {
 
     /// Resolve school specifier from ace.toml layers (last non-empty wins).
     pub fn specifier(&self) -> Option<String> {
-        [&self.ace_local, &self.ace_project]
+        [&self.ace_local, &self.ace_project, &self.ace_user]
             .iter()
             .find(|l| !l.school.is_empty())
             .map(|l| l.school.clone())

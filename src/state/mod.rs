@@ -50,6 +50,7 @@ impl State {
     pub fn empty() -> Self {
         Self {
             config: Tree {
+                ace_user: AceToml::default(),
                 ace_project: AceToml::default(),
                 ace_local: AceToml::default(),
                 school_backend: None,
@@ -81,9 +82,9 @@ struct Resolved {
     resume: bool,
 }
 
-/// Resolve effective values from layers. Order: project → local (last wins).
+/// Resolve effective values from layers. Order: user → project → local (last wins).
 fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
-    let layers = [&tree.ace_project, &tree.ace_local];
+    let layers = [&tree.ace_user, &tree.ace_project, &tree.ace_local];
 
     // school: last non-empty wins
     let school_specifier = layers
@@ -92,10 +93,11 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         .find(|l| !l.school.is_empty())
         .map(|l| l.school.clone());
 
-    // backend: local > project > school > fallback Claude
+    // backend: local > project > user > school > fallback Claude
     let backend = overrides.backend
         .or(tree.ace_local.backend)
         .or(tree.ace_project.backend)
+        .or(tree.ace_user.backend)
         .or(tree.school_backend)
         .unwrap_or_default();
 
@@ -114,18 +116,24 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         }
     }
 
-    // trust: local layer only — never from project or school (personal preference).
-    // Backcompat: yolo = true in local config is treated as trust = "yolo".
+    // trust: user + local only — never from project or school (personal preference).
+    // Local wins over user. Backcompat: yolo = true treated as trust = "yolo".
     let trust = if !tree.ace_local.trust.is_default() {
         tree.ace_local.trust
     } else if tree.ace_local.yolo {
+        Trust::Yolo
+    } else if !tree.ace_user.trust.is_default() {
+        tree.ace_user.trust
+    } else if tree.ace_user.yolo {
         Trust::Yolo
     } else {
         Trust::Default
     };
 
-    // resume: local layer only (personal preference). Default true.
-    let resume = tree.ace_local.resume.unwrap_or(true);
+    // resume: user + local only (personal preference). Local wins over user. Default true.
+    let resume = tree.ace_local.resume
+        .or(tree.ace_user.resume)
+        .unwrap_or(true);
 
     Resolved {
         school_specifier,
@@ -155,6 +163,7 @@ mod tests {
 
     fn tree(ace_project: AceToml, ace_local: AceToml) -> Tree {
         Tree {
+            ace_user: AceToml::default(),
             ace_project,
             ace_local,
             school_backend: None,
