@@ -24,6 +24,14 @@ Anthropic API (not Bedrock/Vertex/Foundry). Uses a background Sonnet 4.6 classif
 each tool call; safe actions proceed, dangerous ones block. Adds latency and token cost per
 check.
 
+## Session Resume
+
+`claude --continue` resumes the most recent session scoped to the current project directory.
+
+No session ID needed — Claude tracks sessions per project internally. Multiple terminals in
+different project directories each resume their own session correctly. Multiple terminals in
+the same directory is last-writer-wins.
+
 ## MCP Registration
 
 **Method: CLI** — non-interactive, user-scoped, handles merging.

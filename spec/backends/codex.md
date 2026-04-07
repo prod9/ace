@@ -23,6 +23,20 @@ override surface as `-c developer_instructions=...`. Codex does not support a
 - `trust = "auto"` → `--full-auto`
 - `trust = "yolo"` → `--dangerously-bypass-approvals-and-sandbox`
 
+## Session Resume
+
+`codex resume --last` resumes the most recent session scoped to the current working directory.
+The `--all` flag disables cwd filtering to show sessions from any directory.
+
+`codex resume <SESSION_ID>` resumes a specific session by UUID. Session IDs are visible in
+the picker, `/status`, or files under `~/.codex/sessions/`.
+
+`codex resume` (bare) launches an interactive picker of recent sessions, filtered to cwd by
+default.
+
+Note: `resume` is a subcommand, not a flag — so ACE must build a different command for resume
+vs new session (unlike Claude where `--continue` is just a flag on the same command).
+
 ## MCP Registration
 
 **Method: CLI-first.** Prefer `codex mcp add` for registration.
