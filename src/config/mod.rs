@@ -34,7 +34,6 @@ impl Scope {
     }
 
     /// Resolve the filesystem path for this scope.
-    #[allow(dead_code)] // used by config set + yolo commands (PROD9-61)
     pub fn path_in<'a>(&self, paths: &'a paths::AcePaths) -> &'a Path {
         match self {
             Scope::User => &paths.user,

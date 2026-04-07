@@ -54,13 +54,11 @@ impl Ace {
         self.scope_override = scope;
     }
 
-    #[allow(dead_code)] // used by config set + yolo commands (PROD9-61)
     pub fn scope_override(&self) -> Option<Scope> {
         self.scope_override
     }
 
     /// Resolve config paths for the current project directory.
-    #[allow(dead_code)] // used by config set + yolo commands (PROD9-61)
     pub fn require_paths(&self) -> Result<AcePaths, ConfigError> {
         config::paths::resolve(&self.project_dir)
     }

@@ -1,6 +1,6 @@
 use crate::ace::Ace;
+use crate::config::Scope;
 use crate::config::ace_toml::{self, Trust};
-use crate::config::paths;
 
 use super::CmdError;
 
@@ -10,12 +10,18 @@ pub fn run(ace: &mut Ace, trust: Trust) {
 }
 
 fn run_inner(ace: &mut Ace, trust: Trust) -> Result<(), CmdError> {
-    let ace_paths = paths::resolve(ace.project_dir())?;
+    let scope = ace.scope_override().unwrap_or(Scope::Local);
+    let paths = ace.require_paths()?;
+    let target = scope.path_in(&paths);
 
-    let mut local = ace_toml::load(&ace_paths.local).unwrap_or_default();
-    local.trust = trust;
-    local.yolo = false; // clear deprecated field
-    ace_toml::save(&ace_paths.local, &local)?;
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let mut config = ace_toml::load_or_default(target)?;
+    config.trust = trust;
+    config.yolo = false; // clear deprecated field
+    ace_toml::save(target, &config)?;
 
     let msg = match trust {
         Trust::Auto => "Auto mode — AI decides which actions need approval",
