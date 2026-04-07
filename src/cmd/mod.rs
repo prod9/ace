@@ -14,7 +14,7 @@ mod yolo;
 use clap::{Parser, Subcommand};
 
 use crate::ace::{Ace, IoError};
-use crate::config::ConfigError;
+use crate::config::{ConfigError, Scope};
 use crate::config::backend::Backend;
 use crate::state::actions::import_skill::ImportError;
 use crate::state::actions::register_mcp::McpRegisterError;
@@ -49,6 +49,22 @@ pub struct Cli {
     /// Shortcut for `--backend flaude`
     #[arg(long, global = true)]
     flaude: bool,
+
+    /// Write to user-level config (~/.config/ace/ace.toml)
+    #[arg(long, global = true)]
+    user: bool,
+
+    /// Alias for --user
+    #[arg(long = "global", global = true, hide = true)]
+    global_alias: bool,
+
+    /// Write to project config (ace.toml)
+    #[arg(long, global = true)]
+    project: bool,
+
+    /// Write to local config (ace.local.toml)
+    #[arg(long, global = true)]
+    local: bool,
 
     /// Machine-readable output (no colors, no spinners, no logo)
     #[arg(long, global = true)]
@@ -145,7 +161,16 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         }
     };
 
+    let scope_override = match resolve_scope_override(&cli) {
+        Ok(scope) => scope,
+        Err(err) => {
+            exit_on_err(ace, Err(err));
+            return;
+        }
+    };
+
     ace.set_backend_override(backend_override);
+    ace.set_scope_override(scope_override);
 
     let Some(command) = cli.command else {
         return main::run(ace, cli.backend_args, true).await;
@@ -165,6 +190,30 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Command::Maverick => maverick::run(ace),
+    }
+}
+
+fn resolve_scope_override(cli: &Cli) -> Result<Option<Scope>, CmdError> {
+    let mut selected = Vec::new();
+
+    if cli.user || cli.global_alias {
+        selected.push(Scope::User);
+    }
+    if cli.project {
+        selected.push(Scope::Project);
+    }
+    if cli.local {
+        selected.push(Scope::Local);
+    }
+
+    selected.dedup();
+
+    match selected.as_slice() {
+        [] => Ok(None),
+        [scope] => Ok(Some(*scope)),
+        _ => Err(CmdError::Other(
+            "cannot combine multiple scope flags (--user, --project, --local)".to_string(),
+        )),
     }
 }
 

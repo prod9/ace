@@ -4,9 +4,10 @@ use std::path::{Path, PathBuf};
 
 use crate::config;
 use crate::config::backend::Backend;
+use crate::config::paths::AcePaths;
 use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
-use crate::config::ConfigError;
+use crate::config::{ConfigError, Scope};
 use crate::git::Git;
 use crate::state::{RuntimeOverrides, State};
 
@@ -18,6 +19,7 @@ pub struct Ace {
     state: Option<State>,
     school: Option<SchoolPaths>,
     runtime_overrides: RuntimeOverrides,
+    scope_override: Option<Scope>,
     io: Io,
     mode: OutputMode,
 }
@@ -29,6 +31,7 @@ impl Ace {
             state: None,
             school: None,
             runtime_overrides: RuntimeOverrides::default(),
+            scope_override: None,
             io: Io::new(mode),
             mode,
         }
@@ -45,6 +48,21 @@ impl Ace {
     pub fn set_backend_override(&mut self, backend: Option<Backend>) {
         self.runtime_overrides.backend = backend;
         self.state = None;
+    }
+
+    pub fn set_scope_override(&mut self, scope: Option<Scope>) {
+        self.scope_override = scope;
+    }
+
+    #[allow(dead_code)] // used by config set + yolo commands (PROD9-61)
+    pub fn scope_override(&self) -> Option<Scope> {
+        self.scope_override
+    }
+
+    /// Resolve config paths for the current project directory.
+    #[allow(dead_code)] // used by config set + yolo commands (PROD9-61)
+    pub fn require_paths(&self) -> Result<AcePaths, ConfigError> {
+        config::paths::resolve(&self.project_dir)
     }
 
     /// Lazy-load tree + school.toml + resolve. No-op if already loaded.
