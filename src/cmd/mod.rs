@@ -147,21 +147,24 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
 
     ace.set_backend_override(backend_override);
 
-    match cli.command {
-        Some(Command::Setup { specifier }) => setup::run(ace, specifier.as_deref()).await,
-        Some(Command::Import { source, skill }) => import::run(ace, &source, skill.as_deref()),
-        Some(Command::Diff) => diff::run(ace).await,
-        Some(Command::Fmt) | Some(Command::Format) => fmt::run(ace),
-        Some(Command::Config) => config::run(ace).await,
-        Some(Command::Paths { key }) => paths::run(ace, key.as_deref()).await,
-        Some(Command::Mcp { command }) => mcp::run(ace, command),
-        Some(Command::School { command }) => school::run(ace, command).await,
-        Some(Command::Pull) => pull::run(ace),
-        Some(Command::New) => main::run(ace, cli.backend_args, false).await,
-        Some(Command::Auto) => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
-        Some(Command::Yolo) => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
-        Some(Command::Maverick) => maverick::run(ace),
-        None => main::run(ace, cli.backend_args, true).await,
+    let Some(command) = cli.command else {
+        return main::run(ace, cli.backend_args, true).await;
+    };
+
+    match command {
+        Command::Setup { specifier } => setup::run(ace, specifier.as_deref()).await,
+        Command::Import { source, skill } => import::run(ace, &source, skill.as_deref()),
+        Command::Diff => diff::run(ace).await,
+        Command::Fmt | Command::Format => fmt::run(ace),
+        Command::Config => config::run(ace).await,
+        Command::Paths { key } => paths::run(ace, key.as_deref()).await,
+        Command::Mcp { command } => mcp::run(ace, command),
+        Command::School { command } => school::run(ace, command).await,
+        Command::Pull => pull::run(ace),
+        Command::New => main::run(ace, cli.backend_args, false).await,
+        Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
+        Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
+        Command::Maverick => maverick::run(ace),
     }
 }
 
