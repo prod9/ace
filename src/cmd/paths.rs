@@ -37,6 +37,7 @@ fn build_paths(
 ) -> Result<Vec<(String, String)>, CmdError> {
     let mut out = Vec::new();
 
+    out.push(("config.user".into(), p.user.display().to_string()));
     out.push(("project".into(), ace.project_dir().display().to_string()));
     out.push(("cache".into(), p.cache.display().to_string()));
 
