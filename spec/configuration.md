@@ -21,6 +21,17 @@ Each layer can set:
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
 
+### Personal-only fields
+
+These fields are resolved from `ace.local.toml` only — never from project-committed `ace.toml`
+or `school.toml`. They are personal workflow preferences.
+
+- `trust` — permission mode: `"default"`, `"auto"`, or `"yolo"`. Default: `"default"`.
+- `resume` — auto-resume previous session on `ace` launch. Default: `true`.
+  When `true`, `ace` passes resume flags to the backend if a previous session exists for
+  the current project directory. `ace --new` (or `ace -n`) forces a fresh session regardless.
+  Backends that don't support resume start fresh silently.
+
 ## Loading vs Validation
 
 Config loading and config validation are separate concerns.
