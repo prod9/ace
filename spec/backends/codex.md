@@ -37,6 +37,10 @@ default.
 Note: `resume` is a subcommand, not a flag — so ACE must build a different command for resume
 vs new session (unlike Claude where `--continue` is just a flag on the same command).
 
+**No prior session:** `codex resume --last` in a directory with no previous sessions shows an
+empty picker. Pressing ESC creates a new session. This means resume-by-default is safe — no
+error or crash on first run.
+
 ## MCP Registration
 
 **Method: CLI-first.** Prefer `codex mcp add` for registration.
