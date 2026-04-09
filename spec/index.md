@@ -60,6 +60,16 @@ this entirely.
 This is a deliberate departure from lockfile-and-pin paradigms. The skills folder captures intent
 and preferences, not reproducible builds.
 
+This does not mean changes are untracked. Schools are git repositories — every skill change has
+full commit history, authorship, and diff visibility. The school's git log is the version history.
+What ACE avoids is per-project pinning to a specific school revision.
+
+This applies equally to imported skills. Wildcard imports (`skill = "*"`, `skill = "frontend-*"`)
+always pull latest from the source and overwrite local copies — preserving stale local versions
+would be accidental pinning. This is how the parent school pattern works: `ace import parent/school
+--all` followed by `ace school update` keeps the child school in sync with the parent's latest
+skills (see `school/school-commands.md`).
+
 ## School
 
 A school is a git-cloneable source repository containing skills, conventions, agent configs, and

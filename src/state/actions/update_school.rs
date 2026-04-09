@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 
 use crate::ace::Ace;
@@ -37,9 +37,7 @@ impl UpdateSchool<'_> {
             return Ok(UpdateSchoolResult::NoImports);
         }
 
-        let local_skills = local_skill_names(self.school_root, &school.imports)?;
         let by_source = group_by_source(&school.imports);
-
         let mut count = 0;
 
         for (source, patterns) in &by_source {
@@ -49,7 +47,7 @@ impl UpdateSchool<'_> {
             crate::git::clone_github(source, tmp.path())?;
 
             let discovered = discover_skills(tmp.path())?;
-            count += copy_matching_skills(ace, self.school_root, source, patterns, &discovered, &local_skills)?;
+            count += copy_matching_skills(ace, self.school_root, source, patterns, &discovered)?;
         }
 
         ace.done(&format!("Updated {count} skill(s)"));
@@ -67,55 +65,18 @@ fn group_by_source<'a>(imports: &'a [config::school_toml::ImportDecl]) -> HashMa
     by_source
 }
 
-/// Collect skill names that exist locally and are NOT tracked in [[imports]].
-/// These are the child school's own skills — never overwritten by wildcard imports.
-fn local_skill_names(
-    school_root: &Path,
-    imports: &[config::school_toml::ImportDecl],
-) -> Result<HashSet<String>, std::io::Error> {
-    let imported: HashSet<&str> = imports.iter()
-        .filter(|i| !glob::is_glob(&i.skill))
-        .map(|i| i.skill.as_str())
-        .collect();
-
-    let skills_dir = school_root.join("skills");
-    let mut local = HashSet::new();
-
-    let Ok(entries) = std::fs::read_dir(&skills_dir) else {
-        return Ok(local);
-    };
-
-    for entry in entries {
-        let entry = entry?;
-        if !entry.path().is_dir() {
-            continue;
-        }
-
-        let Some(name) = entry.file_name().to_str().map(String::from) else {
-            continue;
-        };
-
-        if !imported.contains(name.as_str()) {
-            local.insert(name);
-        }
-    }
-
-    Ok(local)
-}
-
 fn copy_matching_skills(
     ace: &mut Ace,
     school_root: &Path,
     source: &str,
     patterns: &[&str],
     discovered: &[DiscoveredSkill],
-    local_skills: &HashSet<String>,
 ) -> Result<usize, UpdateSchoolError> {
     let mut count = 0;
 
     for pattern in patterns {
         if glob::is_glob(pattern) {
-            count += copy_glob_skills(ace, school_root, source, pattern, discovered, local_skills)?;
+            count += copy_glob_skills(ace, school_root, source, pattern, discovered)?;
         } else {
             count += copy_exact_skill(ace, school_root, source, pattern, discovered)?;
         }
@@ -151,11 +112,9 @@ fn copy_glob_skills(
     source: &str,
     pattern: &str,
     discovered: &[DiscoveredSkill],
-    local_skills: &HashSet<String>,
 ) -> Result<usize, UpdateSchoolError> {
     let matched: Vec<&DiscoveredSkill> = discovered.iter()
         .filter(|s| glob::glob_match(pattern, &s.name))
-        .filter(|s| !local_skills.contains(&s.name))
         .collect();
 
     if matched.is_empty() {

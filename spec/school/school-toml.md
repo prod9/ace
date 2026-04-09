@@ -167,5 +167,6 @@ source = "company/school"
 
 Glob rules:
 - `*` matches zero or more characters. No `?`, `**`, or character classes.
-- The school's own non-imported skills are never overwritten by wildcard imports.
+- Wildcard imports always overwrite existing skills with the latest from the source —
+  consistent with ACE's always-latest versioning philosophy (see `index.md`).
 - For conflicts between wildcard sources, the first `[[imports]]` entry wins.

@@ -113,15 +113,14 @@ Re-fetch all imported skills from their sources.
 4. For each source group: clone to temp dir, discover skills.
    - **Exact imports**: copy the named skill over existing.
    - **Wildcard imports**: match discovered skills against the glob pattern, copy all matches.
-     Skip skills that exist locally and are not tracked in `[[imports]]` (child wins).
 5. Report which skills were updated to stderr.
 
 ### Important
 
 - Exact imports update only the named skill. If not found in the source, warns and skips.
 - Wildcard imports re-discover on every update — new skills matching the pattern are picked up
-  automatically.
-- The school's own non-imported skills are never overwritten by wildcard imports.
+  automatically. Existing skills are overwritten with the latest from the source, consistent
+  with ACE's always-latest versioning philosophy (see `spec/index.md`).
 
 ## `ace diff`
 
