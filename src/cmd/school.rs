@@ -6,8 +6,8 @@ use crate::ace::Ace;
 use crate::config::skill_meta;
 use crate::config::school_toml;
 use crate::ace::OutputMode;
-use crate::state::actions::init_school::{SchoolInit, SchoolInitError};
-use crate::state::actions::update_school::{SchoolUpdate, SchoolUpdateResult};
+use crate::state::actions::init_school::{InitSchool, InitSchoolError};
+use crate::state::actions::update_school::{UpdateSchool, UpdateSchoolResult};
 
 use super::CmdError;
 
@@ -49,7 +49,7 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
     let project_dir = ace.project_dir().to_path_buf();
 
     if !crate::state::actions::is_git_repo(&project_dir) {
-        return Err(SchoolInitError::NotInGitRepo.into());
+        return Err(InitSchoolError::NotInGitRepo.into());
     }
 
     let name = match name {
@@ -67,7 +67,7 @@ fn run_init(ace: &mut Ace, name: Option<String>, force: bool) -> Result<(), CmdE
         }
     };
 
-    SchoolInit { name: &name, project_dir: &project_dir, force }.run(ace)?;
+    InitSchool { name: &name, project_dir: &project_dir, force }.run(ace)?;
     Ok(())
 }
 
@@ -150,10 +150,10 @@ fn count_skill_words(skill_dir: &std::path::Path) -> usize {
 fn run_update(ace: &mut Ace) -> Result<(), CmdError> {
     let school_root = ace.require_school()?.root.clone();
 
-    let result = SchoolUpdate { school_root: &school_root }.run(ace)?;
+    let result = UpdateSchool { school_root: &school_root }.run(ace)?;
     match result {
-        SchoolUpdateResult::NoImports => ace.warn("no imports to update"),
-        SchoolUpdateResult::Updated { .. } => {}
+        UpdateSchoolResult::NoImports => ace.warn("no imports to update"),
+        UpdateSchoolResult::Updated { .. } => {}
     }
     Ok(())
 }

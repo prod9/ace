@@ -19,8 +19,8 @@ use crate::config::backend::Backend;
 use crate::state::actions::import_skill::ImportError;
 use crate::state::actions::register_mcp::McpRegisterError;
 use crate::state::actions::prepare_school::PrepareError;
-use crate::state::actions::init_school::SchoolInitError;
-use crate::state::actions::update_school::SchoolUpdateError;
+use crate::state::actions::init_school::InitSchoolError;
+use crate::state::actions::update_school::UpdateSchoolError;
 use crate::state::actions::setup_project::SetupError;
 use crate::git::GitError;
 
@@ -144,9 +144,9 @@ pub(crate) enum CmdError {
     #[error("{0}")]
     Import(#[from] ImportError),
     #[error("{0}")]
-    SchoolInit(#[from] SchoolInitError),
+    InitSchool(#[from] InitSchoolError),
     #[error("{0}")]
-    SchoolUpdate(#[from] SchoolUpdateError),
+    UpdateSchool(#[from] UpdateSchoolError),
     #[error("{0}")]
     Git(#[from] GitError),
     #[error("{0}")]

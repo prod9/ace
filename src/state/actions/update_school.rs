@@ -5,12 +5,12 @@ use crate::ace::Ace;
 use crate::config;
 use super::discover_skill::{DiscoveredSkill, discover_skills};
 
-pub struct SchoolUpdate<'a> {
+pub struct UpdateSchool<'a> {
     pub school_root: &'a Path,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum SchoolUpdateError {
+pub enum UpdateSchoolError {
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
@@ -19,7 +19,7 @@ pub enum SchoolUpdateError {
     Git(#[from] crate::git::GitError),
 }
 
-pub enum SchoolUpdateResult {
+pub enum UpdateSchoolResult {
     NoImports,
     Updated {
         #[allow(dead_code)] // part of result API
@@ -27,15 +27,15 @@ pub enum SchoolUpdateResult {
     },
 }
 
-impl SchoolUpdate<'_> {
-    pub fn run(&self, ace: &mut Ace) -> Result<SchoolUpdateResult, SchoolUpdateError> {
+impl UpdateSchool<'_> {
+    pub fn run(&self, ace: &mut Ace) -> Result<UpdateSchoolResult, UpdateSchoolError> {
         // -- load config --
 
         let toml_path = self.school_root.join("school.toml");
         let school = config::school_toml::load(&toml_path)?;
 
         if school.imports.is_empty() {
-            return Ok(SchoolUpdateResult::NoImports);
+            return Ok(UpdateSchoolResult::NoImports);
         }
 
         // -- group imports by source --
@@ -57,7 +57,7 @@ impl SchoolUpdate<'_> {
         }
 
         ace.done(&format!("Updated {count} skill(s)"));
-        Ok(SchoolUpdateResult::Updated { count })
+        Ok(UpdateSchoolResult::Updated { count })
     }
 }
 
@@ -77,7 +77,7 @@ fn copy_matching_skills(
     source: &str,
     names: &[&str],
     discovered: &[DiscoveredSkill],
-) -> Result<usize, SchoolUpdateError> {
+) -> Result<usize, UpdateSchoolError> {
     let mut count = 0;
 
     for name in names {
