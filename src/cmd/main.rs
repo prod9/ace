@@ -55,6 +55,9 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool
     }
 
     let resume = should_resume && ace.state().resume;
+    if resume {
+        ace.hint("Resuming previous session. If this fails, run: ace new");
+    }
 
     ace.separator();
 

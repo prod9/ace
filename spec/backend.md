@@ -43,7 +43,10 @@ Each backend must provide:
 - **`is_ready()`** — heuristic check that the backend is authenticated/configured.
 - **`supports_trust(trust)`** — validate whether the backend supports the given trust level.
 - **`exec_session(opts)`** — launch the backend session. Each backend builds its own Command
-  internally from `SessionOpts` (trust, session prompt, project dir, env, extra args).
+  internally from `SessionOpts` (trust, session prompt, project dir, env, extra args, resume).
+  When `resume = true`, some backends may fail if no prior session exists (Claude) while others
+  handle it gracefully (Codex). ACE prints a hint before exec so the user knows to run
+  `ace new` on failure. See per-backend specs and `decisions/004-resume-fallback.md`.
 - **`mcp_list()`** — list currently registered MCP server names.
 - **`mcp_add(entry)`** — register a remote MCP server.
 - **`mcp_remove(name)`** — unregister a remote MCP server by name.
