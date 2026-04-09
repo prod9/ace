@@ -7,6 +7,7 @@ pub mod prepare_school;
 pub mod register_mcp;
 pub mod remove_mcp;
 pub mod setup_project;
+pub mod skill_set;
 pub mod update_cache;
 pub mod update_gitignore;
 pub mod update_school;

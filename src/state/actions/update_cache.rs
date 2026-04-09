@@ -54,18 +54,7 @@ impl UpdateOutcome {
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum ChangeKind {
-    Added,
-    Modified,
-    Removed,
-}
-
-#[derive(Debug)]
-pub struct SkillChange {
-    pub name: String,
-    pub kind: ChangeKind,
-}
+pub use super::skill_set::{ChangeKind, SkillChange};
 
 /// Outcome of a school cache update — carries data for the caller to act on.
 #[derive(Debug)]

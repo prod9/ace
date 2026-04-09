@@ -4,7 +4,8 @@ use std::path::Path;
 use crate::ace::Ace;
 use crate::config;
 use crate::glob;
-use super::discover_skill::{DiscoveredSkill, discover_skills};
+use super::discover_skill::discover_skills;
+use super::skill_set::{ChangeKind, SkillSet};
 
 pub struct UpdateSchool<'a> {
     pub school_root: &'a Path,
@@ -38,6 +39,7 @@ impl UpdateSchool<'_> {
         }
 
         let by_source = group_by_source(&school.imports);
+        let skills_dir = self.school_root.join("skills");
         let mut count = 0;
 
         for (source, patterns) in &by_source {
@@ -47,7 +49,38 @@ impl UpdateSchool<'_> {
             crate::git::clone_github(source, tmp.path())?;
 
             let discovered = discover_skills(tmp.path())?;
-            count += copy_matching_skills(ace, self.school_root, source, patterns, &discovered)?;
+            let source_set = SkillSet::from_discovered(&discovered);
+
+            for pattern in patterns {
+                let names: Vec<&str> = if glob::is_glob(pattern) {
+                    source_set.matching(pattern)
+                } else {
+                    vec![*pattern]
+                };
+
+                if names.is_empty() {
+                    ace.warn(&format!("no skills matching {pattern} in {source}"));
+                    continue;
+                }
+
+                let changes = source_set.copy_into(&skills_dir, &names)?;
+
+                if changes.is_empty() && !glob::is_glob(pattern) {
+                    ace.warn(&format!("skill {pattern} not found in {source}, skipping"));
+                    continue;
+                }
+
+                for change in &changes {
+                    let label = match change.kind {
+                        ChangeKind::Added => "new",
+                        ChangeKind::Modified => "updated",
+                        ChangeKind::Removed => "removed",
+                    };
+                    ace.done(&format!("{} ({label})", change.name));
+                }
+
+                count += changes.len();
+            }
         }
 
         ace.done(&format!("Updated {count} skill(s)"));
@@ -63,75 +96,4 @@ fn group_by_source<'a>(imports: &'a [config::school_toml::ImportDecl]) -> HashMa
             .push(imp.skill.as_str());
     }
     by_source
-}
-
-fn copy_matching_skills(
-    ace: &mut Ace,
-    school_root: &Path,
-    source: &str,
-    patterns: &[&str],
-    discovered: &[DiscoveredSkill],
-) -> Result<usize, UpdateSchoolError> {
-    let mut count = 0;
-
-    for pattern in patterns {
-        if glob::is_glob(pattern) {
-            count += copy_glob_skills(ace, school_root, source, pattern, discovered)?;
-        } else {
-            count += copy_exact_skill(ace, school_root, source, pattern, discovered)?;
-        }
-    }
-
-    Ok(count)
-}
-
-fn copy_exact_skill(
-    ace: &mut Ace,
-    school_root: &Path,
-    source: &str,
-    name: &str,
-    discovered: &[DiscoveredSkill],
-) -> Result<usize, UpdateSchoolError> {
-    let Some(skill) = discovered.iter().find(|s| s.name == name) else {
-        ace.warn(&format!("skill {name} not found in {source}, skipping"));
-        return Ok(0);
-    };
-
-    let dest = school_root.join("skills").join(name);
-    if dest.exists() {
-        std::fs::remove_dir_all(&dest)?;
-    }
-
-    crate::fsutil::copy_dir_recursive(&skill.path, &dest)?;
-    Ok(1)
-}
-
-fn copy_glob_skills(
-    ace: &mut Ace,
-    school_root: &Path,
-    source: &str,
-    pattern: &str,
-    discovered: &[DiscoveredSkill],
-) -> Result<usize, UpdateSchoolError> {
-    let matched: Vec<&DiscoveredSkill> = discovered.iter()
-        .filter(|s| glob::glob_match(pattern, &s.name))
-        .collect();
-
-    if matched.is_empty() {
-        ace.warn(&format!("no skills matching {pattern} in {source}"));
-        return Ok(0);
-    }
-
-    let mut count = 0;
-    for skill in matched {
-        let dest = school_root.join("skills").join(&skill.name);
-        if dest.exists() {
-            std::fs::remove_dir_all(&dest)?;
-        }
-
-        crate::fsutil::copy_dir_recursive(&skill.path, &dest)?;
-        count += 1;
-    }
-
-    Ok(count)
 }
