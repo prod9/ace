@@ -9,7 +9,7 @@ set -euo pipefail
 # Installs the latest release binary to /usr/local/bin/ace.
 
 REPO="prod9/ace"
-INSTALL_DIR="/usr/local/bin"
+INSTALL_DIR="${HOME}/.local/bin"
 
 # --- Detect platform ----------------------------------------------------------
 
@@ -65,12 +65,12 @@ fi
 
 chmod +x "$TMPFILE"
 mkdir -p "$INSTALL_DIR"
-
-if [ -w "$INSTALL_DIR" ]; then
-  mv "$TMPFILE" "${INSTALL_DIR}/ace"
-else
-  echo "Installing to ${INSTALL_DIR} (requires sudo)..."
-  sudo mv "$TMPFILE" "${INSTALL_DIR}/ace"
-fi
+mv "$TMPFILE" "${INSTALL_DIR}/ace"
 
 echo "Installed ace ${TAG} to ${INSTALL_DIR}/ace"
+
+if ! echo ":${PATH}:" | grep -q ":${INSTALL_DIR}:"; then
+  echo ""
+  echo "Note: ${INSTALL_DIR} is not on your PATH."
+  echo "Add it with:  export PATH=\"${INSTALL_DIR}:\$PATH\""
+fi
