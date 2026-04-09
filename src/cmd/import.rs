@@ -1,4 +1,5 @@
 use crate::ace::Ace;
+use crate::git;
 use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill};
 
 use super::CmdError;
@@ -9,10 +10,11 @@ pub fn run(ace: &mut Ace, source: &str, skill: Option<&str>) {
 }
 
 fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>) -> Result<(), CmdError> {
+    let normalized = git::normalize_github_source(source);
     let school_root = ace.require_school()?.root.clone();
 
     let result = ImportSkill {
-        source,
+        source: &normalized,
         skill,
         school_root: &school_root,
     }
@@ -28,7 +30,7 @@ fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>) -> Result<(), Cmd
                 .ok_or_else(|| ImportError::SkillNotFound(selected.to_string()))?;
 
             ImportSkill {
-                source,
+                source: &normalized,
                 skill: Some(&skill.name),
                 school_root: &school_root,
             }

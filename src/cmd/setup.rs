@@ -1,5 +1,6 @@
 use crate::ace::Ace;
 use crate::config::index_toml;
+use crate::git;
 use crate::state::actions::update_gitignore::UpdateGitignore;
 use crate::state::actions::setup_project::Setup;
 use crate::templates;
@@ -15,7 +16,7 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
     let project_dir = ace.project_dir().to_path_buf();
 
     let resolved = match specifier {
-        Some(s) => s.to_string(),
+        Some(s) => normalize_specifier(s),
         None => resolve_from_cache(ace)?,
     };
 
@@ -57,6 +58,18 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
 
     ace.done("Setup complete.");
     Ok(())
+}
+
+/// Normalize a specifier: strip GitHub URL prefix and .git suffix from the source portion.
+/// Preserves colon-separated path (e.g. `owner/repo:subpath`).
+fn normalize_specifier(spec: &str) -> String {
+    match spec.split_once(':') {
+        Some((source, path)) => {
+            let normalized = git::normalize_github_source(source);
+            format!("{normalized}:{path}")
+        }
+        None => git::normalize_github_source(spec),
+    }
 }
 
 fn resolve_from_cache(ace: &mut Ace) -> Result<String, CmdError> {

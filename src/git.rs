@@ -126,9 +126,23 @@ impl<'a> Git<'a> {
     }
 }
 
+/// Normalize a GitHub source: strip URL prefix and `.git` suffix.
+/// Accepts `https://github.com/owner/repo`, `https://github.com/owner/repo.git`,
+/// or plain `owner/repo`. Returns `owner/repo`.
+pub fn normalize_github_source(source: &str) -> String {
+    let s = source
+        .strip_prefix("https://github.com/")
+        .or_else(|| source.strip_prefix("http://github.com/"))
+        .unwrap_or(source);
+    let s = s.strip_suffix(".git").unwrap_or(s);
+    s.trim_end_matches('/').to_string()
+}
+
 /// Clone a GitHub repo by `owner/repo` specifier into `dest` using a full clone.
+/// Accepts full GitHub URLs or plain `owner/repo` specifiers.
 pub fn clone_github(source: &str, dest: &Path) -> Result<(), GitError> {
-    let url = format!("https://github.com/{source}.git");
+    let normalized = normalize_github_source(source);
+    let url = format!("https://github.com/{normalized}.git");
     clone_repo(&url, dest)
 }
 
@@ -162,6 +176,56 @@ mod tests {
     use super::*;
     use std::process::Command;
     use tempfile::TempDir;
+
+    #[test]
+    fn normalize_plain_specifier() {
+        assert_eq!(normalize_github_source("owner/repo"), "owner/repo");
+    }
+
+    #[test]
+    fn normalize_strips_https_prefix() {
+        assert_eq!(
+            normalize_github_source("https://github.com/owner/repo"),
+            "owner/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_strips_git_suffix() {
+        assert_eq!(
+            normalize_github_source("owner/repo.git"),
+            "owner/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_strips_both() {
+        assert_eq!(
+            normalize_github_source("https://github.com/owner/repo.git"),
+            "owner/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_strips_trailing_slash() {
+        assert_eq!(
+            normalize_github_source("https://github.com/owner/repo/"),
+            "owner/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_http_prefix() {
+        assert_eq!(
+            normalize_github_source("http://github.com/owner/repo"),
+            "owner/repo"
+        );
+    }
+
+    #[test]
+    fn normalize_preserves_dot_specifier() {
+        assert_eq!(normalize_github_source("."), ".");
+    }
 
     #[test]
     fn clone_repo_full_history() {

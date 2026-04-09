@@ -24,10 +24,11 @@ impl Install<'_> {
                 .map_err(|e| PrepareError::Clone(format!("mkdir: {e}")))?;
         }
 
-        let repo = self.specifier.split_once(':').map_or(
+        let raw_repo = self.specifier.split_once(':').map_or(
             self.specifier,
             |(owner_repo, _)| owner_repo,
         );
+        let repo = git::normalize_github_source(raw_repo);
         let url = format!("https://github.com/{repo}.git");
 
         ace.progress(&format!("Cloning {repo}"));
