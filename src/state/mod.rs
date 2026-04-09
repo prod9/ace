@@ -1,5 +1,6 @@
 pub mod actions;
 pub mod school;
+pub mod skill_set;
 
 pub use school::School;
 

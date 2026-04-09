@@ -5,7 +5,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::glob;
 use super::discover_skill::discover_skills;
-use super::skill_set::{ChangeKind, SkillSet};
+use crate::state::skill_set::{ChangeKind, SkillSet};
 
 pub struct UpdateSchool<'a> {
     pub school_root: &'a Path,

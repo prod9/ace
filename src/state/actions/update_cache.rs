@@ -54,7 +54,7 @@ impl UpdateOutcome {
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
 
-pub use super::skill_set::{ChangeKind, SkillChange};
+pub use crate::state::skill_set::{ChangeKind, SkillChange};
 
 /// Outcome of a school cache update — carries data for the caller to act on.
 #[derive(Debug)]
