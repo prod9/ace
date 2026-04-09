@@ -65,6 +65,20 @@ Import a skill from an external repository into the school. Top-level command (n
 - **--skill** — Specific skill name or glob pattern (e.g. `"frontend-*"`).
 - **--all** — Import all skills from the source. Shorthand for `--skill "*"`.
 
+### Parity with skills.sh
+
+The `skills` CLI (https://skills.sh, `npx skills`) supports `--skill '*'` and `--all` for
+bulk import, but only as a point-in-time snapshot — `skills update` only refreshes what's in
+the lock file. New skills added to the source require another `add`.
+
+ACE's wildcard imports go further: glob patterns in `[[imports]]` re-discover matching skills
+on every `ace school update`. New skills added to the source are picked up automatically.
+
+The `skills` CLI only supports literal `*` (all-or-nothing). ACE supports `*` anywhere in the
+pattern (`frontend-*`, `*-coding`, `*-design-*`). The `skills` CLI uses exact name matching
+for `--skill` values — no glob, no `?`, no character classes. ACE matches this constraint
+(no `?` or character classes) but adds prefix/suffix/infix `*` matching.
+
 ### Flow
 
 1. Resolve school context: if `school.toml` in cwd → school dir. Otherwise resolve linked
