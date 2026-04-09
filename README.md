@@ -10,12 +10,23 @@ environments up-to-date. Acts as an entrypoint to supported AI coding backends s
 
 ## Install
 
+**curl installer** (recommended):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/prod9/ace/main/install.sh | bash
+```
+
+**GitHub release** (manual):
+
+Download the binary for your platform from the
+[latest release](https://github.com/prod9/ace/releases/latest), `chmod +x`, and move to
+somewhere on your `$PATH`.
+
+**Source** (development):
+
 ```sh
 cargo install --path .
 ```
-
-For now, the public install path is still source-based. Manual release binaries and a curl
-installer are being prepared separately.
 
 ## Usage
 
