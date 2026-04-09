@@ -102,9 +102,12 @@ enum Command {
     Import {
         /// Skill source (owner/repo or URL)
         source: String,
-        /// Specific skill name within the repo
+        /// Specific skill name or glob pattern (e.g. "frontend-*")
         #[arg(long)]
         skill: Option<String>,
+        /// Import all skills from the source (equivalent to --skill "*")
+        #[arg(long)]
+        all: bool,
     },
     /// Manage MCP server registrations
     Mcp {
@@ -181,7 +184,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
 
     match command {
         Command::Setup { specifier } => setup::run(ace, specifier.as_deref()).await,
-        Command::Import { source, skill } => import::run(ace, &source, skill.as_deref()),
+        Command::Import { source, skill, all } => import::run(ace, &source, skill.as_deref(), all),
         Command::Diff => diff::run(ace).await,
         Command::Fmt | Command::Format => fmt::run(ace),
         Command::Config { command } => config::run(ace, command).await,

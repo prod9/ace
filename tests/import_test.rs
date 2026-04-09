@@ -132,3 +132,61 @@ source = "some-owner/some-repo"
 }
 
 use predicates;
+
+#[test]
+fn import_all_adds_wildcard_entry() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    // --all writes a wildcard import entry without cloning (no network needed).
+    env.ace()
+        .args(["import", "company/school", "--all"])
+        .assert()
+        .success()
+        .stderr(predicates::str::contains("Added import: * from company/school"));
+
+    let toml = env.read_file("school.toml");
+    assert!(toml.contains("skill = \"*\""), "should have wildcard skill entry");
+    assert!(toml.contains("source = \"company/school\""), "should have source");
+}
+
+#[test]
+fn import_glob_pattern_adds_entry() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "company/school", "--skill", "*-coding"])
+        .assert()
+        .success()
+        .stderr(predicates::str::contains("Added import: *-coding from company/school"));
+
+    let toml = env.read_file("school.toml");
+    assert!(toml.contains("skill = \"*-coding\""), "should have glob pattern");
+}
+
+#[test]
+fn import_all_duplicate_warns() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file(
+        "school.toml",
+        r#"name = "test-school"
+
+[[imports]]
+skill = "*"
+source = "company/school"
+"#,
+    );
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "company/school", "--all"])
+        .assert()
+        .success()
+        .stderr(predicates::str::contains("import already exists"));
+}

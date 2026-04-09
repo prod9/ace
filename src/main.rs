@@ -5,6 +5,7 @@ mod cmd;
 mod config;
 mod fsutil;
 mod git;
+mod glob;
 mod templates;
 mod state;
 

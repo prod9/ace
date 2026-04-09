@@ -56,13 +56,14 @@ has all the tools (git + GitHub MCP).
 The `ace-school` skill (created by `ace school init`) provides detailed instructions for
 this workflow.
 
-## `ace import <source> [--skill <name>]`
+## `ace import <source> [--skill <name>] [--all]`
 
 Import a skill from an external repository into the school. Top-level command (not under
 `ace school`) for convenience.
 
 - **source** — GitHub `owner/repo` shorthand or full URL (same convention as school specifiers).
-- **--skill** — Specific skill name within the repo (if repo has multiple skills).
+- **--skill** — Specific skill name or glob pattern (e.g. `"frontend-*"`).
+- **--all** — Import all skills from the source. Shorthand for `--skill "*"`.
 
 ### Flow
 
@@ -83,7 +84,22 @@ Import a skill from an external repository into the school. Top-level command (n
 - Skills are copied as real files — the school owns and commits them.
 - Re-importing the same skill overwrites files and updates (not duplicates) the `[[imports]]`
   entry.
-- Never imports all skills wholesale when multiple are present — always prompts for selection.
+- When multiple skills are found and no `--skill` or `--all` is given, prompts for selection.
+- Glob patterns (`--skill "frontend-*"` or `--all`) record an `[[imports]]` entry and print
+  a hint to run `ace school update`. No skills are copied immediately — resolution happens
+  during update.
+
+### Parent school pattern
+
+To inherit all skills from a company-wide school:
+
+```sh
+ace import company/school --all
+ace school update
+```
+
+This adds `skill = "*"` to `[[imports]]` and fetches all skills on update. New skills added
+to the parent are picked up automatically on subsequent updates.
 
 ## `ace school update`
 
@@ -94,13 +110,18 @@ Re-fetch all imported skills from their sources.
 1. Read `[[imports]]` from `school.toml`.
 2. If empty, print "no imports to update" and return.
 3. Group imports by source (avoid cloning same repo twice).
-4. For each source group: clone to temp dir, discover skills, copy matching ones over existing.
+4. For each source group: clone to temp dir, discover skills.
+   - **Exact imports**: copy the named skill over existing.
+   - **Wildcard imports**: match discovered skills against the glob pattern, copy all matches.
+     Skip skills that exist locally and are not tracked in `[[imports]]` (child wins).
 5. Report which skills were updated to stderr.
 
 ### Important
 
-- Only updates skills listed in `[[imports]]` — does not discover or import new skills.
-- If a skill is no longer found in the source repo, prints a warning and skips it.
+- Exact imports update only the named skill. If not found in the source, warns and skips.
+- Wildcard imports re-discover on every update — new skills matching the pattern are picked up
+  automatically.
+- The school's own non-imported skills are never overwritten by wildcard imports.
 
 ## `ace diff`
 

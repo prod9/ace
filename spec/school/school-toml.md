@@ -124,11 +124,14 @@ Array of imported skill declarations. Each entry tracks a skill that was importe
 external repository via `ace import`. Used by `ace school update` to re-fetch skills from
 their sources.
 
-- `skill` — Skill directory name. Matches the folder name under `skills/`.
+- `skill` — Skill name or glob pattern. Exact names match the folder name under `skills/`.
+  Glob patterns use `*` to match zero or more characters.
 - `source` — GitHub `owner/repo` shorthand where the skill was imported from.
 
 Skills are copied into the school as real files (the school owns and commits them). The
 `[[imports]]` entries record provenance so `ace school update` knows where to re-fetch from.
+
+#### Exact imports
 
 ```toml
 [[imports]]
@@ -139,3 +142,30 @@ source = "anthropics/skills"
 skill = "frontend-design"
 source = "anthropics/skills"
 ```
+
+#### Wildcard imports
+
+Glob patterns re-discover matching skills on every `ace school update`. New skills added to
+the source that match the pattern are picked up automatically.
+
+```toml
+# All skills from a parent school
+[[imports]]
+skill = "*"
+source = "company/school"
+
+# Only coding convention skills
+[[imports]]
+skill = "*-coding"
+source = "company/school"
+
+# All frontend skills
+[[imports]]
+skill = "frontend-*"
+source = "company/school"
+```
+
+Glob rules:
+- `*` matches zero or more characters. No `?`, `**`, or character classes.
+- The school's own non-imported skills are never overwritten by wildcard imports.
+- For conflicts between wildcard sources, the first `[[imports]]` entry wins.
