@@ -32,6 +32,15 @@ No session ID needed — Claude tracks sessions per project internally. Multiple
 different project directories each resume their own session correctly. Multiple terminals in
 the same directory is last-writer-wins.
 
+**No prior session:** `claude --continue` in interactive mode fails hard with
+"No conversation found to continue" (exit code 1). In `--print` mode it silently starts a new
+session. Passing `--continue --system-prompt "..."` together does not help — `--continue` is
+rejected before `--system-prompt` is considered.
+
+**ACE strategy:** ACE prints a hint before exec'ing with `--continue`, telling the user to
+run `ace new` if resume fails. No automatic retry — the user handles it.
+See `spec/decisions/004-resume-fallback.md`.
+
 ## MCP Registration
 
 **Method: CLI** — non-interactive, user-scoped, handles merging.
