@@ -142,8 +142,11 @@ impl Update<'_> {
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         ace.progress(&format!("Fetching {}", self.specifier));
-        git.fetch("origin", "main")
-            .map_err(|e| PrepareError::Clone(e.to_string()))?;
+        if let Err(e) = git.fetch("origin", "main") {
+            ace.warn(&e.to_string());
+            ace.hint(crate::git::auth_hint());
+            return Err(PrepareError::Clone(e.to_string()));
+        }
 
         if git
             .is_ahead_of("origin/main")

@@ -40,7 +40,11 @@ impl ImportSkill<'_> {
         let tmp = tempfile::tempdir()?;
 
         ace.progress(&format!("Cloning {}", self.source));
-        crate::git::clone_github(self.source, tmp.path())?;
+        if let Err(e) = crate::git::clone_github(self.source, tmp.path()) {
+            ace.warn(&e.to_string());
+            ace.hint(crate::git::auth_hint());
+            return Err(e.into());
+        }
 
         let skills = discover_skills(tmp.path())?;
         if skills.is_empty() {

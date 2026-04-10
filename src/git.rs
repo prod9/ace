@@ -7,8 +7,34 @@ use crate::ace::OutputMode;
 pub enum GitError {
     #[error("git {cmd}: {source}")]
     Exec { cmd: String, source: std::io::Error },
-    #[error("git {cmd}: {status}")]
-    Exit { cmd: String, status: ExitStatus },
+    #[error("git {cmd}: {status}{}", if stderr.is_empty() { String::new() } else { format!("\n{stderr}") })]
+    Exit {
+        cmd: String,
+        status: ExitStatus,
+        stderr: String,
+    },
+}
+
+/// Build a `git` Command with non-interactive env so we fail fast instead of hanging
+/// on credential or known_hosts prompts. Credential helpers (keychain, gh, etc.) still work.
+fn git_command() -> Command {
+    let mut cmd = Command::new("git");
+    cmd.env("GIT_TERMINAL_PROMPT", "0");
+    cmd.env(
+        "GIT_SSH_COMMAND",
+        "ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new",
+    );
+    cmd
+}
+
+/// Hint printed alongside git failures that look like auth/transport issues.
+/// Points users at the two supported auth paths: SSH keys or the GitHub CLI.
+pub fn auth_hint() -> &'static str {
+    "If this is an auth issue, either:\n  \
+     • Set up an SSH key and add it to GitHub:\n      \
+     https://docs.github.com/en/authentication/connecting-to-github-with-ssh\n  \
+     • Or install GitHub CLI and sign in:\n      \
+     brew install gh && gh auth login"
 }
 
 pub struct Git<'a> {
@@ -84,21 +110,21 @@ impl<'a> Git<'a> {
     fn run(&self, args: &[&str]) -> Result<(), GitError> {
         let cmd_str = args.join(" ");
 
-        let status = Command::new("git")
+        let out = git_command()
             .args(args)
             .current_dir(self.repo)
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
+            .output()
             .map_err(|e| GitError::Exec {
                 cmd: cmd_str.clone(),
                 source: e,
             })?;
 
-        if !status.success() {
+        if !out.status.success() {
             return Err(GitError::Exit {
                 cmd: cmd_str,
-                status,
+                status: out.status,
+                stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
             });
         }
         Ok(())
@@ -107,7 +133,7 @@ impl<'a> Git<'a> {
     fn output(&self, args: &[&str]) -> Result<String, GitError> {
         let cmd_str = args.join(" ");
 
-        let out = Command::new("git")
+        let out = git_command()
             .args(args)
             .current_dir(self.repo)
             .output()
@@ -120,6 +146,7 @@ impl<'a> Git<'a> {
             return Err(GitError::Exit {
                 cmd: cmd_str,
                 status: out.status,
+                stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
             });
         }
         Ok(String::from_utf8_lossy(&out.stdout).into_owned())
@@ -151,21 +178,21 @@ pub fn clone_github(source: &str, dest: &Path) -> Result<(), GitError> {
 pub fn clone_repo(url: &str, dest: &Path) -> Result<(), GitError> {
     let cmd_str = format!("clone --no-tags {url}");
 
-    let status = Command::new("git")
+    let out = git_command()
         .args(["clone", "--no-tags", url])
         .arg(dest)
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .output()
         .map_err(|e| GitError::Exec {
             cmd: cmd_str.clone(),
             source: e,
         })?;
 
-    if !status.success() {
+    if !out.status.success() {
         return Err(GitError::Exit {
             cmd: cmd_str,
-            status,
+            status: out.status,
+            stderr: String::from_utf8_lossy(&out.stderr).trim().to_string(),
         });
     }
     Ok(())
@@ -176,6 +203,28 @@ mod tests {
     use super::*;
     use std::process::Command;
     use tempfile::TempDir;
+
+    #[test]
+    fn git_command_sets_noninteractive_env() {
+        let cmd = git_command();
+        let envs: Vec<(String, String)> = cmd
+            .get_envs()
+            .filter_map(|(k, v)| {
+                v.map(|v| (k.to_string_lossy().into_owned(), v.to_string_lossy().into_owned()))
+            })
+            .collect();
+
+        let prompt = envs.iter().find(|(k, _)| k == "GIT_TERMINAL_PROMPT");
+        assert_eq!(prompt.map(|(_, v)| v.as_str()), Some("0"));
+
+        let ssh = envs.iter().find(|(k, _)| k == "GIT_SSH_COMMAND");
+        let ssh_val = ssh.map(|(_, v)| v.as_str()).unwrap_or("");
+        assert!(ssh_val.contains("BatchMode=yes"), "GIT_SSH_COMMAND: {ssh_val}");
+        assert!(
+            ssh_val.contains("StrictHostKeyChecking=accept-new"),
+            "GIT_SSH_COMMAND: {ssh_val}"
+        );
+    }
 
     #[test]
     fn normalize_plain_specifier() {

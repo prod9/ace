@@ -32,8 +32,11 @@ impl Install<'_> {
         let url = format!("https://github.com/{repo}.git");
 
         ace.progress(&format!("Cloning {repo}"));
-        git::clone_repo(&url, cache)
-            .map_err(|e| PrepareError::Clone(e.to_string()))?;
+        if let Err(e) = git::clone_repo(&url, cache) {
+            ace.warn(&e.to_string());
+            ace.hint(git::auth_hint());
+            return Err(PrepareError::Clone(e.to_string()));
+        }
         ace.done(&format!("Cloned {repo}"));
 
         update_index(&school_paths.source)?;

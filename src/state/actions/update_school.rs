@@ -46,7 +46,11 @@ impl UpdateSchool<'_> {
             let tmp = tempfile::tempdir()?;
 
             ace.progress(&format!("Fetching {source}"));
-            crate::git::clone_github(source, tmp.path())?;
+            if let Err(e) = crate::git::clone_github(source, tmp.path()) {
+                ace.warn(&e.to_string());
+                ace.hint(crate::git::auth_hint());
+                return Err(e.into());
+            }
 
             let discovered = discover_skills(tmp.path())?;
             let source_set = SkillSet::from_discovered(&discovered);
