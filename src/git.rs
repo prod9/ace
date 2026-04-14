@@ -283,29 +283,29 @@ mod tests {
         let remote_path = remote.path();
         Command::new("git")
             .args(["init"])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git init");
         std::fs::write(remote_path.join("file.txt"), "first").unwrap();
         Command::new("git")
             .args(["add", "."])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git add");
         Command::new("git")
             .args(["commit", "-m", "first"])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git commit 1");
         std::fs::write(remote_path.join("file.txt"), "second").unwrap();
         Command::new("git")
             .args(["add", "."])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git add 2");
         Command::new("git")
             .args(["commit", "-m", "second"])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git commit 2");
 
@@ -325,18 +325,18 @@ mod tests {
         let remote_path = remote.path();
         Command::new("git")
             .args(["init"])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git init");
         std::fs::write(remote_path.join("a.txt"), "a").unwrap();
         Command::new("git")
             .args(["add", "."])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git add a");
         Command::new("git")
             .args(["commit", "-m", "init"])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git commit init");
 
@@ -346,19 +346,19 @@ mod tests {
         std::fs::write(remote_path.join("b.txt"), "b").unwrap();
         Command::new("git")
             .args(["add", "."])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git add b");
         Command::new("git")
             .args(["commit", "-m", "new"])
-            .current_dir(&remote_path)
+            .current_dir(remote_path)
             .output()
             .expect("git commit new");
 
         let branch_name = {
             let out = Command::new("git")
                 .args(["rev-parse", "--abbrev-ref", "HEAD"])
-                .current_dir(&remote_path)
+                .current_dir(remote_path)
                 .output()
                 .expect("rev-parse branch");
             String::from_utf8_lossy(&out.stdout).trim().to_string()
@@ -371,7 +371,7 @@ mod tests {
         let remote_head = {
             let out = Command::new("git")
                 .args(["rev-parse", "HEAD"])
-                .current_dir(&remote_path)
+                .current_dir(remote_path)
                 .output()
                 .expect("rev-parse remote");
             String::from_utf8_lossy(&out.stdout).trim().to_string()

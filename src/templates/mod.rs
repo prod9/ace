@@ -77,7 +77,8 @@ mod tests {
 
     #[test]
     fn substitute_cases() {
-        let cases: &[(&str, &[(&str, &str)], &str)] = &[
+        type Case<'a> = (&'a str, &'a [(&'a str, &'a str)], &'a str);
+        let cases: &[Case] = &[
             // basic
             ("Hello {{ name }}!", &[("name", "world")], "Hello world!"),
             ("{{x}}", &[("x", "1")], "1"),

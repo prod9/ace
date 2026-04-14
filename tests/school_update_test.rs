@@ -143,5 +143,3 @@ source = "nonexistent-owner-xxxxx/nonexistent-repo-xxxxx"
     env.assert_exists("skills/local-skill/SKILL.md");
     env.assert_contains("skills/local-skill/SKILL.md", "Local Skill");
 }
-
-use predicates;

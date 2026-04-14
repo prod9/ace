@@ -233,5 +233,3 @@ fn setup_backend_flag_overrides_configured_backend() {
     env.assert_exists("AGENTS.md");
     env.assert_not_exists("CLAUDE.md");
 }
-
-use predicates;

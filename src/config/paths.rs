@@ -25,11 +25,11 @@ pub(super) fn home_dir() -> Option<PathBuf> {
 pub(super) fn config_dir() -> Result<PathBuf, ConfigError> {
     let xdg = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
     let home = home_dir().map(|h| h.join(".config"));
-    xdg.or_else(|| home).ok_or(ConfigError::NoConfigDir)
+    xdg.or(home).ok_or(ConfigError::NoConfigDir)
 }
 
 pub(super) fn cache_dir() -> Result<PathBuf, ConfigError> {
     let xdg = std::env::var_os("XDG_CACHE_HOME").map(PathBuf::from);
     let home = home_dir().map(|h| h.join(".cache"));
-    xdg.or_else(|| home).ok_or(ConfigError::NoCacheDir)
+    xdg.or(home).ok_or(ConfigError::NoCacheDir)
 }

@@ -43,10 +43,10 @@ fn parse_specifier(spec: &str) -> Result<(String, Option<&str>), ConfigError> {
         return Err(ConfigError::TraversalInSource(source.to_string()));
     }
 
-    if let Some(p) = path {
-        if has_traversal(p) {
-            return Err(ConfigError::TraversalInPath(p.to_string()));
-        }
+    if let Some(p) = path
+        && has_traversal(p)
+    {
+        return Err(ConfigError::TraversalInPath(p.to_string()));
     }
 
     Ok((source.to_string(), path))

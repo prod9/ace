@@ -19,10 +19,10 @@ fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>, all: bool) -> Res
 
     // Glob patterns are recorded as imports, not copied immediately.
     // They resolve on `ace school update`.
-    if let Some(pattern) = effective_skill {
-        if crate::glob::is_glob(pattern) {
-            return add_glob_import(ace, &school_root, &normalized, pattern);
-        }
+    if let Some(pattern) = effective_skill
+        && crate::glob::is_glob(pattern)
+    {
+        return add_glob_import(ace, &school_root, &normalized, pattern);
     }
 
     let result = ImportSkill {

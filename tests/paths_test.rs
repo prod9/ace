@@ -62,5 +62,3 @@ fn paths_unknown_key() {
         .failure()
         .stderr(predicates::str::contains("unknown key"));
 }
-
-use predicates;

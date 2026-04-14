@@ -59,11 +59,11 @@ impl Tree {
 
         let sp = school_paths::resolve(project_dir, &spec)?;
         let school_toml_path = sp.root.join("school.toml");
-        if school_toml_path.exists() {
-            if let Ok(st) = school_toml::load(&school_toml_path) {
-                self.school_backend = st.backend;
-                self.school_toml = Some(st);
-            }
+        if school_toml_path.exists()
+            && let Ok(st) = school_toml::load(&school_toml_path)
+        {
+            self.school_backend = st.backend;
+            self.school_toml = Some(st);
         }
         self.school_paths = Some(sp);
         Ok(())

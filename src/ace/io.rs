@@ -33,11 +33,11 @@ impl TerminalGuard {
         let alt_screen = Arc::new(AtomicBool::new(false));
         let flag = Arc::clone(&alt_screen);
 
-        let mut signals = Signals::new(&[SIGINT]).expect("register signal handler");
+        let mut signals = Signals::new([SIGINT]).expect("register signal handler");
         let handle = signals.handle();
 
         std::thread::spawn(move || {
-            for _ in signals.forever() {
+            if signals.forever().next().is_some() {
                 let cleanup = if flag.load(Ordering::Relaxed) {
                     CLEANUP_ALT_SCREEN
                 } else {

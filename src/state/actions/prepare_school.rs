@@ -38,11 +38,10 @@ pub struct PrepareResult {
 //   claude:   skills ✓  rules ✓  commands ✓  agents ✓
 //   codex:    skills ✓  rules ✗  commands ✗  agents ✗
 fn is_supported(backend: Backend, folder: &str) -> bool {
-    match (backend, folder) {
-        (_, "skills") => true,
-        (Backend::Claude | Backend::Flaude, _) => true,
-        _ => false,
-    }
+    matches!(
+        (backend, folder),
+        (_, "skills") | (Backend::Claude | Backend::Flaude, _)
+    )
 }
 
 impl Prepare<'_> {

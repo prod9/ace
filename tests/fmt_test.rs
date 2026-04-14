@@ -70,5 +70,3 @@ fn fmt_no_files() {
         .success()
         .stderr(predicates::str::contains("no ace.toml or school.toml"));
 }
-
-use predicates;

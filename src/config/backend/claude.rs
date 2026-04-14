@@ -178,10 +178,10 @@ fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
     };
 
     // Try parsing as {"statuses":[...]} object
-    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&result_str) {
-        if let Some(statuses) = obj.get("statuses") {
-            return Ok(super::parse_status_array(&statuses.to_string()));
-        }
+    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&result_str)
+        && let Some(statuses) = obj.get("statuses")
+    {
+        return Ok(super::parse_status_array(&statuses.to_string()));
     }
 
     // Fallback: bare array

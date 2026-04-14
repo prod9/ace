@@ -131,8 +131,6 @@ source = "some-owner/some-repo"
         .stderr(predicates::str::contains("git clone"));
 }
 
-use predicates;
-
 #[test]
 fn import_all_adds_wildcard_entry() {
     let env = TestEnv::new();

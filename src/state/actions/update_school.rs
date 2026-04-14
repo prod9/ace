@@ -92,7 +92,7 @@ impl UpdateSchool<'_> {
     }
 }
 
-fn group_by_source<'a>(imports: &'a [config::school_toml::ImportDecl]) -> HashMap<&'a str, Vec<&'a str>> {
+fn group_by_source(imports: &[config::school_toml::ImportDecl]) -> HashMap<&str, Vec<&str>> {
     let mut by_source: HashMap<&str, Vec<&str>> = HashMap::new();
     for imp in imports {
         by_source.entry(imp.source.as_str())

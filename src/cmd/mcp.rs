@@ -209,7 +209,7 @@ fn run_reset(ace: &mut Ace, name: Option<String>) -> Result<(), CmdError> {
 fn report_statuses(ace: &mut Ace, statuses: &[McpStatus]) {
     for status in statuses {
         if status.ok {
-            ace.done(&format!("{}", status.name));
+            ace.done(&status.name);
         } else {
             ace.error(&format!("{} (unhealthy)", status.name));
         }

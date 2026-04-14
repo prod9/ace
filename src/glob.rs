@@ -1,14 +1,14 @@
-/// Simple glob matching for skill name patterns.
-///
-/// Supports `*` as a wildcard matching zero or more characters.
-/// No `?`, `**`, or character classes.
-///
-/// Examples:
-/// - `"*"` matches everything
-/// - `"frontend-*"` matches `"frontend-design"`, `"frontend-review"`
-/// - `"*-coding"` matches `"go-coding"`, `"rust-coding"`
-/// - `"*-design-*"` matches `"frontend-design-system"`
-/// - `"go-coding"` matches only `"go-coding"` (exact)
+//! Simple glob matching for skill name patterns.
+//!
+//! Supports `*` as a wildcard matching zero or more characters.
+//! No `?`, `**`, or character classes.
+//!
+//! Examples:
+//! - `"*"` matches everything
+//! - `"frontend-*"` matches `"frontend-design"`, `"frontend-review"`
+//! - `"*-coding"` matches `"go-coding"`, `"rust-coding"`
+//! - `"*-design-*"` matches `"frontend-design-system"`
+//! - `"go-coding"` matches only `"go-coding"` (exact)
 
 /// Returns true if `pattern` contains a `*` wildcard.
 pub fn is_glob(pattern: &str) -> bool {

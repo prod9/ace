@@ -79,5 +79,3 @@ fn school_init_preserves_existing_files() {
     // CLAUDE.md preserved — still has custom content.
     env.assert_contains("CLAUDE.md", "My Custom Instructions");
 }
-
-use predicates;

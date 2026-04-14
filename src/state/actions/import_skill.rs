@@ -52,11 +52,8 @@ impl ImportSkill<'_> {
         }
 
         let selected = match self.skill {
-            Some(name) => {
-                let found = skills.iter().find(|s| s.name == name)
-                    .ok_or_else(|| ImportError::SkillNotFound(name.to_string()))?;
-                found
-            }
+            Some(name) => skills.iter().find(|s| s.name == name)
+                .ok_or_else(|| ImportError::SkillNotFound(name.to_string()))?,
             None if skills.len() == 1 => &skills[0],
             None => return Ok(ImportResult::NeedsSelection(skills)),
         };

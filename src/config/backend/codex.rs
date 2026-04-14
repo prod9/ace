@@ -360,12 +360,12 @@ fn parse_or_empty_table(existing_toml: &str) -> Result<toml::Value, String> {
 }
 
 fn parse_check_output(output: &str) -> Vec<McpStatus> {
-    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(output) {
-        if let Some(statuses) = parsed.get("statuses") {
-            let result = super::parse_status_array(&statuses.to_string());
-            if !result.is_empty() {
-                return result;
-            }
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(output)
+        && let Some(statuses) = parsed.get("statuses")
+    {
+        let result = super::parse_status_array(&statuses.to_string());
+        if !result.is_empty() {
+            return result;
         }
     }
 
@@ -374,19 +374,19 @@ fn parse_check_output(output: &str) -> Vec<McpStatus> {
         return result;
     }
 
-    if let Some(statuses_pos) = output.find("\"statuses\"") {
-        if let Some(start) = output[statuses_pos..].find('[') {
-            let start = statuses_pos + start;
-            if let Some(end) = output[start..].find(']') {
-                return super::parse_status_array(&output[start..=start + end]);
-            }
+    if let Some(statuses_pos) = output.find("\"statuses\"")
+        && let Some(start) = output[statuses_pos..].find('[')
+    {
+        let start = statuses_pos + start;
+        if let Some(end) = output[start..].find(']') {
+            return super::parse_status_array(&output[start..=start + end]);
         }
     }
 
-    if let Some(start) = output.find('[') {
-        if let Some(end) = output.rfind(']') {
-            return super::parse_status_array(&output[start..=end]);
-        }
+    if let Some(start) = output.find('[')
+        && let Some(end) = output.rfind(']')
+    {
+        return super::parse_status_array(&output[start..=end]);
     }
 
     Vec::new()
