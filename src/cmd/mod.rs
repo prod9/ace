@@ -190,6 +190,10 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
     ace.set_backend_override(backend_override);
     ace.set_scope_override(scope_override);
 
+    if !cli.porcelain && !matches!(&cli.command, Some(Command::Upgrade { .. })) {
+        crate::upgrade::check_for_update(ace);
+    }
+
     let Some(command) = cli.command else {
         return main::run(ace, cli.backend_args, true).await;
     };

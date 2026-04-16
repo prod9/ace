@@ -1,7 +1,6 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-#[allow(dead_code)] // used by startup version check (PROD9-60 task 6)
 const CACHE_TTL: Duration = Duration::from_secs(4 * 3600);
 
 pub fn parse_version_tags(tags: &[String]) -> Vec<semver::Version> {
@@ -17,7 +16,6 @@ pub fn latest_version(versions: &[semver::Version]) -> Option<&semver::Version> 
     versions.iter().max()
 }
 
-#[allow(dead_code)] // used by startup version check (PROD9-60 task 6)
 pub fn read_cache_marker(path: &Path) -> Option<semver::Version> {
     let content = std::fs::read_to_string(path).ok()?;
     semver::Version::parse(content.trim()).ok()
@@ -30,7 +28,6 @@ pub fn write_cache_marker(path: &Path, version: &semver::Version) -> std::io::Re
     std::fs::write(path, version.to_string())
 }
 
-#[allow(dead_code)] // used by startup version check (PROD9-60 task 6)
 pub fn is_cache_fresh(path: &Path, now: SystemTime) -> bool {
     let Ok(meta) = std::fs::metadata(path) else {
         return false;

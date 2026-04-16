@@ -2,6 +2,67 @@ pub mod check;
 pub mod download;
 pub mod replace;
 
+use std::time::SystemTime;
+
+use crate::ace::Ace;
+
+pub fn check_for_update(ace: &mut Ace) {
+    if std::env::var("ACE_SKIP_UPDATE").as_deref() == Ok("1") {
+        return;
+    }
+    if let Ok(state) = ace.require_state()
+        && state.skip_update
+    {
+        return;
+    }
+
+    let current = semver::Version::parse(env!("CARGO_PKG_VERSION"))
+        .expect("CARGO_PKG_VERSION is valid semver");
+
+    let Some(marker_path) = check::cache_marker_path() else {
+        return;
+    };
+
+    let latest = if check::is_cache_fresh(&marker_path, SystemTime::now()) {
+        let Some(v) = check::read_cache_marker(&marker_path) else {
+            return;
+        };
+        v
+    } else {
+        let tag_filter = format!("v{}.*", current.major);
+        let Ok(tags) =
+            crate::git::ls_remote_tags("https://github.com/prod9/ace.git", &tag_filter)
+        else {
+            return;
+        };
+        let versions = check::parse_version_tags(&tags);
+        let Some(v) = check::latest_version(&versions) else {
+            return;
+        };
+        let _ = check::write_cache_marker(&marker_path, v);
+        v.clone()
+    };
+
+    if !check::needs_update(&current, &latest) {
+        return;
+    }
+
+    ace.hint(&format!("ace {latest} available — upgrading in background"));
+    spawn_background_upgrade();
+}
+
+fn spawn_background_upgrade() {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    let _ = std::process::Command::new(exe)
+        .args(["upgrade", "--silent"])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn();
+}
+
 pub fn target_triple() -> &'static str {
     #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
     { "x86_64-unknown-linux-gnu" }
