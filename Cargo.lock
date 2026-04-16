@@ -14,6 +14,7 @@ dependencies = [
  "indicatif",
  "inquire",
  "predicates",
+ "semver",
  "serde",
  "serde_json",
  "signal-hook",

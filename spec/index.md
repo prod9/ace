@@ -23,6 +23,7 @@ underlying AI coding tool.
 - [school/school-toml.md](school/school-toml.md) — `school.toml` format reference.
 - [school/school-commands.md](school/school-commands.md) — `ace school` subcommands.
 - [testing.md](testing.md) — Integration test strategy, TestEnv pattern.
+- [upgrade.md](upgrade.md) — Self-update: version check, background upgrade, `ace upgrade`.
 
 ## Philosophy
 
@@ -42,33 +43,27 @@ Get the user into coding as fast as possible. Never block on operations that can
 
 Skills always track latest main — projects never pin to a specific version.
 
-Version-pinning assumes a dumb consumer that breaks on interface changes. An LLM reads the skill,
-adapts, and can fix regressions itself. The execution engine is non-deterministic at every level:
-same prompt + same model produces different code on different runs, model versions change
-underneath you, and prompts evolve independently of code. Pinning skill versions cannot make a
-non-reproducible pipeline reproducible.
+Skills model how teams actually work. When a team agrees on a new convention, that decision
+applies immediately to all ongoing work — nobody files a ticket to "upgrade" each project.
+A school change propagates to every project on next sync, no per-project ceremony required.
 
-Schools evolve independently of projects. Skills should work across as many project versions as
-possible — deploying into any project at any point in its history. When compatibility issues arise,
-the LLM understands both the skill and the project code, and resolves the gap itself.
+Schools evolve independently of projects. Skills should work across any project at any point in
+its history — when compatibility issues arise, the LLM resolves the gap itself.
 
-Skills that ship companion scripts or binaries make version-pinning especially harmful — new
-prompts against old code, old tools against new code, new models interpreting old prompts
-differently. The combinatorial matrix is unwinnable. Symlinks to an always-latest cache sidestep
-this entirely.
+Version-pinning assumes a dumb consumer that breaks on interface changes. LLMs are not dumb
+consumers — they read the skill, adapt, and resolve compatibility gaps themselves. The execution
+engine is non-deterministic at every level (model versions, prompt evolution, run-to-run variance),
+so pinning cannot make a non-reproducible pipeline reproducible. Skills with companion scripts make
+it worse: new prompts against old code, old tools against new code. The combinatorial matrix is
+unwinnable.
 
 This is a deliberate departure from lockfile-and-pin paradigms. The skills folder captures intent
-and preferences, not reproducible builds.
+and preferences, not reproducible builds. Changes are still tracked — schools are git repositories
+with full commit history. What ACE avoids is per-project pinning to a specific school revision.
 
-This does not mean changes are untracked. Schools are git repositories — every skill change has
-full commit history, authorship, and diff visibility. The school's git log is the version history.
-What ACE avoids is per-project pinning to a specific school revision.
-
-This applies equally to imported skills. Wildcard imports (`skill = "*"`, `skill = "frontend-*"`)
-always pull latest from the source and overwrite local copies — preserving stale local versions
-would be accidental pinning. This is how the parent school pattern works: `ace import parent/school
---all` followed by `ace school update` keeps the child school in sync with the parent's latest
-skills (see `school/school-commands.md`).
+Wildcard imports (`skill = "*"`, `skill = "frontend-*"`) follow the same principle: always pull
+latest, always overwrite. This is how the parent school pattern works
+(see `school/school-commands.md`).
 
 ## School
 
@@ -89,4 +84,5 @@ full details on specifiers, structure, and relationship to projects.
 9. **Check project setup** — CLAUDE.md, MCP configs, project-specific requirements from source
 10. **Select backend** — Claude Code or Codex
 11. **Inject prompt** — prepend system context about skills, role, and school workflow
-12. **Exec** — replace process with the chosen tool
+12. **Version check** — read cache marker, run `git ls-remote` if stale, print hint and spawn background upgrade if newer version available. Skipped for `ace upgrade`, `ace --version`, `--porcelain`, `skip_update`, `ACE_SKIP_UPDATE=1`. See [upgrade.md](upgrade.md).
+13. **Exec** — replace process with the chosen tool

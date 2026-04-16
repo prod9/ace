@@ -1,0 +1,94 @@
+use std::path::{Path, PathBuf};
+
+pub fn staging_path(exe: &Path) -> PathBuf {
+    let mut p = exe.as_os_str().to_owned();
+    p.push(".new");
+    PathBuf::from(p)
+}
+
+#[cfg(windows)]
+pub fn old_path(exe: &Path) -> PathBuf {
+    let mut p = exe.as_os_str().to_owned();
+    p.push(".old");
+    PathBuf::from(p)
+}
+
+#[cfg(unix)]
+pub fn replace_binary(exe_path: &Path, new_binary: &[u8]) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let staging = staging_path(exe_path);
+    std::fs::write(&staging, new_binary)?;
+    std::fs::set_permissions(&staging, std::fs::Permissions::from_mode(0o755))?;
+    std::fs::rename(&staging, exe_path)?;
+    Ok(())
+}
+
+#[cfg(windows)]
+pub fn replace_binary(exe_path: &Path, new_binary: &[u8]) -> std::io::Result<()> {
+    let old = old_path(exe_path);
+    let _ = std::fs::remove_file(&old);
+    std::fs::rename(exe_path, &old)?;
+    std::fs::write(exe_path, new_binary)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn staging_path_appends_new() {
+        let exe = PathBuf::from("/usr/local/bin/ace");
+        assert_eq!(staging_path(&exe), PathBuf::from("/usr/local/bin/ace.new"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn old_path_appends_old() {
+        let exe = PathBuf::from("C:\\Program Files\\ace.exe");
+        assert_eq!(old_path(&exe), PathBuf::from("C:\\Program Files\\ace.exe.old"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replace_binary_atomic_on_unix() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let exe_path = dir.path().join("ace");
+        std::fs::write(&exe_path, b"old binary").unwrap();
+
+        let new_binary = b"new binary content";
+        replace_binary(&exe_path, new_binary).unwrap();
+
+        let content = std::fs::read(&exe_path).unwrap();
+        assert_eq!(content, new_binary);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replace_binary_sets_executable_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let exe_path = dir.path().join("ace");
+        std::fs::write(&exe_path, b"old").unwrap();
+
+        replace_binary(&exe_path, b"new").unwrap();
+
+        let perms = std::fs::metadata(&exe_path).unwrap().permissions();
+        assert_eq!(perms.mode() & 0o755, 0o755);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replace_binary_cleans_up_staging_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let exe_path = dir.path().join("ace");
+        std::fs::write(&exe_path, b"old").unwrap();
+
+        replace_binary(&exe_path, b"new").unwrap();
+
+        let staging = staging_path(&exe_path);
+        assert!(!staging.exists(), "staging file should be removed after rename");
+    }
+}

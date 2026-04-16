@@ -21,6 +21,8 @@ Each layer can set:
 - `role` — selected role name (last non-empty wins). Must match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
+- `skip_update` — disable automatic version check and background upgrade. Default: `false`.
+  See [upgrade.md](upgrade.md). Also overridden by `ACE_SKIP_UPDATE=1` env var.
 
 ### Personal-only fields
 
@@ -47,7 +49,7 @@ which layer to write to:
 When no scope flag is given, the default is inferred from the key:
 
 - Personal-only fields (`trust`, `resume`) → `--local`
-- Shared fields (`school`, `backend`, `session_prompt`, `env.*`) → `--project`
+- Shared fields (`school`, `backend`, `session_prompt`, `env.*`, `skip_update`) → `--project`
 
 An explicit scope flag always overrides inference.
 
@@ -61,7 +63,7 @@ Bare `ace config` prints the effective resolved configuration (all layers merged
 
 Print the effective resolved value for a single key. Outputs the raw value, one line.
 
-Keys: `school`, `backend`, `trust`, `resume`, `session_prompt`, `env.KEY`.
+Keys: `school`, `backend`, `trust`, `resume`, `session_prompt`, `skip_update`, `env.KEY`.
 
 ### `ace config set <key> <value> [--user|--project|--local]`
 
@@ -69,7 +71,7 @@ Write a single field to the appropriate layer. Loads the target file, modifies t
 saves back. Other fields in that file are preserved.
 
 Key syntax:
-- Simple fields: `backend`, `school`, `trust`, `resume`, `session_prompt`
+- Simple fields: `backend`, `school`, `trust`, `resume`, `session_prompt`, `skip_update`
 - Env map entries: `env.KEY` — dot-path into the `[env]` table (e.g. `ace config set env.ANTHROPIC_API_KEY sk-...`)
 
 ## Loading vs Validation

@@ -52,6 +52,7 @@ fn show(ace: &mut Ace) -> Result<(), CmdError> {
         env: state.env.clone(),
         trust: state.trust,
         resume: if state.resume { None } else { Some(false) },
+        skip_update: if state.skip_update { Some(true) } else { None },
         yolo: false,
     };
 
@@ -86,6 +87,7 @@ fn get(ace: &mut Ace, key: &str) -> Result<(), CmdError> {
             Trust::Yolo => "yolo".to_string(),
         },
         ConfigKey::Resume => state.resume.to_string(),
+        ConfigKey::SkipUpdate => state.skip_update.to_string(),
         ConfigKey::SessionPrompt => state.session_prompt.clone(),
         ConfigKey::Env(ref env_key) => {
             state.env.get(env_key).cloned().unwrap_or_default()
@@ -127,6 +129,9 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
         ConfigKey::Resume => {
             let resume = parse_bool(value)?;
             config.resume = Some(resume);
+        }
+        ConfigKey::SkipUpdate => {
+            config.skip_update = Some(parse_bool(value)?);
         }
         ConfigKey::SessionPrompt => {
             config.session_prompt = Some(value.to_string());

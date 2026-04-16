@@ -27,6 +27,7 @@ pub struct State {
     pub school: Option<School>,
     pub trust: Trust,
     pub resume: bool,
+    pub skip_update: bool,
 }
 
 impl State {
@@ -42,6 +43,7 @@ impl State {
             env: resolved.env,
             trust: resolved.trust,
             resume: resolved.resume,
+            skip_update: resolved.skip_update,
             school,
             config: tree,
         }
@@ -64,6 +66,7 @@ impl State {
             env: HashMap::new(),
             trust: Trust::Default,
             resume: true,
+            skip_update: false,
             school: None,
         }
     }
@@ -81,6 +84,7 @@ struct Resolved {
     env: HashMap<String, String>,
     trust: Trust,
     resume: bool,
+    skip_update: bool,
 }
 
 /// Resolve effective values from layers. Order: user → project → local (last wins).
@@ -136,6 +140,13 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         .or(tree.ace_user.resume)
         .unwrap_or(true);
 
+    // skip_update: standard three-layer, last Some wins. Default false.
+    let skip_update = layers
+        .iter()
+        .rev()
+        .find_map(|l| l.skip_update)
+        .unwrap_or(false);
+
     Resolved {
         school_specifier,
         backend,
@@ -143,6 +154,7 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         env,
         trust,
         resume,
+        skip_update,
     }
 }
 
@@ -158,6 +170,7 @@ mod tests {
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
             trust: Trust::Default,
             resume: None,
+            skip_update: None,
             yolo: false,
         }
     }
@@ -322,6 +335,63 @@ mod tests {
         let mut state = State::empty();
         state.school_specifier = Some("prod9/school".to_string());
         assert!(state.has_school());
+    }
+
+    #[test]
+    fn skip_update_defaults_false() {
+        let t = tree(ace("s", &[]), ace("s", &[]));
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(!r.skip_update);
+    }
+
+    #[test]
+    fn skip_update_project_true() {
+        let mut project = ace("s", &[]);
+        project.skip_update = Some(true);
+        let t = tree(project, ace("s", &[]));
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(r.skip_update);
+    }
+
+    #[test]
+    fn skip_update_local_false_overrides_project_true() {
+        let mut project = ace("s", &[]);
+        project.skip_update = Some(true);
+        let mut local = ace("s", &[]);
+        local.skip_update = Some(false);
+        let t = tree(project, local);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(!r.skip_update, "local false should override project true");
+    }
+
+    #[test]
+    fn skip_update_user_true_used_when_others_unset() {
+        let t = Tree {
+            ace_user: AceToml { skip_update: Some(true), ..AceToml::default() },
+            ace_project: AceToml::default(),
+            ace_local: AceToml::default(),
+            school_backend: None,
+            school_toml: None,
+            school_paths: None,
+        };
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(r.skip_update);
+    }
+
+    #[test]
+    fn skip_update_project_overrides_user() {
+        let mut project = ace("s", &[]);
+        project.skip_update = Some(false);
+        let t = Tree {
+            ace_user: AceToml { skip_update: Some(true), ..AceToml::default() },
+            ace_project: project,
+            ace_local: AceToml::default(),
+            school_backend: None,
+            school_toml: None,
+            school_paths: None,
+        };
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+        assert!(!r.skip_update, "project false should override user true");
     }
 
     #[test]

@@ -8,6 +8,7 @@ mod git;
 mod glob;
 mod templates;
 mod state;
+mod upgrade;
 
 use clap::Parser;
 use cmd::Cli;

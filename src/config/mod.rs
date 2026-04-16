@@ -49,6 +49,7 @@ pub enum ConfigKey {
     Backend,
     Trust,
     Resume,
+    SkipUpdate,
     SessionPrompt,
     Env(String),
 }
@@ -65,6 +66,7 @@ impl ConfigKey {
             "backend" => Some(ConfigKey::Backend),
             "trust" => Some(ConfigKey::Trust),
             "resume" => Some(ConfigKey::Resume),
+            "skip_update" => Some(ConfigKey::SkipUpdate),
             "session_prompt" => Some(ConfigKey::SessionPrompt),
             _ => None,
         }
@@ -76,9 +78,30 @@ impl ConfigKey {
             ConfigKey::Backend => "backend",
             ConfigKey::Trust => "trust",
             ConfigKey::Resume => "resume",
+            ConfigKey::SkipUpdate => "skip_update",
             ConfigKey::SessionPrompt => "session_prompt",
             ConfigKey::Env(_) => "env",
         }
+    }
+}
+
+#[cfg(test)]
+mod config_key_tests {
+    use super::*;
+
+    #[test]
+    fn parse_skip_update() {
+        assert_eq!(ConfigKey::parse("skip_update"), Some(ConfigKey::SkipUpdate));
+    }
+
+    #[test]
+    fn skip_update_scope_key() {
+        assert_eq!(ConfigKey::SkipUpdate.scope_key(), "skip_update");
+    }
+
+    #[test]
+    fn skip_update_default_scope_is_project() {
+        assert_eq!(Scope::default_for_key("skip_update"), Scope::Project);
     }
 }
 

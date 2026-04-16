@@ -9,6 +9,7 @@ mod paths;
 mod pull;
 mod school;
 mod setup;
+mod upgrade;
 mod yolo;
 
 use clap::{Parser, Subcommand};
@@ -127,6 +128,17 @@ enum Command {
     Auto,
     /// Enable yolo trust mode (skip all permission prompts)
     Yolo,
+    /// Check for updates and upgrade ACE
+    Upgrade {
+        /// Suppress all output (used by background spawn)
+        #[arg(long)]
+        silent: bool,
+        /// Reinstall even if at latest, or install a specific version
+        #[arg(long)]
+        force: bool,
+        /// Specific version to install (requires --force)
+        version: Option<String>,
+    },
     /// 🛩️
     #[command(hide = true)]
     Maverick,
@@ -195,6 +207,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Command::New => main::run(ace, cli.backend_args, false).await,
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
+        Command::Upgrade { silent, force, version } => upgrade::run(ace, silent, force, version),
         Command::Maverick => maverick::run(ace),
     }
 }

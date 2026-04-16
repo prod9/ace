@@ -11,6 +11,7 @@ no business logic.
 
 - `AceToml` — shape of `ace.toml` / `ace.local.toml` / `~/.config/ace/ace.toml`
 - `SchoolToml` — shape of `school.toml`
+- `IndexToml` — shape of `~/.cache/ace/index.toml` (tracks downloaded schools)
 - `AcePaths` — computes config file locations from project dir
 - `SchoolPaths` — computes school cache/root locations from specifier
 
@@ -93,3 +94,16 @@ Config ← State ← Ace
 - State imports Config (for disk representation types)
 - Ace and Actions import State (for the domain tree)
 - Config never imports State
+
+## Standalone Modules
+
+Not everything fits the Config → State → Ace pipeline. Standalone helper modules
+live at the `src/` top level when they are independent of the domain tree:
+
+- `src/git.rs` — git subprocess helpers
+- `src/glob.rs` — simple glob matching
+- `src/upgrade/` — self-update: version check, binary download, self-replacement
+
+These modules may be called from `main()`, `cmd/`, or `Ace` but do not import
+State or Actions. They receive only the specific values they need (paths, version
+strings, output mode) rather than the full `Ace` instance.

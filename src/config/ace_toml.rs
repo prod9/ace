@@ -40,6 +40,10 @@ pub struct AceToml {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resume: Option<bool>,
 
+    /// Disable automatic version checks and background upgrades.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skip_update: Option<bool>,
+
     /// Deprecated: use `trust = "yolo"` instead. Kept for backcompat.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub yolo: bool,
