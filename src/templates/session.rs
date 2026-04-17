@@ -123,7 +123,7 @@ mod tests {
         let dir = nonexistent_dir();
         let prompt = build_session_prompt("Acme", "", "", &dir, &[], None, false);
         assert!(prompt.contains("School: Acme"));
-        assert!(prompt.contains("ACE (Augmented Coding Environment)"));
+        assert!(prompt.contains("ACE (Accelerated Coding Environment)"));
     }
 
     #[test]

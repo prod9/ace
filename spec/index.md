@@ -1,6 +1,6 @@
 # ACE Overview
 
-ACE (Augmented Coding Environment) is a CLI gateway into Claude Code or Codex. It ensures the
+ACE (Accelerated Coding Environment) is a CLI gateway into Claude Code or Codex. It ensures the
 development environment is properly configured and up-to-date before handing off to the
 underlying AI coding tool.
 
