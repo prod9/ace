@@ -6,6 +6,20 @@ use std::time::SystemTime;
 
 use crate::ace::Ace;
 
+#[cfg(windows)]
+pub fn cleanup_old_binary(ace: &mut Ace) {
+    let Ok(exe) = std::env::current_exe() else {
+        return;
+    };
+    let old = replace::old_path(&exe);
+    if !old.exists() {
+        return;
+    }
+    if let Err(e) = std::fs::remove_file(&old) {
+        ace.warn(&format!("failed to remove {}: {e}", old.display()));
+    }
+}
+
 pub fn check_for_update(ace: &mut Ace) {
     if std::env::var("ACE_SKIP_UPDATE").as_deref() == Ok("1") {
         return;

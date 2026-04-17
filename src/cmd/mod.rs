@@ -190,6 +190,9 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
     ace.set_backend_override(backend_override);
     ace.set_scope_override(scope_override);
 
+    #[cfg(windows)]
+    crate::upgrade::cleanup_old_binary(ace);
+
     if !cli.porcelain && !matches!(&cli.command, Some(Command::Upgrade { .. })) {
         crate::upgrade::check_for_update(ace);
     }
