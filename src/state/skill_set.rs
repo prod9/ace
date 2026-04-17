@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::actions::discover_skill::DiscoveredSkill;
+use super::actions::discover_skill::{DiscoveredSkill, Tier};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChangeKind {
@@ -16,13 +16,21 @@ pub struct SkillChange {
     pub kind: ChangeKind,
 }
 
+#[derive(Clone)]
+struct Entry {
+    path: PathBuf,
+    tier: Tier,
+}
+
 /// A set of skills discovered from a directory or import source.
 pub struct SkillSet {
-    skills: HashMap<String, PathBuf>,
+    skills: HashMap<String, Entry>,
 }
 
 impl SkillSet {
-    /// Scan a directory for subdirs containing SKILL.md.
+    /// Scan a directory for subdirs containing SKILL.md. All skills are
+    /// tagged Tier::Curated — this constructor is for flat layouts where
+    /// tier distinctions don't apply.
     #[allow(dead_code)] // used in tests; production use coming via update_cache migration
     pub fn from_dir(dir: &Path) -> Result<Self, std::io::Error> {
         let mut skills = HashMap::new();
@@ -46,7 +54,7 @@ impl SkillSet {
                 continue;
             };
 
-            skills.insert(name.to_string(), path);
+            skills.insert(name.to_string(), Entry { path, tier: Tier::Curated });
         }
 
         Ok(Self { skills })
@@ -55,7 +63,17 @@ impl SkillSet {
     /// Build from discover_skills output.
     pub fn from_discovered(discovered: &[DiscoveredSkill]) -> Self {
         let skills = discovered.iter()
-            .map(|s| (s.name.clone(), s.path.clone()))
+            .map(|s| (s.name.clone(), Entry { path: s.path.clone(), tier: s.tier }))
+            .collect();
+        Self { skills }
+    }
+
+    /// Return a new set containing only skills whose tier is in `allowed`.
+    #[allow(dead_code)] // called by import_skill / update_school in follow-up commit
+    pub fn filter_tiers(&self, allowed: &[Tier]) -> Self {
+        let skills = self.skills.iter()
+            .filter(|(_, e)| allowed.contains(&e.tier))
+            .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
         Self { skills }
     }
@@ -84,7 +102,7 @@ impl SkillSet {
         let mut changes = Vec::new();
 
         for &name in names {
-            let Some(src) = self.skills.get(name) else {
+            let Some(entry) = self.skills.get(name) else {
                 continue;
             };
 
@@ -96,7 +114,7 @@ impl SkillSet {
                 ChangeKind::Added
             };
 
-            crate::fsutil::copy_dir_recursive(src, &dest)?;
+            crate::fsutil::copy_dir_recursive(&entry.path, &dest)?;
             changes.push(SkillChange { name: name.to_string(), kind });
         }
 
@@ -196,5 +214,67 @@ mod tests {
         let set = SkillSet::from_dir(src.path()).expect("from_dir");
         let changes = set.copy_into(dest.path(), &["nonexistent"]).expect("copy");
         assert!(changes.is_empty());
+    }
+
+    // -- tier filtering (PROD9-75) --
+
+    use super::super::actions::discover_skill::{DiscoveredSkill, Tier};
+
+    fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
+        DiscoveredSkill {
+            name: name.to_string(),
+            path: PathBuf::from(format!("/tmp/{name}")),
+            tier,
+        }
+    }
+
+    #[test]
+    fn filter_tiers_keeps_only_allowed() {
+        let set = SkillSet::from_discovered(&[
+            discovered("cur",  Tier::Curated),
+            discovered("exp",  Tier::Experimental),
+            discovered("sys",  Tier::System),
+        ]);
+
+        let filtered = set.filter_tiers(&[Tier::Curated]);
+        let names: Vec<&str> = filtered.names().collect();
+        assert_eq!(names, vec!["cur"]);
+    }
+
+    #[test]
+    fn filter_tiers_multiple_allowed() {
+        let set = SkillSet::from_discovered(&[
+            discovered("cur",  Tier::Curated),
+            discovered("exp",  Tier::Experimental),
+            discovered("sys",  Tier::System),
+        ]);
+
+        let filtered = set.filter_tiers(&[Tier::Curated, Tier::Experimental]);
+        let mut names: Vec<&str> = filtered.names().collect();
+        names.sort();
+        assert_eq!(names, vec!["cur", "exp"]);
+    }
+
+    #[test]
+    fn filter_tiers_empty_allowed_returns_empty() {
+        let set = SkillSet::from_discovered(&[
+            discovered("cur",  Tier::Curated),
+        ]);
+
+        let filtered = set.filter_tiers(&[]);
+        assert_eq!(filtered.names().count(), 0);
+    }
+
+    #[test]
+    fn matching_after_filter_respects_filter() {
+        let set = SkillSet::from_discovered(&[
+            discovered("a-cur", Tier::Curated),
+            discovered("a-exp", Tier::Experimental),
+            discovered("b-sys", Tier::System),
+        ]);
+
+        let filtered = set.filter_tiers(&[Tier::Curated]);
+        let matched = filtered.matching("*");
+        assert_eq!(matched, vec!["a-cur"]);
     }
 }
