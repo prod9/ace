@@ -42,7 +42,7 @@ impl UpdateSchool<'_> {
         let skills_dir = self.school_root.join("skills");
         let mut count = 0;
 
-        for (source, patterns) in &by_source {
+        for (source, decls) in &by_source {
             let tmp = tempfile::tempdir()?;
 
             ace.progress(&format!("Fetching {source}"));
@@ -55,22 +55,19 @@ impl UpdateSchool<'_> {
             let discovered = discover_skills(tmp.path())?;
             let source_set = SkillSet::from_discovered(&discovered);
 
-            for pattern in patterns {
-                let names: Vec<&str> = if glob::is_glob(pattern) {
-                    source_set.matching(pattern)
-                } else {
-                    vec![*pattern]
-                };
+            for decl in decls {
+                let names = resolve_import_names(&source_set, decl);
 
                 if names.is_empty() {
-                    ace.warn(&format!("no skills matching {pattern} in {source}"));
+                    ace.warn(&format!("no skills matching {} in {source}", decl.skill));
                     continue;
                 }
 
-                let changes = source_set.copy_into(&skills_dir, &names)?;
+                let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
+                let changes = source_set.copy_into(&skills_dir, &name_refs)?;
 
-                if changes.is_empty() && !glob::is_glob(pattern) {
-                    ace.warn(&format!("skill {pattern} not found in {source}, skipping"));
+                if changes.is_empty() && !glob::is_glob(&decl.skill) {
+                    ace.warn(&format!("skill {} not found in {source}, skipping", decl.skill));
                     continue;
                 }
 
@@ -92,12 +89,129 @@ impl UpdateSchool<'_> {
     }
 }
 
-fn group_by_source(imports: &[config::school_toml::ImportDecl]) -> HashMap<&str, Vec<&str>> {
-    let mut by_source: HashMap<&str, Vec<&str>> = HashMap::new();
+/// Resolve the list of skill names to copy for an import entry given a
+/// discovered set from the source repo. Explicit names are looked up
+/// across all tiers; glob patterns are tier-gated.
+fn resolve_import_names(
+    set: &SkillSet,
+    decl: &config::school_toml::ImportDecl,
+) -> Vec<String> {
+    use crate::state::actions::discover_skill::Tier;
+
+    if glob::is_glob(&decl.skill) {
+        let mut allowed = vec![Tier::Curated];
+        if decl.include_experimental {
+            allowed.push(Tier::Experimental);
+        }
+        if decl.include_system {
+            allowed.push(Tier::System);
+        }
+        let filtered = set.filter_tiers(&allowed);
+        filtered.matching(&decl.skill)
+            .into_iter()
+            .map(String::from)
+            .collect()
+    } else if set.names().any(|n| n == decl.skill) {
+        vec![decl.skill.clone()]
+    } else {
+        Vec::new()
+    }
+}
+
+fn group_by_source(
+    imports: &[config::school_toml::ImportDecl],
+) -> HashMap<&str, Vec<&config::school_toml::ImportDecl>> {
+    let mut by_source: HashMap<&str, Vec<&config::school_toml::ImportDecl>> = HashMap::new();
     for imp in imports {
         by_source.entry(imp.source.as_str())
             .or_default()
-            .push(imp.skill.as_str());
+            .push(imp);
     }
     by_source
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::school_toml::ImportDecl;
+    use crate::state::actions::discover_skill::{DiscoveredSkill, Tier};
+
+    fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
+        DiscoveredSkill {
+            name: name.to_string(),
+            path: std::path::PathBuf::from(format!("/tmp/{name}")),
+            tier,
+        }
+    }
+
+    fn import(skill: &str, experimental: bool, system: bool) -> ImportDecl {
+        ImportDecl {
+            skill: skill.to_string(),
+            source: "owner/repo".to_string(),
+            include_experimental: experimental,
+            include_system: system,
+        }
+    }
+
+    #[test]
+    fn resolve_glob_matches_curated_by_default() {
+        let set = SkillSet::from_discovered(&[
+            discovered("alpha", Tier::Curated),
+            discovered("beta",  Tier::Experimental),
+            discovered("gamma", Tier::System),
+        ]);
+        let names = resolve_import_names(&set, &import("*", false, false));
+        assert_eq!(names, vec!["alpha".to_string()]);
+    }
+
+    #[test]
+    fn resolve_glob_with_experimental_flag_adds_that_tier() {
+        let set = SkillSet::from_discovered(&[
+            discovered("alpha", Tier::Curated),
+            discovered("beta",  Tier::Experimental),
+            discovered("gamma", Tier::System),
+        ]);
+        let mut names = resolve_import_names(&set, &import("*", true, false));
+        names.sort();
+        assert_eq!(names, vec!["alpha".to_string(), "beta".to_string()]);
+    }
+
+    #[test]
+    fn resolve_glob_with_both_flags_adds_all_tiers() {
+        let set = SkillSet::from_discovered(&[
+            discovered("alpha", Tier::Curated),
+            discovered("beta",  Tier::Experimental),
+            discovered("gamma", Tier::System),
+        ]);
+        let mut names = resolve_import_names(&set, &import("*", true, true));
+        names.sort();
+        assert_eq!(names, vec!["alpha".to_string(), "beta".to_string(), "gamma".to_string()]);
+    }
+
+    #[test]
+    fn resolve_explicit_name_finds_skill_in_any_tier() {
+        let set = SkillSet::from_discovered(&[
+            discovered("shell", Tier::Experimental),
+        ]);
+        let names = resolve_import_names(&set, &import("shell", false, false));
+        assert_eq!(names, vec!["shell".to_string()]);
+    }
+
+    #[test]
+    fn resolve_explicit_name_missing_returns_empty() {
+        let set = SkillSet::from_discovered(&[
+            discovered("alpha", Tier::Curated),
+        ]);
+        let names = resolve_import_names(&set, &import("missing", false, false));
+        assert!(names.is_empty());
+    }
+
+    #[test]
+    fn resolve_glob_no_matches_returns_empty() {
+        let set = SkillSet::from_discovered(&[
+            discovered("alpha", Tier::Experimental),
+        ]);
+        let names = resolve_import_names(&set, &import("*", false, false));
+        assert!(names.is_empty(), "curated-only default should not match experimental");
+    }
 }

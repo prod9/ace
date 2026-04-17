@@ -5,12 +5,32 @@ use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill
 
 use super::CmdError;
 
-pub fn run(ace: &mut Ace, source: &str, skill: Option<&str>, all: bool) {
-    let result = run_inner(ace, source, skill, all);
+pub fn run(
+    ace: &mut Ace,
+    source: &str,
+    skill: Option<&str>,
+    all: bool,
+    include_experimental: bool,
+    include_system: bool,
+) {
+    let result = run_inner(ace, source, skill, all, include_experimental, include_system);
     super::exit_on_err(ace, result);
 }
 
-fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>, all: bool) -> Result<(), CmdError> {
+fn run_inner(
+    ace: &mut Ace,
+    source: &str,
+    skill: Option<&str>,
+    all: bool,
+    include_experimental: bool,
+    include_system: bool,
+) -> Result<(), CmdError> {
+    if (include_experimental || include_system) && !all {
+        return Err(CmdError::Other(
+            "--include-experimental / --include-system require --all".to_string(),
+        ));
+    }
+
     let normalized = git::normalize_github_source(source);
     let school_root = ace.require_school()?.root.clone();
 
@@ -22,7 +42,10 @@ fn run_inner(ace: &mut Ace, source: &str, skill: Option<&str>, all: bool) -> Res
     if let Some(pattern) = effective_skill
         && crate::glob::is_glob(pattern)
     {
-        return add_glob_import(ace, &school_root, &normalized, pattern);
+        return add_glob_import(
+            ace, &school_root, &normalized, pattern,
+            include_experimental, include_system,
+        );
     }
 
     let result = ImportSkill {
@@ -59,6 +82,8 @@ fn add_glob_import(
     school_root: &std::path::Path,
     source: &str,
     pattern: &str,
+    include_experimental: bool,
+    include_system: bool,
 ) -> Result<(), CmdError> {
     let toml_path = school_root.join("school.toml");
     let mut school = school_toml::load(&toml_path)?;
@@ -74,8 +99,8 @@ fn add_glob_import(
     school.imports.push(ImportDecl {
         skill: pattern.to_string(),
         source: source.to_string(),
-        include_experimental: false,
-        include_system: false,
+        include_experimental,
+        include_system,
     });
 
     school_toml::save(&toml_path, &school)?;

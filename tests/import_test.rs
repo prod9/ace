@@ -188,3 +188,81 @@ source = "company/school"
         .success()
         .stderr(predicates::str::contains("import already exists"));
 }
+
+// -- tier-inclusion flags (PROD9-75) --
+
+#[test]
+fn import_include_experimental_without_all_errors() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "owner/repo", "--include-experimental"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("--all"));
+}
+
+#[test]
+fn import_include_system_without_all_errors() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "owner/repo", "--include-system"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("--all"));
+}
+
+#[test]
+fn import_include_with_explicit_skill_errors() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "owner/repo", "--skill", "foo", "--include-experimental"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("--all"));
+}
+
+#[test]
+fn import_all_include_experimental_persists_flag() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "company/school", "--all", "--include-experimental"])
+        .assert()
+        .success();
+
+    let toml = env.read_file("school.toml");
+    assert!(toml.contains("include_experimental = true"), "missing flag in {toml}");
+    assert!(!toml.contains("include_system"), "include_system should not be written: {toml}");
+}
+
+#[test]
+fn import_all_include_both_flags_persists_both() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.ace()
+        .args(["import", "company/school", "--all", "--include-experimental", "--include-system"])
+        .assert()
+        .success();
+
+    let toml = env.read_file("school.toml");
+    assert!(toml.contains("include_experimental = true"), "missing experimental flag: {toml}");
+    assert!(toml.contains("include_system = true"), "missing system flag: {toml}");
+}

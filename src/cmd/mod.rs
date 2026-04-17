@@ -109,6 +109,12 @@ enum Command {
         /// Import all skills from the source (equivalent to --skill "*")
         #[arg(long)]
         all: bool,
+        /// With --all: also expand into skills/.experimental/
+        #[arg(long)]
+        include_experimental: bool,
+        /// With --all: also expand into skills/.system/
+        #[arg(long)]
+        include_system: bool,
     },
     /// Manage MCP server registrations
     Mcp {
@@ -203,7 +209,9 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
 
     match command {
         Command::Setup { specifier } => setup::run(ace, specifier.as_deref()).await,
-        Command::Import { source, skill, all } => import::run(ace, &source, skill.as_deref(), all),
+        Command::Import { source, skill, all, include_experimental, include_system } => {
+            import::run(ace, &source, skill.as_deref(), all, include_experimental, include_system)
+        }
         Command::Diff => diff::run(ace).await,
         Command::Fmt | Command::Format => fmt::run(ace),
         Command::Config { command } => config::run(ace, command).await,
