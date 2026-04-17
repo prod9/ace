@@ -347,6 +347,70 @@ impl TestEnv {
         RemoteSchool { origin, cache }
     }
 
+    /// Set up a bare origin repo containing skill folders at the given paths
+    /// and a gitconfig redirect so `ace import <specifier>` clones from the
+    /// sandbox instead of hitting github.com. `skill_paths` are relative to
+    /// the repo root — e.g. `"skills/.experimental/shell"`.
+    pub fn setup_tiered_origin(&self, specifier: &str, skill_paths: &[&str]) {
+        let origin = self.path(&format!("origins/{specifier}.git"));
+        let work = self.path(&format!("_origin_work_{}", specifier.replace('/', "_")));
+
+        std::fs::create_dir_all(&origin).expect("create origin dir");
+        self.git_in(
+            &origin,
+            &["init", "--bare", "--quiet", "--template=", "-b", "main"],
+        );
+
+        self.git_in(
+            self.root(),
+            &[
+                "clone",
+                "--quiet",
+                origin.to_str().expect("origin path"),
+                work.to_str().expect("work path"),
+            ],
+        );
+
+        for rel in skill_paths {
+            let skill_dir = work.join(rel);
+            std::fs::create_dir_all(&skill_dir).expect("create skill dir");
+            let name = skill_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .expect("skill dir name");
+            std::fs::write(skill_dir.join("SKILL.md"), format!("# {name}\n"))
+                .expect("write SKILL.md");
+        }
+
+        self.git_in(&work, &["add", "-A"]);
+        self.git_in(
+            &work,
+            &[
+                "-c", "user.email=test@test.com",
+                "-c", "user.name=Test",
+                "commit", "-m", "seed",
+            ],
+        );
+        self.git_in(&work, &["push", "--quiet"]);
+        std::fs::remove_dir_all(&work).expect("remove work dir");
+
+        // gitconfig redirect: https://github.com/<specifier>.git → file://origin
+        // Using insteadOf on the full URL avoids interfering with any other
+        // GitHub access the test might make.
+        let gh_url = format!("https://github.com/{specifier}.git");
+        let file_url = format!("file://{}", origin.display());
+        let config_block = format!("[url \"{file_url}\"]\n\tinsteadOf = {gh_url}\n");
+
+        let gitconfig_path = self.path(".gitconfig");
+        if gitconfig_path.exists() {
+            let mut existing = std::fs::read_to_string(&gitconfig_path).expect("read gitconfig");
+            existing.push_str(&config_block);
+            std::fs::write(&gitconfig_path, existing).expect("append gitconfig");
+        } else {
+            std::fs::write(&gitconfig_path, config_block).expect("write gitconfig");
+        }
+    }
+
     /// Set up an embedded school with flaude backend. Common fixture for
     /// MCP and exec integration tests.
     pub fn setup_flaude_school(&self, school_toml: &str) {

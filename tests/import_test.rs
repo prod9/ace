@@ -266,3 +266,87 @@ fn import_all_include_both_flags_persists_both() {
     assert!(toml.contains("include_experimental = true"), "missing experimental flag: {toml}");
     assert!(toml.contains("include_system = true"), "missing system flag: {toml}");
 }
+
+// -- end-to-end import with real git (PROD9-75) --
+
+#[test]
+fn import_explicit_skill_resolves_from_experimental_tier() {
+    // Reproduces the original bug: shell lives in skills/.experimental/ only.
+    // Before PROD9-75, ACE skipped all hidden dirs and reported "no skills found".
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.setup_tiered_origin("dot/skills", &[
+        "skills/.experimental/shell",
+        "skills/.curated/react",
+    ]);
+
+    env.ace()
+        .args(["import", "dot/skills", "--skill", "shell"])
+        .assert()
+        .success();
+
+    env.assert_exists("skills/shell/SKILL.md");
+    env.assert_contains("school.toml", "skill = \"shell\"");
+    env.assert_contains("school.toml", "source = \"dot/skills\"");
+}
+
+#[test]
+fn import_all_defaults_to_curated_tier_only() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.setup_tiered_origin("dot/skills", &[
+        "skills/.curated/react",
+        "skills/.experimental/shell",
+        "skills/.system/skill-creator",
+    ]);
+
+    // --all without --include-* flags should record a wildcard entry only.
+    env.ace()
+        .args(["import", "dot/skills", "--all"])
+        .assert()
+        .success();
+
+    // The actual expansion happens on school update.
+    env.ace()
+        .args(["school", "update"])
+        .assert()
+        .success();
+
+    env.assert_exists("skills/react/SKILL.md");
+    env.assert_not_exists("skills/shell/SKILL.md");
+    env.assert_not_exists("skills/skill-creator/SKILL.md");
+}
+
+#[test]
+fn import_all_with_include_experimental_pulls_that_tier() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.setup_tiered_origin("dot/skills", &[
+        "skills/.curated/react",
+        "skills/.experimental/shell",
+        "skills/.system/skill-creator",
+    ]);
+
+    env.ace()
+        .args(["import", "dot/skills", "--all", "--include-experimental"])
+        .assert()
+        .success();
+
+    env.ace()
+        .args(["school", "update"])
+        .assert()
+        .success();
+
+    env.assert_exists("skills/react/SKILL.md");
+    env.assert_exists("skills/shell/SKILL.md");
+    env.assert_not_exists("skills/skill-creator/SKILL.md");
+}
