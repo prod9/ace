@@ -69,7 +69,6 @@ impl SkillSet {
     }
 
     /// Return a new set containing only skills whose tier is in `allowed`.
-    #[allow(dead_code)] // called by import_skill / update_school in follow-up commit
     pub fn filter_tiers(&self, allowed: &[Tier]) -> Self {
         let skills = self.skills.iter()
             .filter(|(_, e)| allowed.contains(&e.tier))

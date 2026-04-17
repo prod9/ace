@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(dead_code)] // Experimental/System wired in next step
 pub enum Tier {
     Curated,
     Experimental,
@@ -12,7 +11,6 @@ pub enum Tier {
 pub struct DiscoveredSkill {
     pub name: String,
     pub path: PathBuf,
-    #[allow(dead_code)] // read by callers in follow-up commit
     pub tier: Tier,
 }
 

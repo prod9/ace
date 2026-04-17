@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::ace::Ace;
 use crate::config;
 use crate::glob;
-use super::discover_skill::discover_skills;
+use super::discover_skill::{discover_skills, Tier};
 use crate::state::skill_set::{ChangeKind, SkillSet};
 
 pub struct UpdateSchool<'a> {
@@ -66,11 +66,6 @@ impl UpdateSchool<'_> {
                 let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
                 let changes = source_set.copy_into(&skills_dir, &name_refs)?;
 
-                if changes.is_empty() && !glob::is_glob(&decl.skill) {
-                    ace.warn(&format!("skill {} not found in {source}, skipping", decl.skill));
-                    continue;
-                }
-
                 for change in &changes {
                     let label = match change.kind {
                         ChangeKind::Added => "new",
@@ -96,8 +91,6 @@ fn resolve_import_names(
     set: &SkillSet,
     decl: &config::school_toml::ImportDecl,
 ) -> Vec<String> {
-    use crate::state::actions::discover_skill::Tier;
-
     if glob::is_glob(&decl.skill) {
         let mut allowed = vec![Tier::Curated];
         if decl.include_experimental {
@@ -134,7 +127,7 @@ fn group_by_source(
 mod tests {
     use super::*;
     use crate::config::school_toml::ImportDecl;
-    use crate::state::actions::discover_skill::{DiscoveredSkill, Tier};
+    use crate::state::actions::discover_skill::DiscoveredSkill;
 
     fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
         DiscoveredSkill {
