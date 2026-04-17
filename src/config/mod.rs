@@ -13,6 +13,7 @@ use std::path::Path;
 pub(crate) fn is_empty_str(s: &str) -> bool { s.is_empty() }
 pub(crate) fn is_empty_map(m: &HashMap<String, String>) -> bool { m.is_empty() }
 pub(crate) fn is_empty_vec<T>(v: &[T]) -> bool { v.is_empty() }
+pub(crate) fn is_false(b: &bool) -> bool { !*b }
 
 /// Config scope — determines which layer a write targets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

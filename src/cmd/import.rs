@@ -74,6 +74,8 @@ fn add_glob_import(
     school.imports.push(ImportDecl {
         skill: pattern.to_string(),
         source: source.to_string(),
+        include_experimental: false,
+        include_system: false,
     });
 
     school_toml::save(&toml_path, &school)?;

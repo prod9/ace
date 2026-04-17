@@ -89,6 +89,8 @@ impl ImportSkill<'_> {
             None => school.imports.push(ImportDecl {
                 skill: skill.name.clone(),
                 source: self.source.to_string(),
+                include_experimental: false,
+                include_system: false,
             }),
         }
 
