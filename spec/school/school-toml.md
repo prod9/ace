@@ -127,6 +127,11 @@ their sources.
 - `skill` — Skill name or glob pattern. Exact names match the folder name under `skills/`.
   Glob patterns use `*` to match zero or more characters.
 - `source` — GitHub `owner/repo` shorthand where the skill was imported from.
+- `include_experimental` — When `true`, glob matching also expands into
+  `skills/.experimental/`. Defaults to `false`. Only meaningful for wildcard entries —
+  explicit skill names resolve across all tiers regardless of this flag.
+- `include_system` — When `true`, glob matching also expands into `skills/.system/`.
+  Defaults to `false`. Same tier-filter semantics as `include_experimental`.
 
 Skills are copied into the school as real files (the school owns and commits them). The
 `[[imports]]` entries record provenance so `ace school update` knows where to re-fetch from.
@@ -170,3 +175,6 @@ Glob rules:
 - Wildcard imports always overwrite existing skills with the latest from the source —
   consistent with ACE's always-latest versioning philosophy (see `index.md`).
 - For conflicts between wildcard sources, the first `[[imports]]` entry wins.
+- Wildcard matches are tier-gated: `Curated` only by default, `Experimental` / `System`
+  tiers require explicit `include_experimental = true` / `include_system = true` on the
+  `[[imports]]` entry (or `--include-experimental` / `--include-system` at import time).

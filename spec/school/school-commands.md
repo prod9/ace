@@ -64,6 +64,10 @@ Import a skill from an external repository into the school. Top-level command (n
 - **source** — GitHub `owner/repo` shorthand or full URL (same convention as school specifiers).
 - **--skill** — Specific skill name or glob pattern (e.g. `"frontend-*"`).
 - **--all** — Import all skills from the source. Shorthand for `--skill "*"`.
+- **--include-experimental** — With `--all`: also expand into `skills/.experimental/`.
+  Fails if used without `--all`.
+- **--include-system** — With `--all`: also expand into `skills/.system/`. Fails if used
+  without `--all`.
 
 ### Parity with skills.sh
 
@@ -84,7 +88,9 @@ for `--skill` values — no glob, no `?`, no character classes. ACE matches this
 1. Resolve school context: if `school.toml` in cwd → school dir. Otherwise resolve linked
    school from `ace.toml` → school cache path.
 2. Clone source repo to temp dir (`git clone --depth 1`).
-3. Discover `SKILL.md` files in the repo (checks both `skills/` subdirectory and root-level).
+3. Discover `SKILL.md` files under `skills/` (priority: `skills/.curated/` > `skills/` >
+   `skills/.experimental/` > `skills/.system/`, first hit per name wins). Each skill is
+   tagged with its tier — `Curated` (top-level or `.curated/`), `Experimental`, or `System`.
 4. Select skill:
    - `--skill` given → find by name.
    - Single skill in repo → auto-import.
@@ -102,6 +108,9 @@ for `--skill` values — no glob, no `?`, no character classes. ACE matches this
 - Glob patterns (`--skill "frontend-*"` or `--all`) record an `[[imports]]` entry and print
   a hint to run `ace school update`. No skills are copied immediately — resolution happens
   during update.
+- **Tier gating**: explicit `--skill <name>` resolves across all tiers (Curated, Experimental,
+  System). Glob matching and `--all` default to Curated only. Use `--include-experimental`
+  and/or `--include-system` to widen the match — both require `--all`.
 
 ### Parent school pattern
 
@@ -125,8 +134,10 @@ Re-fetch all imported skills from their sources.
 2. If empty, print "no imports to update" and return.
 3. Group imports by source (avoid cloning same repo twice).
 4. For each source group: clone to temp dir, discover skills.
-   - **Exact imports**: copy the named skill over existing.
-   - **Wildcard imports**: match discovered skills against the glob pattern, copy all matches.
+   - **Exact imports**: copy the named skill over existing. Resolves across all tiers.
+   - **Wildcard imports**: filter discovered skills to the tiers allowed by the
+     `[[imports]]` entry (`Curated` always; `Experimental` if `include_experimental = true`;
+     `System` if `include_system = true`), then match against the glob pattern.
 5. Report which skills were updated to stderr.
 
 ### Important
