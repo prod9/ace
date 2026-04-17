@@ -279,7 +279,11 @@ Optional project catalog entries that give the AI context about available reposi
 <h3>// [[imports]]</h3>
 
 <p>
-Import skills from other school repositories.
+Import skills from other school repositories. Skill discovery scans four tiers under
+<span style="color:#c0c0c0;">skills/</span>: the default <span style="color:#c0c0c0;">skills/&lt;name&gt;</span> and
+<span style="color:#c0c0c0;">skills/.curated/&lt;name&gt;</span> (both Curated), plus
+<span style="color:#c0c0c0;">skills/.experimental/</span> and <span style="color:#c0c0c0;">skills/.system/</span>.
+Explicit names resolve from any tier. Glob patterns match only Curated by default.
 </p>
 
 <table>
@@ -293,13 +297,25 @@ Import skills from other school repositories.
     <td>skill</td>
     <td>string</td>
     <td><span style="color:#555;">(empty)</span></td>
-    <td>Name of the skill to import.</td>
+    <td>Skill name or glob pattern (e.g. <span style="color:#c0c0c0;">"*-coding"</span>, <span style="color:#c0c0c0;">"*"</span>).</td>
   </tr>
   <tr>
     <td>source</td>
     <td>string</td>
     <td><span style="color:#555;">(empty)</span></td>
     <td>School specifier to import from, e.g. <span style="color:#c0c0c0;">"prod9/school"</span>.</td>
+  </tr>
+  <tr>
+    <td>include_experimental</td>
+    <td>bool</td>
+    <td><span style="color:#c0c0c0;">false</span></td>
+    <td>For glob entries: also match skills under <span style="color:#c0c0c0;">skills/.experimental/</span>.</td>
+  </tr>
+  <tr>
+    <td>include_system</td>
+    <td>bool</td>
+    <td><span style="color:#c0c0c0;">false</span></td>
+    <td>For glob entries: also match skills under <span style="color:#c0c0c0;">skills/.system/</span>.</td>
   </tr>
 </table>
 
