@@ -1,31 +1,53 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[allow(dead_code)] // Experimental/System wired in next step
+pub enum Tier {
+    Curated,
+    Experimental,
+    System,
+}
+
 pub struct DiscoveredSkill {
     pub name: String,
     pub path: PathBuf,
+    #[allow(dead_code)] // read by callers in follow-up commit
+    pub tier: Tier,
 }
 
-/// Discover skills by finding SKILL.md files in the repo.
-/// Searches both root-level dirs and `skills/` subdirectory.
+/// Discover skills under `<dir>/skills/`. Priority (first hit per name wins):
+///
+/// 1. `skills/.curated/<name>/`      → Tier::Curated
+/// 2. `skills/<name>/`               → Tier::Curated
+/// 3. `skills/.experimental/<name>/` → Tier::Experimental
+/// 4. `skills/.system/<name>/`       → Tier::System
+///
+/// Collision between `.curated/` and top-level `skills/` resolves to `.curated/`.
+/// Skills at the repo root (outside `skills/`) are not discovered.
 pub fn discover_skills(dir: &Path) -> Result<Vec<DiscoveredSkill>, std::io::Error> {
     let mut skills = Vec::new();
     let mut seen = HashSet::new();
 
-    // Check `skills/` subdirectory first (preferred convention)
-    let skills_dir = dir.join("skills");
-    if skills_dir.is_dir() {
-        scan_for_skills(&skills_dir, &mut skills, &mut seen)?;
-    }
+    let search = [
+        (dir.join("skills/.curated"),      Tier::Curated),
+        (dir.join("skills"),               Tier::Curated),
+        (dir.join("skills/.experimental"), Tier::Experimental),
+        (dir.join("skills/.system"),       Tier::System),
+    ];
 
-    // Also check root-level directories
-    scan_for_skills(dir, &mut skills, &mut seen)?;
+    for (path, tier) in &search {
+        if path.is_dir() {
+            scan_for_skills(path, *tier, &mut skills, &mut seen)?;
+        }
+    }
 
     Ok(skills)
 }
 
 fn scan_for_skills(
     parent: &Path,
+    tier: Tier,
     skills: &mut Vec<DiscoveredSkill>,
     seen: &mut HashSet<String>,
 ) -> Result<(), std::io::Error> {
@@ -47,7 +69,7 @@ fn scan_for_skills(
         }
 
         if path.join("SKILL.md").exists() && seen.insert(name.clone()) {
-            skills.push(DiscoveredSkill { name, path });
+            skills.push(DiscoveredSkill { name, path, tier });
         }
     }
     Ok(())
@@ -76,65 +98,21 @@ mod tests {
     }
 
     #[test]
-    fn finds_skill_with_skill_md() {
-        let tmp = tempfile::tempdir().expect("create temp dir");
-        let skill_dir = tmp.path().join("my-skill");
-        fs::create_dir(&skill_dir).expect("create skill dir");
-        fs::write(skill_dir.join("SKILL.md"), "# My Skill").expect("write SKILL.md");
-
-        let skills = discover_skills(tmp.path()).expect("discover_skills");
-        assert_eq!(skills.len(), 1);
-        assert_eq!(skills[0].name, "my-skill");
-        assert_eq!(skills[0].path, skill_dir);
-    }
-
-    #[test]
     fn dir_without_skill_md_is_skipped() {
         let tmp = tempfile::tempdir().expect("create temp dir");
-        fs::create_dir(tmp.path().join("no-marker")).expect("create dir");
+        fs::create_dir_all(tmp.path().join("skills/no-marker")).expect("create dir");
 
         let skills = discover_skills(tmp.path()).expect("discover_skills");
         assert!(skills.is_empty());
-    }
-
-    #[test]
-    fn hidden_dirs_are_skipped() {
-        let tmp = tempfile::tempdir().expect("create temp dir");
-        let hidden = tmp.path().join(".hidden-skill");
-        fs::create_dir(&hidden).expect("create hidden dir");
-        fs::write(hidden.join("SKILL.md"), "").expect("write SKILL.md");
-
-        let skills = discover_skills(tmp.path()).expect("discover_skills");
-        assert!(skills.is_empty());
-    }
-
-    #[test]
-    fn deduplicates_skills_subdir_over_root() {
-        let tmp = tempfile::tempdir().expect("create temp dir");
-
-        // Skill in skills/ subdir (preferred)
-        let skills_dir = tmp.path().join("skills");
-        fs::create_dir(&skills_dir).expect("create skills dir");
-        let sub = skills_dir.join("dup-skill");
-        fs::create_dir(&sub).expect("create skills/dup-skill");
-        fs::write(sub.join("SKILL.md"), "from skills/").expect("write SKILL.md");
-
-        // Same name at root level
-        let root = tmp.path().join("dup-skill");
-        fs::create_dir(&root).expect("create root dup-skill");
-        fs::write(root.join("SKILL.md"), "from root").expect("write SKILL.md");
-
-        let skills = discover_skills(tmp.path()).expect("discover_skills");
-        assert_eq!(skills.len(), 1);
-        assert_eq!(skills[0].name, "dup-skill");
-        assert_eq!(skills[0].path, sub, "skills/ subdir should win over root");
     }
 
     #[test]
     fn finds_multiple_skills() {
         let tmp = tempfile::tempdir().expect("create temp dir");
+        let skills_dir = tmp.path().join("skills");
+        fs::create_dir(&skills_dir).expect("create skills dir");
         for name in ["alpha", "beta", "gamma"] {
-            let d = tmp.path().join(name);
+            let d = skills_dir.join(name);
             fs::create_dir(&d).expect("create dir");
             fs::write(d.join("SKILL.md"), "").expect("write SKILL.md");
         }
@@ -143,5 +121,113 @@ mod tests {
         let mut names: Vec<_> = skills.iter().map(|s| s.name.as_str()).collect();
         names.sort();
         assert_eq!(names, vec!["alpha", "beta", "gamma"]);
+    }
+
+    // -- tier discovery (PROD9-75) --
+
+    fn make_skill_at(base: &Path, rel: &str) -> PathBuf {
+        let dir = base.join(rel);
+        fs::create_dir_all(&dir).expect("create skill dir");
+        fs::write(dir.join("SKILL.md"), "# skill").expect("write SKILL.md");
+        dir
+    }
+
+    #[test]
+    fn top_level_skill_tagged_curated() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "skills/my-skill");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].tier, Tier::Curated);
+    }
+
+    #[test]
+    fn finds_skill_in_curated_subdir() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = make_skill_at(tmp.path(), "skills/.curated/foo");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "foo");
+        assert_eq!(skills[0].path, path);
+        assert_eq!(skills[0].tier, Tier::Curated);
+    }
+
+    #[test]
+    fn finds_skill_in_experimental_subdir() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "skills/.experimental/shell");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "shell");
+        assert_eq!(skills[0].tier, Tier::Experimental);
+    }
+
+    #[test]
+    fn finds_skill_in_system_subdir() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "skills/.system/skill-creator");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "skill-creator");
+        assert_eq!(skills[0].tier, Tier::System);
+    }
+
+    #[test]
+    fn curated_wins_over_top_level_on_collision() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "skills/dup");
+        let curated = make_skill_at(tmp.path(), "skills/.curated/dup");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].path, curated, ".curated should win over top-level");
+        assert_eq!(skills[0].tier, Tier::Curated);
+    }
+
+    #[test]
+    fn different_tiers_coexist() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "skills/top");
+        make_skill_at(tmp.path(), "skills/.curated/cur");
+        make_skill_at(tmp.path(), "skills/.experimental/exp");
+        make_skill_at(tmp.path(), "skills/.system/sys");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        let mut by_name: Vec<(&str, Tier)> =
+            skills.iter().map(|s| (s.name.as_str(), s.tier)).collect();
+        by_name.sort_by_key(|(n, _)| *n);
+
+        assert_eq!(
+            by_name,
+            vec![
+                ("cur", Tier::Curated),
+                ("exp", Tier::Experimental),
+                ("sys", Tier::System),
+                ("top", Tier::Curated),
+            ]
+        );
+    }
+
+    #[test]
+    fn root_level_skill_outside_skills_dir_is_not_discovered() {
+        // Spec change: root-children scanning removed (PROD9-75).
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "orphan");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert!(skills.is_empty());
+    }
+
+    #[test]
+    fn hidden_non_tier_dirs_beneath_skills_are_skipped() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        make_skill_at(tmp.path(), "skills/.weird/thing");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert!(skills.is_empty());
     }
 }
