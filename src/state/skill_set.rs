@@ -217,8 +217,6 @@ mod tests {
 
     // -- tier filtering (PROD9-75) --
 
-    use super::super::actions::discover_skill::{DiscoveredSkill, Tier};
-
     fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
         DiscoveredSkill {
             name: name.to_string(),

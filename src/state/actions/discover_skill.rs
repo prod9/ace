@@ -86,13 +86,14 @@ mod tests {
     }
 
     #[test]
-    fn files_are_skipped() {
+    fn files_in_skills_dir_are_skipped() {
         let tmp = tempfile::tempdir().expect("create temp dir");
-        fs::write(tmp.path().join("not-a-dir"), "").expect("write file");
-        fs::write(tmp.path().join("SKILL.md"), "").expect("write SKILL.md");
+        fs::create_dir(tmp.path().join("skills")).expect("mkdir skills");
+        fs::write(tmp.path().join("skills/loose.md"), "").expect("write file");
+        fs::write(tmp.path().join("skills/SKILL.md"), "").expect("write SKILL.md");
 
         let skills = discover_skills(tmp.path()).expect("discover_skills");
-        assert!(skills.is_empty());
+        assert!(skills.is_empty(), "regular files in skills/ should not be treated as skills");
     }
 
     #[test]
