@@ -188,6 +188,30 @@ mod tests {
     }
 
     #[test]
+    fn curated_wins_over_experimental_on_collision() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let curated = make_skill_at(tmp.path(), "skills/.curated/ios-taste");
+        make_skill_at(tmp.path(), "skills/.experimental/ios-taste");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].path, curated, ".curated should win over .experimental");
+        assert_eq!(skills[0].tier, Tier::Curated);
+    }
+
+    #[test]
+    fn experimental_wins_over_system_on_collision() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let experimental = make_skill_at(tmp.path(), "skills/.experimental/dup");
+        make_skill_at(tmp.path(), "skills/.system/dup");
+
+        let skills = discover_skills(tmp.path()).expect("discover_skills");
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].path, experimental, ".experimental should win over .system");
+        assert_eq!(skills[0].tier, Tier::Experimental);
+    }
+
+    #[test]
     fn different_tiers_coexist() {
         let tmp = tempfile::tempdir().expect("tempdir");
         make_skill_at(tmp.path(), "skills/top");

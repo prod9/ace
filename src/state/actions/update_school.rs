@@ -191,6 +191,15 @@ mod tests {
     }
 
     #[test]
+    fn resolve_explicit_name_finds_skill_in_system_tier() {
+        let set = SkillSet::from_discovered(&[
+            discovered("skill-creator", Tier::System),
+        ]);
+        let names = resolve_import_names(&set, &import("skill-creator", false, false));
+        assert_eq!(names, vec!["skill-creator".to_string()]);
+    }
+
+    #[test]
     fn resolve_explicit_name_missing_returns_empty() {
         let set = SkillSet::from_discovered(&[
             discovered("alpha", Tier::Curated),
