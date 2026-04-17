@@ -88,6 +88,30 @@
   </tr>
 </table>
 
+<h2>// updates</h2>
+<p>
+ACE checks for newer releases on every invocation and silently upgrades in the background.
+Disable with <span style="color:#888;">skip_update = true</span> or <span style="color:#888;">ACE_SKIP_UPDATE=1</span>.
+</p>
+<table>
+  <tr>
+    <td>ace upgrade</td>
+    <td>Check for a newer release within the current major and upgrade in place</td>
+  </tr>
+  <tr>
+    <td>ace upgrade --force</td>
+    <td>Reinstall even if already at the latest version</td>
+  </tr>
+  <tr>
+    <td>ace upgrade --force VERSION</td>
+    <td>Install a specific version (downgrade or cross a major boundary)</td>
+  </tr>
+  <tr>
+    <td>ace upgrade --silent</td>
+    <td>Suppress all output (used by the background spawn)</td>
+  </tr>
+</table>
+
 <div class="line"></div>
 
 <p style="color:#555; font-size:12px;">
