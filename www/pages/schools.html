@@ -46,6 +46,70 @@ Push to a git remote.
 <span class="prompt">$</span> ace <span class="comment"># skills are symlinked, backend launches</span>
 </div>
 
+<h2>// imports</h2>
+
+<p>
+Schools can import skills from other repositories. Each <span style="color:#c0c0c0;">[[imports]]</span>
+entry in <span style="color:#c0c0c0;">school.toml</span> records where a skill came from so
+<span style="color:#c0c0c0;">ace school update</span> knows how to refresh it.
+</p>
+
+<div class="code-block"><pre><span class="comment"># exact import — a single named skill</span>
+[[imports]]
+skill = "skill-creator"
+source = "anthropics/skills"
+
+<span class="comment"># wildcard import — all matching skills, re-discovered on every update</span>
+[[imports]]
+skill = "frontend-*"
+source = "company/school"
+
+<span class="comment"># import everything curated from the source</span>
+[[imports]]
+skill = "*"
+source = "company/school"</pre></div>
+
+<p>
+Glob patterns support <span style="color:#c0c0c0;">*</span> anywhere in the name
+(<span style="color:#c0c0c0;">*</span>, <span style="color:#c0c0c0;">frontend-*</span>,
+<span style="color:#c0c0c0;">*-coding</span>). No <span style="color:#c0c0c0;">?</span>,
+<span style="color:#c0c0c0;">**</span>, or character classes. Wildcard matches default to the
+curated tier only — set <span style="color:#c0c0c0;">include_experimental = true</span> or
+<span style="color:#c0c0c0;">include_system = true</span> on the entry to widen the search.
+</p>
+
+<h2>// parent school pattern</h2>
+
+<p>
+To inherit every skill from a company-wide school, import with
+<span style="color:#c0c0c0;">--all</span>:
+</p>
+
+<div class="code-block">
+<span class="prompt">$</span> ace import company/school --all<br>
+<span class="prompt">$</span> ace school update <span class="comment"># fetches every curated skill</span>
+</div>
+
+<p>
+This records <span style="color:#c0c0c0;">skill = "*"</span> in
+<span style="color:#c0c0c0;">[[imports]]</span>. New skills added to the parent are picked up
+automatically on subsequent <span style="color:#c0c0c0;">ace school update</span> runs — no
+re-import needed.
+</p>
+
+<p>
+The source doesn't need to be an ACE school. Any repository with a
+<span style="color:#c0c0c0;">skills/</span> folder works — including
+<a href="https://github.com/anthropics/skills">anthropics/skills</a> and community
+<a href="https://skills.sh">skills.sh</a>-style collections. No
+<span style="color:#c0c0c0;">school.toml</span> required on the source.
+</p>
+
+<div class="code-block">
+<span class="prompt">$</span> ace import anthropics/skills --all <span class="comment"># treat a plain skills repo as a parent</span><br>
+<span class="prompt">$</span> ace school update
+</div>
+
 <h2>// propose changes</h2>
 
 <p>

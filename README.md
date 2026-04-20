@@ -52,7 +52,7 @@ ace school update                            # re-fetch all imported skills
 | `ace mcp` | Add missing MCP servers, health-check, and help re-register broken ones |
 | `ace mcp check` | Health-check registered MCP servers without mutating state |
 | `ace mcp reset [name]` | Remove registered MCP servers so they can be re-added cleanly |
-| `ace import <source> [--skill <name>]` | Import a skill from an external repository |
+| `ace import <source> [--skill <name>] [--all]` | Import a skill from an external repository (`--skill` accepts globs like `frontend-*`; `--all` imports every curated skill) |
 | `ace school init` | Initialize a new school repository |
 | `ace school update` | Re-fetch all imported skills from their sources |
 | `ace school skills` | List skills in the current school |
@@ -85,6 +85,18 @@ help you merge the contents into the school.
 
 **Changing school files:** Edit through symlinks (edits go to the school cache directly). The
 AI backend handles proposing changes back — branch, commit, push, create PR via GitHub MCP.
+
+**Parent school pattern:** Inherit every skill from another repository with `ace import <source> --all`.
+This records `skill = "*"` in `[[imports]]`; subsequent `ace school update` runs re-fetch and pick up
+new skills automatically. The source doesn't need to be an ACE school — any repo with a `skills/`
+folder works, including `anthropics/skills` and community [skills.sh](https://skills.sh)-style
+collections.
+
+```sh
+ace import company/school --all       # inherit a company-wide school
+ace import anthropics/skills --all    # or pull from a plain skills repo
+ace school update                     # refresh everything
+```
 
 ## Configuration
 
