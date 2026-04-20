@@ -41,8 +41,7 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
 
     cmd.args(&opts.extra_args);
 
-    use std::os::unix::process::CommandExt;
-    Err(cmd.exec())
+    Err(crate::platform::exec_replace(cmd))
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
