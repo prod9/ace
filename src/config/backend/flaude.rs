@@ -123,21 +123,15 @@ pub(super) fn mcp_check(names: &[String]) -> Result<Vec<McpStatus>, String> {
 
 /// Flaude exec records file.
 fn exec_record_path() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|h| {
-        std::path::Path::new(&h).join(".flaude-exec-records.jsonl")
-    })
+    crate::paths::home_dir().map(|h| h.join(".flaude-exec-records.jsonl"))
 }
 
 /// Flaude record file for MCP registrations.
 fn mcp_record_path() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|h| {
-        std::path::Path::new(&h).join(".flaude-mcp-records.jsonl")
-    })
+    crate::paths::home_dir().map(|h| h.join(".flaude-mcp-records.jsonl"))
 }
 
 /// Flaude MCP list file — one server name per line.
 fn mcp_list_path() -> Option<PathBuf> {
-    std::env::var("HOME").ok().map(|h| {
-        std::path::Path::new(&h).join(".flaude-mcp-list")
-    })
+    crate::paths::home_dir().map(|h| h.join(".flaude-mcp-list"))
 }

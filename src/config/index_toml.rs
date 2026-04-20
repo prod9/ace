@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-use super::paths::cache_dir;
 use super::ConfigError;
+use crate::paths;
 
 /// ~/.cache/ace/index.toml — tracks downloaded schools.
 ///
@@ -33,7 +33,10 @@ pub struct SchoolEntry {
 }
 
 pub fn index_path() -> Result<PathBuf, ConfigError> {
-    let path = cache_dir()?.join("ace").join("index.toml");
+    let path = paths::user_cache_dir()
+        .ok_or(ConfigError::NoCacheDir)?
+        .join("ace")
+        .join("index.toml");
     Ok(path)
 }
 

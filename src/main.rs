@@ -6,6 +6,7 @@ mod config;
 mod fsutil;
 mod git;
 mod glob;
+mod paths;
 mod templates;
 mod state;
 mod upgrade;

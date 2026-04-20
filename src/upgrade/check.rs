@@ -46,7 +46,7 @@ pub fn needs_update(current: &semver::Version, latest: &semver::Version) -> bool
 }
 
 pub fn cache_marker_path() -> Option<std::path::PathBuf> {
-    dirs::cache_dir().map(|d| d.join("ace/latest_version"))
+    crate::paths::user_cache_dir().map(|d| d.join("ace/latest_version"))
 }
 
 #[cfg(test)]

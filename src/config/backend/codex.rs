@@ -146,7 +146,7 @@ fn home_dir() -> Option<PathBuf> {
     std::env::var("CODEX_HOME")
         .ok()
         .map(PathBuf::from)
-        .or_else(|| std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".codex")))
+        .or_else(|| crate::paths::home_dir().map(|h| h.join(".codex")))
 }
 
 fn config_path() -> Option<PathBuf> {

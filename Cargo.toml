@@ -10,7 +10,6 @@ license = "MIT"
 [dependencies]
 clap = { version = "4.5.59", features = ["derive"] }
 console = "0.16.2"
-dirs = "6.0.0"
 gif = { version = "0.14.1", default-features = false, features = ["std"] }
 signal-hook = { version = "0.4.3", default-features = false, features = ["iterator"] }
 indicatif = { version = "0.18.4", default-features = false, features = ["unicode-width"] }
