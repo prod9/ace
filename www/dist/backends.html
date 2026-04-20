@@ -34,6 +34,43 @@ or ace.local.toml with <span style="color:#00ff88;">backend = "value"</span>.
 Default: <span style="color:#c0c0c0;">claude</span>.
 </p>
 
+<h2>// cli override</h2>
+
+<p>
+Override the configured backend for a single invocation without editing
+config. Flags are global — they work on any <span style="color:#c0c0c0;">ace</span>
+subcommand.
+</p>
+
+<table>
+  <tr>
+    <th>Flag</th>
+    <th>Equivalent</th>
+  </tr>
+  <tr>
+    <td>-b, --backend &lt;value&gt;</td>
+    <td style="color:#888;">explicit backend name (claude, codex, flaude)</td>
+  </tr>
+  <tr>
+    <td>--claude</td>
+    <td style="color:#888;">shortcut for <span style="color:#c0c0c0;">--backend claude</span></td>
+  </tr>
+  <tr>
+    <td>--codex</td>
+    <td style="color:#888;">shortcut for <span style="color:#c0c0c0;">--backend codex</span></td>
+  </tr>
+  <tr>
+    <td>--flaude</td>
+    <td style="color:#888;">shortcut for <span style="color:#c0c0c0;">--backend flaude</span></td>
+  </tr>
+</table>
+
+<div class="code-block">
+<span class="prompt">$</span> ace --codex <span class="comment"># launch Codex for this session only</span><br>
+<span class="prompt">$</span> ace --claude -- --continue <span class="comment"># resume with Claude, passing --continue through</span><br>
+<span class="prompt">$</span> ace mcp --codex <span class="comment"># check MCP against Codex without switching config</span>
+</div>
+
 <table>
   <tr>
     <th>Config Value</th>
