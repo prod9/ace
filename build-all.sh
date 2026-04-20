@@ -18,6 +18,7 @@ TARGETS=(
   x86_64-unknown-linux-gnu
   aarch64-unknown-linux-musl
   x86_64-unknown-linux-musl
+  x86_64-pc-windows-gnu
 )
 
 OUTDIR="${1:-target/dist}"
@@ -107,8 +108,16 @@ for target in "${build_targets[@]}"; do
   fi
 
   if "${cmd[@]}"; then
-    cp "target/$target/release/ace" "$OUTDIR/ace-$target"
-    echo "    -> $OUTDIR/ace-$target"
+    case "$target" in
+      *-windows-*)
+        cp "target/$target/release/ace.exe" "$OUTDIR/ace-$target.exe"
+        echo "    -> $OUTDIR/ace-$target.exe"
+        ;;
+      *)
+        cp "target/$target/release/ace" "$OUTDIR/ace-$target"
+        echo "    -> $OUTDIR/ace-$target"
+        ;;
+    esac
   else
     echo "    !! FAILED"
     failed+=("$target")

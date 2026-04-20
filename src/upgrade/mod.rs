@@ -86,6 +86,8 @@ pub fn target_triple() -> &'static str {
     { "x86_64-apple-darwin" }
     #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
     { "aarch64-apple-darwin" }
+    #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
+    { "x86_64-pc-windows-gnu" }
 }
 
 #[cfg(test)]
@@ -101,6 +103,7 @@ mod tests {
                 "aarch64-unknown-linux-gnu",
                 "x86_64-apple-darwin",
                 "aarch64-apple-darwin",
+                "x86_64-pc-windows-gnu",
             ]
             .contains(&triple),
             "unexpected triple: {triple}"
