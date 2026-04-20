@@ -5,11 +5,10 @@ use super::{McpDecl, McpStatus, SessionOpts};
 use crate::config::ace_toml::Trust;
 
 pub(super) fn is_ready() -> bool {
-    let home = match std::env::var("HOME") {
-        Ok(h) => h,
-        Err(_) => return false,
+    let Some(home) = crate::paths::home_dir() else {
+        return false;
     };
-    std::path::Path::new(&home).join(".claude.json").exists()
+    home.join(".claude.json").exists()
 }
 
 pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
@@ -34,17 +33,15 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
 
     cmd.args(&opts.extra_args);
 
-    use std::os::unix::process::CommandExt;
-    Err(cmd.exec())
+    Err(crate::platform::exec_replace(cmd))
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
-    let home = match std::env::var("HOME") {
-        Ok(h) => h,
-        Err(_) => return HashSet::new(),
+    let Some(home) = crate::paths::home_dir() else {
+        return HashSet::new();
     };
 
-    let path = std::path::Path::new(&home).join(".claude.json");
+    let path = home.join(".claude.json");
     let content = match std::fs::read_to_string(&path) {
         Ok(c) => c,
         Err(_) => return HashSet::new(),

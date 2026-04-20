@@ -41,8 +41,7 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
 
     cmd.args(&opts.extra_args);
 
-    use std::os::unix::process::CommandExt;
-    Err(cmd.exec())
+    Err(crate::platform::exec_replace(cmd))
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
@@ -146,7 +145,7 @@ fn home_dir() -> Option<PathBuf> {
     std::env::var("CODEX_HOME")
         .ok()
         .map(PathBuf::from)
-        .or_else(|| std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".codex")))
+        .or_else(|| crate::paths::home_dir().map(|h| h.join(".codex")))
 }
 
 fn config_path() -> Option<PathBuf> {
