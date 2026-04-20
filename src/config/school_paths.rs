@@ -59,7 +59,6 @@ fn has_traversal(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
 
     #[test]
     fn parse_specifier_valid() {
@@ -104,33 +103,33 @@ mod tests {
 
     #[test]
     fn resolve_embedded() {
-        let cases: &[(&str, &str)] = &[
-            (".:/school", "/tmp/myproject/school"),
-            (".:school", "/tmp/myproject/school"),
-            (".", "/tmp/myproject"),
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let project = tmp.path().join("myproject");
+        let cases: &[(&str, PathBuf)] = &[
+            (".:/school", project.join("school")),
+            (".:school", project.join("school")),
+            (".", project.clone()),
         ];
 
         for (spec, expected_root) in cases {
-            let p = resolve(Path::new("/tmp/myproject"), spec)
+            let p = resolve(&project, spec)
                 .expect("resolve should succeed for embedded spec");
             assert!(p.cache.is_none(), "embedded school should have no cache for {spec:?}");
-            assert_eq!(
-                p.root,
-                PathBuf::from(expected_root),
-                "root mismatch for {spec:?}"
-            );
+            assert_eq!(&p.root, expected_root, "root mismatch for {spec:?}");
         }
     }
 
     #[test]
     fn resolve_remote() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let project = tmp.path().join("myproject");
         let cases: &[(&str, &str, &str)] = &[
             ("prod9/school", "ace/prod9/school", "ace/prod9/school"),
             ("prod9/mono:school", "ace/prod9/mono", "ace/prod9/mono/school"),
         ];
 
         for (spec, cache_suffix, root_suffix) in cases {
-            let p = resolve(Path::new("/tmp/myproject"), spec)
+            let p = resolve(&project, spec)
                 .expect("resolve should succeed for remote spec");
 
             let cache = p.cache.as_ref()
@@ -142,8 +141,9 @@ mod tests {
 
     #[test]
     fn resolve_rejects_traversal() {
-        let project = Path::new("/tmp/myproject");
-        let result = resolve(project, "owner/repo:../secret");
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let project = tmp.path().join("myproject");
+        let result = resolve(&project, "owner/repo:../secret");
         assert!(result.is_err());
     }
 }

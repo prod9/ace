@@ -137,17 +137,18 @@ fn link_status(path: &Path) -> LinkStatus {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use tempfile::TempDir;
 
     struct TestFixture {
+        _tmp: TempDir,
         root: PathBuf,
     }
 
     impl TestFixture {
-        fn new(name: &str) -> Self {
-            let root = std::env::temp_dir().join(name);
-            let _ = std::fs::remove_dir_all(&root);
-
-            let fix = Self { root };
+        fn new(_name: &str) -> Self {
+            let tmp = tempfile::tempdir().expect("create tempdir");
+            let root = tmp.path().to_path_buf();
+            let fix = Self { _tmp: tmp, root };
             std::fs::create_dir_all(fix.school()).expect("create school dir");
             std::fs::create_dir_all(fix.project()).expect("create project dir");
             fix
@@ -188,10 +189,11 @@ mod tests {
         }
     }
 
-    impl Drop for TestFixture {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.root);
-        }
+    #[test]
+    fn fixtures_are_isolated_per_call() {
+        let a = TestFixture::new("ace-test-isolation");
+        let b = TestFixture::new("ace-test-isolation");
+        assert_ne!(a.root, b.root, "fixtures must be isolated between calls");
     }
 
     #[test]

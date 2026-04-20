@@ -95,26 +95,19 @@ mod tests {
     use super::*;
 
     fn nonexistent_dir() -> std::path::PathBuf {
-        std::path::PathBuf::from("/tmp/ace-test-prompt-nonexistent")
+        let tmp = tempfile::tempdir().expect("tempdir");
+        tmp.path().join("ace-test-prompt-nonexistent")
     }
 
-    struct TempDir(std::path::PathBuf);
+    struct TempDir(tempfile::TempDir);
 
     impl TempDir {
-        fn new(name: &str) -> Self {
-            let path = std::env::temp_dir().join(name);
-            let _ = std::fs::remove_dir_all(&path);
-            Self(path)
+        fn new(_name: &str) -> Self {
+            Self(tempfile::tempdir().expect("tempdir"))
         }
 
         fn path(&self) -> &Path {
-            &self.0
-        }
-    }
-
-    impl Drop for TempDir {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.0);
+            self.0.path()
         }
     }
 

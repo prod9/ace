@@ -84,8 +84,9 @@ mod tests {
 
     #[test]
     fn load_or_default_missing_file() {
-        let path = std::path::Path::new("/tmp/ace-test-nonexistent/ace.toml");
-        let result = load_or_default(path).expect("should return default");
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("missing").join("ace.toml");
+        let result = load_or_default(&path).expect("should return default");
         assert!(result.school.is_empty());
         assert!(result.backend.is_none());
     }
