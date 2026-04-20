@@ -12,7 +12,7 @@ clap = { version = "4.5.59", features = ["derive"] }
 console = "0.16.2"
 dirs = "6.0.0"
 gif = { version = "0.14.1", default-features = false, features = ["std"] }
-signal-hook = { version = "0.4.3", default-features = false, features = ["iterator"] }
+ctrlc = "3"
 indicatif = { version = "0.18.4", default-features = false, features = ["unicode-width"] }
 inquire = { version = "0.9.3", default-features = false, features = ["console", "one-liners"] }
 serde = { version = "1.0.228", features = ["derive"] }
