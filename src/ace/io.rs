@@ -1,11 +1,9 @@
 use std::io::{IsTerminal, Write as _};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use signal_hook::consts::SIGINT;
-use signal_hook::iterator::Signals;
 
 // ANSI escape sequences for terminal state management.
 // Alt screen is a separate buffer that preserves the user's scrollback.
@@ -16,40 +14,49 @@ const HIDE_CURSOR: &[u8] = b"\x1b[?25l";
 const CLEANUP_CURSOR: &[u8] = b"\x1b[?25h";
 const CLEANUP_ALT_SCREEN: &[u8] = b"\x1b[?1049l\x1b[?25h";
 
+fn cleanup_bytes_for(alt_screen: bool) -> &'static [u8] {
+    if alt_screen {
+        CLEANUP_ALT_SCREEN
+    } else {
+        CLEANUP_CURSOR
+    }
+}
+
+// Global alt-screen flag shared with the process-wide Ctrl+C handler.
+// `ctrlc::set_handler` can only be called once per process, so we register
+// once via `OnceLock` and let each `TerminalGuard` mutate this flag.
+fn alt_screen_flag() -> &'static Arc<AtomicBool> {
+    static FLAG: OnceLock<Arc<AtomicBool>> = OnceLock::new();
+    FLAG.get_or_init(|| {
+        let flag = Arc::new(AtomicBool::new(false));
+        let handler_flag = Arc::clone(&flag);
+        let _ = ctrlc::set_handler(move || {
+            let cleanup = cleanup_bytes_for(handler_flag.load(Ordering::Relaxed));
+            let _ = std::io::stderr().write_all(cleanup);
+            let _ = std::io::stderr().flush();
+            std::process::exit(130);
+        });
+        flag
+    })
+}
+
 /// RAII guard that restores terminal state on drop and on SIGINT.
 ///
 /// Starts in cursor-restore mode (show cursor only). Call `enter_alt_screen()`
 /// to upgrade — both drop and SIGINT will then also exit the alternate screen.
 ///
-/// Spawns a background thread that blocks on a Unix signal fd — no polling.
-/// On Ctrl+C the thread writes cleanup escapes and exits with code 130.
+/// Registers a process-wide Ctrl+C handler exactly once (ctrlc crate wraps
+/// `SetConsoleCtrlHandler` on Windows and `sigaction` on Unix). The handler
+/// reads a shared atomic flag so it always sees the current alt-screen mode.
 pub struct TerminalGuard {
     alt_screen: Arc<AtomicBool>,
-    handle: signal_hook::iterator::Handle,
 }
 
 impl TerminalGuard {
     pub fn new() -> Self {
-        let alt_screen = Arc::new(AtomicBool::new(false));
-        let flag = Arc::clone(&alt_screen);
-
-        let mut signals = Signals::new([SIGINT]).expect("register signal handler");
-        let handle = signals.handle();
-
-        std::thread::spawn(move || {
-            if signals.forever().next().is_some() {
-                let cleanup = if flag.load(Ordering::Relaxed) {
-                    CLEANUP_ALT_SCREEN
-                } else {
-                    CLEANUP_CURSOR
-                };
-                let _ = std::io::stderr().write_all(cleanup);
-                let _ = std::io::stderr().flush();
-                std::process::exit(130);
-            }
-        });
-
-        Self { alt_screen, handle }
+        let alt_screen = Arc::clone(alt_screen_flag());
+        alt_screen.store(false, Ordering::Relaxed);
+        Self { alt_screen }
     }
 
     /// Upgrade to alt-screen mode. Both drop and SIGINT will exit the
@@ -59,11 +66,7 @@ impl TerminalGuard {
     }
 
     fn cleanup_bytes(&self) -> &'static [u8] {
-        if self.alt_screen.load(Ordering::Relaxed) {
-            CLEANUP_ALT_SCREEN
-        } else {
-            CLEANUP_CURSOR
-        }
+        cleanup_bytes_for(self.alt_screen.load(Ordering::Relaxed))
     }
 }
 
@@ -71,7 +74,7 @@ impl Drop for TerminalGuard {
     fn drop(&mut self) {
         let _ = std::io::stderr().write_all(self.cleanup_bytes());
         let _ = std::io::stderr().flush();
-        self.handle.close();
+        self.alt_screen.store(false, Ordering::Relaxed);
     }
 }
 
@@ -256,5 +259,20 @@ fn map_inquire_err(e: inquire::InquireError) -> IoError {
         inquire::InquireError::OperationCanceled
         | inquire::InquireError::OperationInterrupted => IoError::Cancelled,
         other => IoError::Io(std::io::Error::other(other)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_bytes_cursor_only_when_no_alt_screen() {
+        assert_eq!(cleanup_bytes_for(false), b"\x1b[?25h");
+    }
+
+    #[test]
+    fn cleanup_bytes_exits_alt_screen_when_active() {
+        assert_eq!(cleanup_bytes_for(true), b"\x1b[?1049l\x1b[?25h");
     }
 }
