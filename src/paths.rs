@@ -33,18 +33,16 @@ fn home_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
 
 #[cfg(unix)]
 fn user_config_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
-    if let Some(v) = non_empty(get("XDG_CONFIG_HOME")) {
-        return Some(PathBuf::from(v));
-    }
-    home_dir_from(get).map(|h| h.join(".config"))
+    non_empty(get("XDG_CONFIG_HOME"))
+        .map(PathBuf::from)
+        .or_else(|| home_dir_from(&get).map(|h| h.join(".config")))
 }
 
 #[cfg(unix)]
 fn user_cache_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
-    if let Some(v) = non_empty(get("XDG_CACHE_HOME")) {
-        return Some(PathBuf::from(v));
-    }
-    home_dir_from(get).map(|h| h.join(".cache"))
+    non_empty(get("XDG_CACHE_HOME"))
+        .map(PathBuf::from)
+        .or_else(|| home_dir_from(&get).map(|h| h.join(".cache")))
 }
 
 #[cfg(windows)]

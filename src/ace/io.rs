@@ -30,12 +30,14 @@ fn alt_screen_flag() -> &'static Arc<AtomicBool> {
     FLAG.get_or_init(|| {
         let flag = Arc::new(AtomicBool::new(false));
         let handler_flag = Arc::clone(&flag);
-        let _ = ctrlc::set_handler(move || {
+        if let Err(e) = ctrlc::set_handler(move || {
             let cleanup = cleanup_bytes_for(handler_flag.load(Ordering::Relaxed));
             let _ = std::io::stderr().write_all(cleanup);
             let _ = std::io::stderr().flush();
             std::process::exit(130);
-        });
+        }) {
+            eprintln!("warning: failed to register Ctrl+C handler: {e}");
+        }
         flag
     })
 }

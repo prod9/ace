@@ -3,13 +3,19 @@
 use std::io;
 use std::process::Command;
 
-/// Replace the current process with `cmd`.
+/// Replace the current process with `cmd`, or on Windows exit with the
+/// child's code.
 ///
-/// On Unix, uses `execvp` via `CommandExt::exec`; does not return on success.
-/// On Windows, spawns the child, waits, and exits the parent with the child's
-/// code — `execvp` has no native equivalent there.
+/// - Unix: calls `execvp` via `CommandExt::exec`. Does not return on success
+///   (kernel replaces the image). Returns `io::Error` only on failure.
+/// - Windows: no `execvp` equivalent. Spawns the child, waits, then calls
+///   `std::process::exit` with the child's exit code. Does not return on
+///   success (this function exits the process). Returns `io::Error` only on
+///   spawn failure.
 ///
-/// Returns the `io::Error` from the underlying call on failure.
+/// Callers should treat the return as a "didn't happen" error — the common
+/// idiom is `Err(exec_replace(cmd))` and the `Err` is only ever constructed
+/// in the failure path.
 #[cfg(unix)]
 pub fn exec_replace(mut cmd: Command) -> io::Error {
     use std::os::unix::process::CommandExt;

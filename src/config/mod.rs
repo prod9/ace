@@ -116,9 +116,9 @@ pub enum ConfigError {
     Encode(#[from] toml::ser::Error),
 
     // paths
-    #[error("neither XDG_CONFIG_HOME nor HOME is set")]
+    #[error("cannot locate user config directory")]
     NoConfigDir,
-    #[error("neither XDG_CACHE_HOME nor HOME is set")]
+    #[error("cannot locate user cache directory")]
     NoCacheDir,
 
     // tree

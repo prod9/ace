@@ -156,7 +156,7 @@ mod tests {
     }
 
     impl TestFixture {
-        fn new(_name: &str) -> Self {
+        fn new() -> Self {
             let tmp = tempfile::tempdir().expect("create tempdir");
             let root = tmp.path().to_path_buf();
             let fix = Self { _tmp: tmp, root };
@@ -213,14 +213,14 @@ mod tests {
 
     #[test]
     fn fixtures_are_isolated_per_call() {
-        let a = TestFixture::new("ace-test-isolation");
-        let b = TestFixture::new("ace-test-isolation");
+        let a = TestFixture::new();
+        let b = TestFixture::new();
         assert_ne!(a.root, b.root, "fixtures must be isolated between calls");
     }
 
     #[test]
     fn link_no_school_folders() {
-        let fix = TestFixture::new("ace-test-link-no-folders");
+        let fix = TestFixture::new();
         let result = fix.link().expect("should succeed");
         assert!(!result.linked("skills"));
         assert!(!result.adopted("skills"));
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn link_creates_folder_symlink() {
-        let fix = TestFixture::new("ace-test-link-folder");
+        let fix = TestFixture::new();
         fix.add_school_entry_with_content("skills", "git-commit", "SKILL.md", "# Git Commit");
         fix.add_school_entry_with_content("skills", "code-review", "SKILL.md", "# Code Review");
 
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn link_skips_correct_symlink() {
-        let fix = TestFixture::new("ace-test-link-skip-correct");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "my-skill");
 
         let project_skills = fix.project_folder("skills");
@@ -264,7 +264,7 @@ mod tests {
 
     #[test]
     fn link_replaces_stale_symlink() {
-        let fix = TestFixture::new("ace-test-link-replace-stale");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "my-skill");
 
         let project_skills = fix.project_folder("skills");
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn link_adopts_empty_dir() {
-        let fix = TestFixture::new("ace-test-link-replace-empty");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "my-skill");
 
         std::fs::create_dir_all(fix.project_folder("skills")).expect("mkdir");
@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn adopt_renames_dir_on_first_setup() {
-        let fix = TestFixture::new("ace-test-link-adopt");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "school-skill");
         fix.add_real_entry("skills", "my-skill", "SKILL.md", "# My Skill");
 
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn adopt_errors_if_previous_exists() {
-        let fix = TestFixture::new("ace-test-link-adopt-exists");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "school-skill");
         fix.add_real_entry("skills", "my-skill", "SKILL.md", "");
 
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn adopt_skips_when_already_symlinked() {
-        let fix = TestFixture::new("ace-test-link-adopt-skip");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "my-skill");
 
         let project_skills = fix.project_folder("skills");
@@ -346,7 +346,7 @@ mod tests {
 
     #[test]
     fn link_all_four_folders() {
-        let fix = TestFixture::new("ace-test-link-all-folders");
+        let fix = TestFixture::new();
         for folder in SCHOOL_FOLDERS {
             fix.add_school_entry(folder, "test-entry");
         }
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn link_skips_absent_folders() {
-        let fix = TestFixture::new("ace-test-link-partial");
+        let fix = TestFixture::new();
         fix.add_school_entry("skills", "a-skill");
         fix.add_school_entry("commands", "a-command");
 

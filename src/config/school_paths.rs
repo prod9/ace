@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::ConfigError;
-use crate::paths;
+use super::paths::ace_cache_dir;
 
 #[derive(Clone)]
 pub struct SchoolPaths {
@@ -18,10 +18,7 @@ pub fn resolve(
     let (base, cache) = if source == "." {
         (project_dir.to_path_buf(), None)
     } else {
-        let cache = paths::user_cache_dir()
-            .ok_or(ConfigError::NoCacheDir)?
-            .join("ace")
-            .join(&source);
+        let cache = ace_cache_dir()?.join(&source);
         (cache.clone(), Some(cache))
     };
     let root = path.map(|p| base.join(p)).unwrap_or(base.clone());
