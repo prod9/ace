@@ -132,7 +132,7 @@ mod tests {
     fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
         DiscoveredSkill {
             name: name.to_string(),
-            path: std::path::PathBuf::from(format!("/tmp/{name}")),
+            path: std::path::PathBuf::from(name),
             tier,
         }
     }

@@ -113,16 +113,16 @@ mod tests {
 
     #[test]
     fn load_missing_file_returns_default() {
-        let path = Path::new("/tmp/ace-test-nonexistent/index.toml");
-        let index = load(path).expect("missing file should return default");
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("missing").join("index.toml");
+        let index = load(&path).expect("missing file should return default");
         assert!(index.school.is_empty());
     }
 
     #[test]
     fn roundtrip_save_load() {
-        let dir = std::env::temp_dir().join("ace-test-index-roundtrip");
-        let _ = std::fs::remove_dir_all(&dir);
-        let path = dir.join("index.toml");
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let path = tmp.path().join("index.toml");
 
         let mut index = IndexToml::default();
         upsert(&mut index, "prod9/school");
@@ -136,7 +136,5 @@ mod tests {
         assert_eq!(loaded.school[1].specifier, "prod9/mono:school");
         assert_eq!(loaded.school[1].repo, "prod9/mono");
         assert_eq!(loaded.school[1].path, "school");
-
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }

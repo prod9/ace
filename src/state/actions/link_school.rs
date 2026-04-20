@@ -1,7 +1,18 @@
+use std::io;
 use std::path::Path;
 
 use crate::ace::Ace;
 use super::prepare_school::PrepareError;
+
+/// Create a directory-level symlink pointing at `target` at `link`.
+/// Platform-split: Unix uses `std::os::unix::fs::symlink`; Windows uses
+/// `std::os::windows::fs::symlink_dir` (directory symlinks don't require admin).
+fn create_dir_symlink(target: &Path, link: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    { std::os::unix::fs::symlink(target, link) }
+    #[cfg(windows)]
+    { std::os::windows::fs::symlink_dir(target, link) }
+}
 
 /// Folders that ACE links from the school cache into the project.
 pub const SCHOOL_FOLDERS: &[&str] = &["skills", "rules", "commands", "agents"];
@@ -81,7 +92,7 @@ fn ensure_symlink(link_path: &Path, target: &Path) -> Result<bool, PrepareError>
         }
     }
 
-    std::os::unix::fs::symlink(target, link_path).map_err(PrepareError::Write)?;
+    create_dir_symlink(target, link_path).map_err(PrepareError::Write)?;
     Ok(true)
 }
 
@@ -137,17 +148,18 @@ fn link_status(path: &Path) -> LinkStatus {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use tempfile::TempDir;
 
     struct TestFixture {
+        _tmp: TempDir,
         root: PathBuf,
     }
 
     impl TestFixture {
-        fn new(name: &str) -> Self {
-            let root = std::env::temp_dir().join(name);
-            let _ = std::fs::remove_dir_all(&root);
-
-            let fix = Self { root };
+        fn new(_name: &str) -> Self {
+            let tmp = tempfile::tempdir().expect("create tempdir");
+            let root = tmp.path().to_path_buf();
+            let fix = Self { _tmp: tmp, root };
             std::fs::create_dir_all(fix.school()).expect("create school dir");
             std::fs::create_dir_all(fix.project()).expect("create project dir");
             fix
@@ -188,10 +200,22 @@ mod tests {
         }
     }
 
-    impl Drop for TestFixture {
-        fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.root);
-        }
+    #[test]
+    fn creates_directory_symlink() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let target = tmp.path().join("target");
+        std::fs::create_dir(&target).expect("create target dir");
+        let link = tmp.path().join("link");
+        create_dir_symlink(&target, &link).expect("create symlink");
+        assert!(link.exists(), "symlink must exist");
+        assert!(link.is_dir(), "symlink must resolve to directory");
+    }
+
+    #[test]
+    fn fixtures_are_isolated_per_call() {
+        let a = TestFixture::new("ace-test-isolation");
+        let b = TestFixture::new("ace-test-isolation");
+        assert_ne!(a.root, b.root, "fixtures must be isolated between calls");
     }
 
     #[test]
@@ -231,7 +255,7 @@ mod tests {
         let project_skills = fix.project_folder("skills");
         std::fs::create_dir_all(project_skills.parent().expect("has parent"))
             .expect("mkdir parent");
-        std::os::unix::fs::symlink(fix.school_folder("skills"), &project_skills)
+        create_dir_symlink(&fix.school_folder("skills"), &project_skills)
             .expect("create symlink");
 
         let result = fix.link().expect("should skip existing");
@@ -246,7 +270,7 @@ mod tests {
         let project_skills = fix.project_folder("skills");
         std::fs::create_dir_all(project_skills.parent().expect("has parent"))
             .expect("mkdir parent");
-        std::os::unix::fs::symlink(fix.root.join("nonexistent"), &project_skills)
+        create_dir_symlink(&fix.root.join("nonexistent"), &project_skills)
             .expect("create stale symlink");
 
         let result = fix.link().expect("should replace stale");
@@ -313,7 +337,7 @@ mod tests {
         let project_skills = fix.project_folder("skills");
         std::fs::create_dir_all(project_skills.parent().expect("has parent"))
             .expect("mkdir parent");
-        std::os::unix::fs::symlink(fix.school_folder("skills"), &project_skills)
+        create_dir_symlink(&fix.school_folder("skills"), &project_skills)
             .expect("create symlink");
 
         let result = fix.link().expect("should succeed");
