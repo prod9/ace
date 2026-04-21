@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config::school_toml::{self, ImportDecl};
 use crate::git;
-use crate::state::actions::import_skill::{ImportError, ImportResult, ImportSkill};
+use crate::state::actions::imports::{Add, AddError, AddResult};
 
 use super::CmdError;
 
@@ -48,7 +48,7 @@ fn run_inner(
         );
     }
 
-    let result = ImportSkill {
+    let result = Add {
         source: &normalized,
         skill: effective_skill,
         school_root: &school_root,
@@ -56,15 +56,15 @@ fn run_inner(
     .run(ace)?;
 
     match result {
-        ImportResult::Done { .. } => {}
-        ImportResult::NeedsSelection(skills) => {
+        AddResult::Done { .. } => {}
+        AddResult::NeedsSelection(skills) => {
             let names: Vec<String> = skills.iter().map(|s| s.name.clone()).collect();
             let selected = ace.prompt_select("Multiple skills found, pick one:", names)?;
 
             let skill = skills.iter().find(|s| s.name == selected)
-                .ok_or_else(|| ImportError::SkillNotFound(selected.to_string()))?;
+                .ok_or_else(|| AddError::SkillNotFound(selected.to_string()))?;
 
-            ImportSkill {
+            Add {
                 source: &normalized,
                 skill: Some(&skill.name),
                 school_root: &school_root,

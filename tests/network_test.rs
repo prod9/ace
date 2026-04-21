@@ -18,7 +18,7 @@ fn setup_remote_school() {
     env.assert_exists("ace.toml");
     env.assert_contains("ace.toml", "prod9/school");
 
-    // Skills symlinked from school cache.
+    // Skills symlinked from school clone.
     env.assert_exists(".claude/skills");
 
     // CLAUDE.md generated.

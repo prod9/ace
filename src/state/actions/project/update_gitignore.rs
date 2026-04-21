@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use super::link_school::SCHOOL_FOLDERS;
+use crate::state::actions::school::SCHOOL_FOLDERS;
 
 const MARKER_START: &str = "# ACE-managed — do not edit this block.";
 const MARKER_END: &str = "# end ACE";
@@ -37,7 +37,7 @@ impl UpdateGitignore<'_> {
 fn build_block() -> String {
     let mut lines = vec![
         MARKER_START.to_string(),
-        "# These folders are symlinks to the school cache managed by `ace setup`.".to_string(),
+        "# These folders are symlinks to the school clone managed by `ace setup`.".to_string(),
         "# To update skills, update the school repo instead.".to_string(),
         "# See: https://github.com/prod9/ace".to_string(),
     ];

@@ -13,7 +13,7 @@ no business logic.
 - `SchoolToml` — shape of `school.toml`
 - `IndexToml` — shape of `~/.cache/ace/index.toml` (tracks downloaded schools)
 - `AcePaths` — computes config file locations from project dir
-- `SchoolPaths` — computes school cache/root locations from specifier
+- `SchoolPaths` — computes school clone/root locations from specifier
 
 Config structs are parse-and-forget. They don't know about each other or about
 override precedence.

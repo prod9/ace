@@ -6,9 +6,7 @@ use crate::config::index_toml;
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
-use super::install_school::Install;
-use super::link_school::Link;
-use super::update_cache::{SkillChange, Update, UpdateOutcome};
+use super::school::{Install, Link, Pull, PullOutcome, SkillChange};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrepareError {
@@ -47,7 +45,7 @@ fn is_supported(backend: Backend, folder: &str) -> bool {
 impl Prepare<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
         let (changes, school_is_dirty) = if is_cached(self.specifier)? {
-            let outcome = (Update {
+            let outcome = (Pull {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
                 force: false,
@@ -55,8 +53,8 @@ impl Prepare<'_> {
             .run(ace)?;
             outcome.emit(ace);
             match outcome {
-                UpdateOutcome::Dirty { .. } => (Vec::new(), true),
-                UpdateOutcome::Updated { changes } => (changes, false),
+                PullOutcome::Dirty { .. } => (Vec::new(), true),
+                PullOutcome::Updated { changes } => (changes, false),
                 _ => (Vec::new(), false),
             }
         } else {

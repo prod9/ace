@@ -6,7 +6,7 @@ use crate::config::ConfigError;
 use crate::templates;
 
 #[derive(Debug, thiserror::Error)]
-pub enum InitSchoolError {
+pub enum InitError {
     #[error("not in git repo, git init?")]
     NotInGitRepo,
     #[error("school.toml already exists")]
@@ -17,21 +17,21 @@ pub enum InitSchoolError {
     Write(std::io::Error),
 }
 
-pub struct InitSchool<'a> {
+pub struct Init<'a> {
     pub name: &'a str,
     pub project_dir: &'a Path,
     pub force: bool,
 }
 
-impl InitSchool<'_> {
-    pub fn run(&self, ace: &mut Ace) -> Result<(), InitSchoolError> {
-        if !super::is_git_repo(self.project_dir) {
-            return Err(InitSchoolError::NotInGitRepo);
+impl Init<'_> {
+    pub fn run(&self, ace: &mut Ace) -> Result<(), InitError> {
+        if !super::super::is_git_repo(self.project_dir) {
+            return Err(InitError::NotInGitRepo);
         }
 
         let toml_path = self.project_dir.join("school.toml");
         if !self.force && toml_path.exists() {
-            return Err(InitSchoolError::AlreadyExists);
+            return Err(InitError::AlreadyExists);
         }
 
         if self.force && toml_path.exists() {
@@ -55,7 +55,7 @@ impl InitSchool<'_> {
         if !instructions.exists() {
             let tpl = templates::Template::parse(templates::builtins::SCHOOL_CLAUDE_MD);
             std::fs::write(&instructions, tpl.substitute(&vals))
-                .map_err(InitSchoolError::Write)?;
+                .map_err(InitError::Write)?;
             ace.done("Created CLAUDE.md");
         }
 
@@ -63,23 +63,23 @@ impl InitSchool<'_> {
         if !readme.exists() {
             let tpl = templates::Template::parse(templates::builtins::SCHOOL_README);
             std::fs::write(&readme, tpl.substitute(&vals))
-                .map_err(InitSchoolError::Write)?;
+                .map_err(InitError::Write)?;
             ace.done("Created README.md");
         }
 
         let skill_dir = self.project_dir.join("skills").join("ace-school");
         let skill_path = skill_dir.join("SKILL.md");
         if !skill_path.exists() {
-            std::fs::create_dir_all(&skill_dir).map_err(InitSchoolError::Write)?;
+            std::fs::create_dir_all(&skill_dir).map_err(InitError::Write)?;
             std::fs::write(&skill_path, templates::builtins::ACE_SCHOOL_SKILL)
-                .map_err(InitSchoolError::Write)?;
+                .map_err(InitError::Write)?;
             ace.done("Created skills/ace-school/SKILL.md");
         }
 
         let gitignore = self.project_dir.join(".gitignore");
         if !gitignore.exists() {
             std::fs::write(&gitignore, templates::builtins::GITIGNORE)
-                .map_err(InitSchoolError::Write)?;
+                .map_err(InitError::Write)?;
             ace.done("Created .gitignore");
         }
 

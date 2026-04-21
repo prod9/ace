@@ -21,7 +21,7 @@ pub struct Setup<'a> {
 
 impl Setup<'_> {
     pub fn run(&self, _ace: &mut Ace) -> Result<(), SetupError> {
-        if !super::is_git_repo(self.project_dir) {
+        if !super::super::is_git_repo(self.project_dir) {
             return Err(SetupError::NotInGitRepo);
         }
 

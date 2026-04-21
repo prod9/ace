@@ -23,9 +23,9 @@ Built by concatenating layers, separated by blank lines:
    Injected verbatim (no template substitution).
 5. **Skill change summary** — `prompt_changes.md`, only when skills changed since last session.
    Lists added, updated, and removed skills. Rendered with `{{ changes }}`.
-6. **School changes** — `prompt_school_changes.md`, only when a school cache exists (remote
-   schools). Contains proposal workflow steps. Rendered with `{{ school_cache }}`. When the
-   cache has uncommitted changes, `prompt_dirty_school.md` is appended (no placeholders).
+6. **School changes** — `prompt_school_changes.md`, only when a school clone exists (remote
+   schools). Contains proposal workflow steps. Rendered with `{{ school_clone }}`. When the
+   clone has uncommitted changes, `prompt_dirty_school.md` is appended (no placeholders).
 7. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
    exists. Consolidation guidance. Rendered with `{{ backend_dir }}`.
 
@@ -84,7 +84,7 @@ parsed template supports `placeholders()` (returns unique names) and `substitute
 |--------------------|---------------------------|-------------------------------|--------------------------------------|
 | `{{ school_name }}`  | `prompt_session.md`, project/school CLAUDE.md templates | School display name | `Acme` |
 | `{{ backend_dir }}`  | `prompt_previous_skills.md`, project CLAUDE.md template | Backend directory name        | `.claude` |
-| `{{ school_cache }}` | `prompt_school_changes.md` | School clone path             | `/home/user/.local/share/ace/org/school` |
+| `{{ school_clone }}` | `prompt_school_changes.md` | School clone path             | `/home/user/.local/share/ace/org/school` |
 | `{{ changes }}`      | `prompt_changes.md`       | Formatted change list (built by `session.rs`) | `- Added: \`new-skill\`` |
 
 ### Adding a Placeholder

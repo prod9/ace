@@ -1,8 +1,8 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
 use crate::config::backend::SessionOpts;
-use crate::state::actions::register_mcp::McpRegister;
-use crate::state::actions::prepare_school::{Prepare, PrepareResult};
+use crate::state::actions::mcp::Register;
+use crate::state::actions::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
 
 use super::CmdError;
@@ -22,7 +22,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool
 
     let project_dir = ace.project_dir().to_path_buf();
     let school_paths = ace.require_school()?;
-    let school_cache = school_paths.cache.clone();
+    let school_clone = school_paths.clone_path.clone();
 
     let school = ace.state().school.as_ref()
         .ok_or(ConfigError::NoSchool)?;
@@ -34,7 +34,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool
         &ace.state().session_prompt,
         &backend_dir,
         &prepare_result.changes,
-        school_cache.as_deref(),
+        school_clone.as_deref(),
         prepare_result.school_is_dirty,
     );
 
@@ -121,7 +121,7 @@ pub(super) async fn prepare_school(
         return Ok(prepare_result);
     }
 
-    if let Err(e) = (McpRegister { backend, entries: &mcp_entries }).run(ace) {
+    if let Err(e) = (Register { backend, entries: &mcp_entries }).run(ace) {
         ace.warn(&format!("MCP registration failed: {e}"));
     }
 

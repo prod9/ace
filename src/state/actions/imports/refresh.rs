@@ -4,15 +4,15 @@ use std::path::Path;
 use crate::ace::Ace;
 use crate::config;
 use crate::glob;
-use super::discover_skill::{discover_skills, Tier};
+use crate::state::actions::{Tier, discover_skills};
 use crate::state::skill_set::{ChangeKind, SkillSet};
 
-pub struct UpdateSchool<'a> {
+pub struct Refresh<'a> {
     pub school_root: &'a Path,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum UpdateSchoolError {
+pub enum RefreshError {
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
@@ -21,7 +21,7 @@ pub enum UpdateSchoolError {
     Git(#[from] crate::git::GitError),
 }
 
-pub enum UpdateSchoolResult {
+pub enum RefreshResult {
     NoImports,
     Updated {
         #[allow(dead_code)] // part of result API
@@ -29,13 +29,13 @@ pub enum UpdateSchoolResult {
     },
 }
 
-impl UpdateSchool<'_> {
-    pub fn run(&self, ace: &mut Ace) -> Result<UpdateSchoolResult, UpdateSchoolError> {
+impl Refresh<'_> {
+    pub fn run(&self, ace: &mut Ace) -> Result<RefreshResult, RefreshError> {
         let toml_path = self.school_root.join("school.toml");
         let school = config::school_toml::load(&toml_path)?;
 
         if school.imports.is_empty() {
-            return Ok(UpdateSchoolResult::NoImports);
+            return Ok(RefreshResult::NoImports);
         }
 
         let by_source = group_by_source(&school.imports);
@@ -81,7 +81,7 @@ impl UpdateSchool<'_> {
         }
 
         ace.done(&format!("Updated {count} skill(s)"));
-        Ok(UpdateSchoolResult::Updated { count })
+        Ok(RefreshResult::Updated { count })
     }
 }
 
@@ -128,7 +128,7 @@ fn group_by_source(
 mod tests {
     use super::*;
     use crate::config::school_toml::ImportDecl;
-    use crate::state::actions::discover_skill::DiscoveredSkill;
+    use crate::state::actions::DiscoveredSkill;
 
     fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
         DiscoveredSkill {

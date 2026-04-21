@@ -1,15 +1,12 @@
-pub mod discover_skill;
-pub mod import_skill;
-pub mod init_school;
-pub mod install_school;
-pub mod link_school;
-pub mod prepare_school;
-pub mod register_mcp;
-pub mod remove_mcp;
-pub mod setup_project;
-pub mod update_cache;
-pub mod update_gitignore;
-pub mod update_school;
+pub mod discover;
+pub mod imports;
+pub mod mcp;
+pub mod prepare;
+pub mod project;
+pub mod school;
+
+pub use discover::{DiscoveredSkill, Tier, discover_skills};
+pub use prepare::{Prepare, PrepareError, PrepareResult};
 
 use std::path::Path;
 

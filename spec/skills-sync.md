@@ -57,7 +57,7 @@ Sync into projects using symlinks, not file copies. Multiple projects sharing th
 redundant data and ensures all projects see the same skill versions immediately after a pull.
 
 **One folder-level symlink per folder**, not per-entry symlinks. Each project folder is a
-single symlink pointing to the school cache's corresponding directory:
+single symlink pointing to the school clone's corresponding directory:
 
 ```
 project/.claude/skills/   → ~/.local/share/ace/{school}/skills/

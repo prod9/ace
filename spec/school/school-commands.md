@@ -32,7 +32,7 @@ Prerequisites: create and clone a git repo first (e.g. `gh repo create org/schoo
 
 ## Update and Edit Safety
 
-The school cache is a live working copy. Users may have uncommitted edits (skills modified
+The school clone is a live working copy. Users may have uncommitted edits (skills modified
 through symlinks). The **Update** action must check for dirty state before pulling:
 
 1. `git status --porcelain` — if dirty, warn and abort. Tell user to propose changes when
@@ -86,7 +86,7 @@ for `--skill` values — no glob, no `?`, no character classes. ACE matches this
 ### Flow
 
 1. Resolve school context: if `school.toml` in cwd → school dir. Otherwise resolve linked
-   school from `ace.toml` → school cache path.
+   school from `ace.toml` → school clone path.
 2. Clone source repo to temp dir (`git clone --depth 1`).
 3. Discover `SKILL.md` files under `skills/` (priority: `skills/.curated/` > `skills/` >
    `skills/.experimental/` > `skills/.system/`, first hit per name wins). Each skill is
@@ -149,12 +149,12 @@ Re-fetch all imported skills from their sources.
 
 ## `ace diff`
 
-Show uncommitted changes in the school cache, including untracked files.
+Show uncommitted changes in the school clone, including untracked files.
 
 - Runs `git add -N .` (intent-to-add) before diffing so new files appear in the output.
-- Prints `# school-cache\t<path>` as the first line (metadata, tab-separated).
+- Prints `# school-clone\t<path>` as the first line (metadata, tab-separated).
 - Resolves school specifier from `ace.toml`.
-- Errors if no school configured or school is embedded (no cache directory).
+- Errors if no school configured or school is embedded (no clone directory).
 - Passes raw diff output through to stdout (human-readable, not tab-separated).
 - Prints metadata line even if the cache is clean (diff output may be empty).
 - Output is a valid unified diff (patch-compatible).

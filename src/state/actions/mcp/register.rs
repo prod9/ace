@@ -6,20 +6,20 @@ use crate::config::school_toml::McpDecl;
 use crate::templates::Template;
 
 #[derive(Debug, thiserror::Error)]
-pub enum McpRegisterError {
+pub enum RegisterError {
     #[error("mcp register failed: {0}")]
     Register(String),
     #[error("{0}")]
     Io(#[from] IoError),
 }
 
-pub struct McpRegister<'a> {
+pub struct Register<'a> {
     pub backend: Backend,
     pub entries: &'a [McpDecl],
 }
 
-impl McpRegister<'_> {
-    pub fn run(&self, ace: &mut Ace) -> Result<(), McpRegisterError> {
+impl Register<'_> {
+    pub fn run(&self, ace: &mut Ace) -> Result<(), RegisterError> {
         if self.entries.is_empty() {
             return Ok(());
         }
@@ -36,7 +36,7 @@ impl McpRegister<'_> {
             let target = resolved.as_ref().unwrap_or(entry);
 
             self.backend.mcp_add(target)
-                .map_err(|e| McpRegisterError::Register(format!("{}: {e}", entry.name)))?;
+                .map_err(|e| RegisterError::Register(format!("{}: {e}", entry.name)))?;
 
             let msg = registration_message(self.backend, &entry.name, entry.headers.is_empty());
             ace.done(&msg);

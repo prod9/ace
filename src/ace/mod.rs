@@ -89,7 +89,7 @@ impl Ace {
             if self.project_dir.join("school.toml").exists() {
                 self.school = Some(SchoolPaths {
                     source: ".".to_string(),
-                    cache: None,
+                    clone_path: None,
                     root: self.project_dir.clone(),
                 });
             } else {

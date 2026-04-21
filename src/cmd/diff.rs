@@ -9,11 +9,11 @@ pub async fn run(ace: &mut Ace) {
 }
 
 fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
-    let cache = ace.require_school()?.cache.clone().ok_or(ConfigError::NoSchool)?;
+    let clone_path = ace.require_school()?.clone_path.clone().ok_or(ConfigError::NoSchool)?;
 
-    ace.data(&format!("# school-cache\t{}", cache.display()));
+    ace.data(&format!("# school-clone\t{}", clone_path.display()));
 
-    let git = ace.git(&cache);
+    let git = ace.git(&clone_path);
     git.intent_to_add_all()?;
     let out = git.diff()?;
     if !out.is_empty() {

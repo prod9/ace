@@ -6,7 +6,7 @@ use super::paths::ace_data_dir;
 #[derive(Clone)]
 pub struct SchoolPaths {
     pub source: String,
-    pub cache: Option<PathBuf>,
+    pub clone_path: Option<PathBuf>,
     pub root: PathBuf,
 }
 
@@ -15,16 +15,16 @@ pub fn resolve(
     specifier: &str,
 ) -> Result<SchoolPaths, ConfigError> {
     let (source, path) = parse_specifier(specifier)?;
-    let (base, cache) = if source == "." {
+    let (base, clone_path) = if source == "." {
         (project_dir.to_path_buf(), None)
     } else {
-        let cache = ace_data_dir()?.join(&source);
-        (cache.clone(), Some(cache))
+        let clone_path = ace_data_dir()?.join(&source);
+        (clone_path.clone(), Some(clone_path))
     };
     let root = path.map(|p| base.join(p)).unwrap_or(base.clone());
     Ok(SchoolPaths {
         source: specifier.to_string(),
-        cache,
+        clone_path,
         root,
     })
 }
@@ -114,7 +114,7 @@ mod tests {
         for (spec, expected_root) in cases {
             let p = resolve(&project, spec)
                 .expect("resolve should succeed for embedded spec");
-            assert!(p.cache.is_none(), "embedded school should have no cache for {spec:?}");
+            assert!(p.clone_path.is_none(), "embedded school should have no clone path for {spec:?}");
             assert_eq!(&p.root, expected_root, "root mismatch for {spec:?}");
         }
     }
@@ -130,17 +130,17 @@ mod tests {
             ("prod9/mono:school", "ace/prod9/mono", "ace/prod9/mono/school"),
         ];
 
-        for (spec, cache_suffix, root_suffix) in cases {
+        for (spec, clone_suffix, root_suffix) in cases {
             let p = resolve(&project, spec)
                 .expect("resolve should succeed for remote spec");
 
-            let cache = p.cache.as_ref()
-                .expect("cache should be Some for remote spec");
+            let clone = p.clone_path.as_ref()
+                .expect("clone_path should be Some for remote spec");
             assert!(
-                cache.starts_with(&data_root),
-                "cache {cache:?} should live under data dir {data_root:?}"
+                clone.starts_with(&data_root),
+                "clone {clone:?} should live under data dir {data_root:?}"
             );
-            assert!(cache.ends_with(cache_suffix), "cache {cache:?} should end with {cache_suffix:?}");
+            assert!(clone.ends_with(clone_suffix), "clone {clone:?} should end with {clone_suffix:?}");
             assert!(p.root.ends_with(root_suffix), "root {:?} should end with {root_suffix:?}", p.root);
         }
     }

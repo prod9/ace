@@ -1,8 +1,7 @@
 use crate::ace::Ace;
 use crate::config::school_paths;
 use crate::config::ConfigError;
-use crate::state::actions::link_school::Link;
-use crate::state::actions::update_cache::Update;
+use crate::state::actions::school::{Link, Pull};
 
 use super::CmdError;
 
@@ -19,7 +18,7 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
 
     let project_dir = ace.project_dir().to_path_buf();
 
-    let outcome = (Update {
+    let outcome = (Pull {
         specifier: &specifier,
         project_dir: &project_dir,
         force: true,

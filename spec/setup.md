@@ -35,7 +35,7 @@ to Prepare, which is shared with the normal `ace` run.
 Prepare ensures the school is ready to use. It is called by both `ace setup` and normal `ace`
 runs.
 
-1. **Is school cached?** (check `index.toml` for matching specifier)
+1. **Is school cloned?** (check `index.toml` for matching specifier)
    - **No** → **Install**: `git clone --depth 1` into `~/.local/share/ace/<owner>/<repo>/` (XDG_DATA_HOME), write
      `index.toml` entry, parse `school.toml`, register MCP servers.
    - **Yes** → **Update**: `git pull` on the cached repo.

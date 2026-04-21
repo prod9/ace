@@ -18,13 +18,13 @@ projects. Structure:
 - `school.toml` — school metadata, session prompt, imports, services, MCP servers
 - `skills/` — skill directories, each with a `SKILL.md`
 
-Projects subscribe via `ace setup`, which clones the school into a local cache
-(`~/.cache/ace/…`) and symlinks `skills/` into the project.
+Projects subscribe via `ace setup`, which clones the school into a local data
+directory (`~/.local/share/ace/…`) and symlinks `skills/` into the project.
 
 ## Editing skills
 
-Skill files in the project are symlinks into the school cache. Edits go directly to the cache —
-this is intentional. The school cache is a real git working copy.
+Skill files in the project are symlinks into the school clone. Edits go directly to the clone —
+this is intentional. The school clone is a real git working copy.
 
 ## Proposing changes
 
@@ -35,7 +35,7 @@ When skill edits need to go upstream:
 3. Stage and commit with a descriptive message. Use `git -C $(ace paths school)` for all git commands — do not `cd` out of the project directory.
 4. `git -C $(ace paths school) push -u origin {branch}` — push to the school remote.
 5. Create a PR to the school repo. Use GitHub MCP if available.
-6. Do **NOT** reset the cache to main — that destroys uncommitted work across all branches.
+6. Do **NOT** reset the clone to main — that destroys uncommitted work across all branches.
 
 ## Good school PR guidelines
 

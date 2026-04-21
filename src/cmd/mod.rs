@@ -17,12 +17,11 @@ use clap::{Parser, Subcommand};
 use crate::ace::{Ace, IoError};
 use crate::config::{ConfigError, Scope};
 use crate::config::backend::Backend;
-use crate::state::actions::import_skill::ImportError;
-use crate::state::actions::register_mcp::McpRegisterError;
-use crate::state::actions::prepare_school::PrepareError;
-use crate::state::actions::init_school::InitSchoolError;
-use crate::state::actions::update_school::UpdateSchoolError;
-use crate::state::actions::setup_project::SetupError;
+use crate::state::actions::imports::{AddError, RefreshError};
+use crate::state::actions::mcp::RegisterError;
+use crate::state::actions::PrepareError;
+use crate::state::actions::school::InitError;
+use crate::state::actions::project::SetupError;
 use crate::git::GitError;
 
 #[derive(Parser)]
@@ -83,7 +82,7 @@ enum Command {
         /// School specifier (owner/repo). Omit to link a cached school.
         specifier: Option<String>,
     },
-    /// Show uncommitted changes in the school cache
+    /// Show uncommitted changes in the school clone
     Diff,
     /// Format ace.toml / school.toml (pretty-print, strip empties)
     Fmt,
@@ -161,13 +160,13 @@ pub(crate) enum CmdError {
     #[error("{0}")]
     Prepare(#[from] PrepareError),
     #[error("{0}")]
-    McpRegister(#[from] McpRegisterError),
+    McpRegister(#[from] RegisterError),
     #[error("{0}")]
-    Import(#[from] ImportError),
+    Import(#[from] AddError),
     #[error("{0}")]
-    InitSchool(#[from] InitSchoolError),
+    InitSchool(#[from] InitError),
     #[error("{0}")]
-    UpdateSchool(#[from] UpdateSchoolError),
+    UpdateSchool(#[from] RefreshError),
     #[error("{0}")]
     Git(#[from] GitError),
     #[error("{0}")]

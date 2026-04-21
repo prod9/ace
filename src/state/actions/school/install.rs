@@ -4,7 +4,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::config::index_toml;
 use crate::git;
-use super::prepare_school::PrepareError;
+use crate::state::actions::PrepareError;
 
 /// First-time school setup: git clone + index update.
 pub struct Install<'a> {
@@ -15,11 +15,11 @@ pub struct Install<'a> {
 impl Install<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<(), PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
-        let Some(cache) = &school_paths.cache else {
+        let Some(clone_path) = &school_paths.clone_path else {
             return Ok(()); // embedded school
         };
 
-        if let Some(parent) = cache.parent() {
+        if let Some(parent) = clone_path.parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| PrepareError::Clone(format!("mkdir: {e}")))?;
         }
@@ -32,7 +32,7 @@ impl Install<'_> {
         let url = format!("https://github.com/{repo}.git");
 
         ace.progress(&format!("Cloning {repo}"));
-        if let Err(e) = git::clone_repo(&url, cache) {
+        if let Err(e) = git::clone_repo(&url, clone_path) {
             ace.warn(&e.to_string());
             ace.hint(git::auth_hint());
             return Err(PrepareError::Clone(e.to_string()));

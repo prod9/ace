@@ -4,16 +4,16 @@ use crate::ace::Ace;
 use crate::config;
 use crate::config::school_toml::ImportDecl;
 
-use super::discover_skill::{DiscoveredSkill, discover_skills};
+use crate::state::actions::{DiscoveredSkill, discover_skills};
 
-pub struct ImportSkill<'a> {
+pub struct Add<'a> {
     pub source: &'a str,
     pub skill: Option<&'a str>,
     pub school_root: &'a Path,
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ImportError {
+pub enum AddError {
     #[error("{0}")]
     Clone(#[from] crate::git::GitError),
     #[error("no skills found in {0}")]
@@ -27,7 +27,7 @@ pub enum ImportError {
 }
 
 /// Result of a successful import — or a request for the caller to pick a skill.
-pub enum ImportResult {
+pub enum AddResult {
     Done {
         #[allow(dead_code)] // part of result API
         skill: String,
@@ -35,8 +35,8 @@ pub enum ImportResult {
     NeedsSelection(Vec<DiscoveredSkill>),
 }
 
-impl ImportSkill<'_> {
-    pub fn run(&self, ace: &mut Ace) -> Result<ImportResult, ImportError> {
+impl Add<'_> {
+    pub fn run(&self, ace: &mut Ace) -> Result<AddResult, AddError> {
         ace.progress(&format!("Fetching {}", self.source));
         let cached = match crate::git::ensure_source_cache(self.source) {
             Ok(p) => p,
@@ -49,31 +49,31 @@ impl ImportSkill<'_> {
 
         let skills = discover_skills(&cached)?;
         if skills.is_empty() {
-            return Err(ImportError::NoSkills(self.source.to_string()));
+            return Err(AddError::NoSkills(self.source.to_string()));
         }
 
         let selected = match self.skill {
             Some(name) => skills.iter().find(|s| s.name == name)
-                .ok_or_else(|| ImportError::SkillNotFound(name.to_string()))?,
+                .ok_or_else(|| AddError::SkillNotFound(name.to_string()))?,
             None if skills.len() == 1 => &skills[0],
-            None => return Ok(ImportResult::NeedsSelection(skills)),
+            None => return Ok(AddResult::NeedsSelection(skills)),
         };
 
         self.install_skill(selected)?;
 
         ace.done(&format!("Imported skill: {}", selected.name));
-        Ok(ImportResult::Done { skill: selected.name.clone() })
+        Ok(AddResult::Done { skill: selected.name.clone() })
     }
 
     /// Install a specific discovered skill after selection.
-    pub fn install_selected(&self, skill: &DiscoveredSkill, ace: &mut Ace) -> Result<(), ImportError> {
+    pub fn install_selected(&self, skill: &DiscoveredSkill, ace: &mut Ace) -> Result<(), AddError> {
         ace.progress(&format!("Installing {}", skill.name));
         self.install_skill(skill)?;
         ace.done(&format!("Imported skill: {}", skill.name));
         Ok(())
     }
 
-    fn install_skill(&self, skill: &DiscoveredSkill) -> Result<(), ImportError> {
+    fn install_skill(&self, skill: &DiscoveredSkill) -> Result<(), AddError> {
         let dest = self.school_root.join("skills").join(&skill.name);
         if dest.exists() {
             std::fs::remove_dir_all(&dest)?;

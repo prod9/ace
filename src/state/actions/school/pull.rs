@@ -2,23 +2,23 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::time::Duration;
 
-use super::prepare_school::PrepareError;
+use crate::state::actions::PrepareError;
 use crate::ace::Ace;
 use crate::config;
 
-impl UpdateOutcome {
+impl PullOutcome {
     pub fn emit(&self, ace: &mut Ace) {
         match self {
-            UpdateOutcome::Embedded | UpdateOutcome::Fresh => {}
-            UpdateOutcome::SwitchedBranch { from } => {
+            PullOutcome::Embedded | PullOutcome::Fresh => {}
+            PullOutcome::SwitchedBranch { from } => {
                 ace.hint(&format!(
-                    "Switched school cache from branch {from} back to main"
+                    "Switched school clone from branch {from} back to main"
                 ));
             }
-            UpdateOutcome::Updated { changes } if changes.is_empty() => {
+            PullOutcome::Updated { changes } if changes.is_empty() => {
                 ace.done("School updated (no skill changes)");
             }
-            UpdateOutcome::Updated { changes } => {
+            PullOutcome::Updated { changes } => {
                 let summary: Vec<String> = changes.iter().map(|c| {
                     let prefix = match c.kind {
                         ChangeKind::Added => "+",
@@ -29,22 +29,22 @@ impl UpdateOutcome {
                 }).collect();
                 ace.done(&format!("School updated ({})", summary.join(", ")));
             }
-            UpdateOutcome::Dirty { on_main: true, .. } => {
+            PullOutcome::Dirty { on_main: true, .. } => {
                 ace.warn("school has local changes — updates blocked");
                 ace.hint("Skills may be outdated until changes are proposed.");
                 ace.hint("Ask your AI assistant to propose the changes — it knows how.");
             }
-            UpdateOutcome::Dirty { on_main: false, branch } => {
+            PullOutcome::Dirty { on_main: false, branch } => {
                 ace.warn(&format!(
                     "school is on branch {branch} with uncommitted changes — updates blocked"
                 ));
                 ace.hint("Skills may be outdated. Ask your AI assistant to propose the changes — it knows how.");
             }
-            UpdateOutcome::AheadOfOrigin { cache_path } => {
-                ace.warn(&format!("school has local commits at {cache_path}"));
+            PullOutcome::AheadOfOrigin { clone_path } => {
+                ace.warn(&format!("school has local commits at {clone_path}"));
                 ace.hint("Propose changes back to the school repo, or resolve manually.");
             }
-            UpdateOutcome::Diverged { error } => {
+            PullOutcome::Diverged { error } => {
                 ace.warn(&format!("school has diverged from origin/main: {error}"));
                 ace.hint("Propose changes back to the school repo, or resolve manually.");
             }
@@ -56,9 +56,9 @@ const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
 
 pub use crate::state::skill_set::{ChangeKind, SkillChange};
 
-/// Outcome of a school cache update — carries data for the caller to act on.
+/// Outcome of a school clone update — carries data for the caller to act on.
 #[derive(Debug)]
-pub enum UpdateOutcome {
+pub enum PullOutcome {
     /// Embedded school, no cache to update.
     Embedded,
     /// Cache is fresh (within cooldown), no fetch needed.
@@ -70,30 +70,30 @@ pub enum UpdateOutcome {
     /// Working tree has uncommitted changes.
     Dirty { on_main: bool, branch: String },
     /// Local commits ahead of origin (can't fast-forward).
-    AheadOfOrigin { cache_path: String },
+    AheadOfOrigin { clone_path: String },
     /// Local and remote have diverged (ff-only merge failed).
     Diverged { error: String },
 }
 
-/// Git fetch + ff-only merge school cache to latest origin/main.
-/// Dirty, ahead, or diverged caches are warned but not errors — update is skipped.
-pub struct Update<'a> {
+/// Git fetch + ff-only merge school clone to latest origin/main.
+/// Dirty, ahead, or diverged clones are warned but not errors — update is skipped.
+pub struct Pull<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
     pub force: bool,
 }
 
-impl Update<'_> {
-    pub fn run(&self, ace: &mut Ace) -> Result<UpdateOutcome, PrepareError> {
+impl Pull<'_> {
+    pub fn run(&self, ace: &mut Ace) -> Result<PullOutcome, PrepareError> {
         // -- resolve school paths --
 
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
 
-        let Some(cache) = &school_paths.cache else {
-            return Ok(UpdateOutcome::Embedded);
+        let Some(clone_path) = &school_paths.clone_path else {
+            return Ok(PullOutcome::Embedded);
         };
 
-        if !cache.join(".git").exists() {
+        if !clone_path.join(".git").exists() {
             return Err(PrepareError::Clone(format!(
                 "school not installed: {}",
                 self.specifier
@@ -102,7 +102,7 @@ impl Update<'_> {
 
         // -- ensure working tree is clean and on main --
 
-        let git = ace.git(cache);
+        let git = ace.git(clone_path);
         let branch = git
             .current_branch()
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
@@ -112,7 +112,7 @@ impl Update<'_> {
             .map_err(|e| PrepareError::Clone(e.to_string()))?;
 
         if dirty {
-            return Ok(UpdateOutcome::Dirty {
+            return Ok(PullOutcome::Dirty {
                 on_main,
                 branch: branch.to_string(),
             });
@@ -127,11 +127,11 @@ impl Update<'_> {
             None
         };
 
-        if !self.force && !is_stale(cache) {
+        if !self.force && !is_stale(clone_path) {
             return if let Some(from) = switched_from {
-                Ok(UpdateOutcome::SwitchedBranch { from })
+                Ok(PullOutcome::SwitchedBranch { from })
             } else {
-                Ok(UpdateOutcome::Fresh)
+                Ok(PullOutcome::Fresh)
             };
         }
 
@@ -152,13 +152,13 @@ impl Update<'_> {
             .is_ahead_of("origin/main")
             .map_err(|e| PrepareError::Clone(e.to_string()))?
         {
-            return Ok(UpdateOutcome::AheadOfOrigin {
-                cache_path: cache.display().to_string(),
+            return Ok(PullOutcome::AheadOfOrigin {
+                clone_path: clone_path.display().to_string(),
             });
         }
 
         if let Err(e) = git.merge_ff_only("origin/main") {
-            return Ok(UpdateOutcome::Diverged {
+            return Ok(PullOutcome::Diverged {
                 error: e.to_string(),
             });
         }
@@ -171,7 +171,7 @@ impl Update<'_> {
 
         let changes = diff_skill_changes(&git, &old_head, &new_head);
 
-        Ok(UpdateOutcome::Updated { changes })
+        Ok(PullOutcome::Updated { changes })
     }
 }
 
@@ -192,8 +192,8 @@ fn diff_skill_changes(
 
 /// Check if the last fetch was longer ago than FETCH_COOLDOWN.
 /// Returns true (stale) if FETCH_HEAD is missing or old.
-fn is_stale(repo: &Path) -> bool {
-    let fetch_head = repo.join(".git/FETCH_HEAD");
+fn is_stale(clone_path: &Path) -> bool {
+    let fetch_head = clone_path.join(".git/FETCH_HEAD");
     let age = fetch_head
         .metadata()
         .and_then(|m| m.modified())

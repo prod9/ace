@@ -17,8 +17,8 @@ fn diff_clean_school_no_output() {
 
     let stdout = String::from_utf8(output.stdout).expect("stdout utf8");
     assert!(
-        stdout.contains("school-cache"),
-        "should print cache path header, got:\n{stdout}"
+        stdout.contains("school-clone"),
+        "should print clone path header, got:\n{stdout}"
     );
 
     // Clean school — no diff content beyond the header line.
@@ -31,7 +31,7 @@ fn diff_dirty_school_shows_changes() {
     let env = TestEnv::new();
     let school = env.setup_remote_school("test-org/test-school");
 
-    // Write a new file into the school cache to make it dirty.
+    // Write a new file into the school clone to make it dirty.
     let new_file = school.cache.join("dirty.txt");
     std::fs::write(&new_file, "hello dirty\n").expect("write dirty file");
 

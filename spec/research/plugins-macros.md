@@ -105,7 +105,7 @@ with `plugin:` for machine parseability.
 ### Symlinking
 
 `plugins/` is NOT symlinked into the project (unlike skills/rules/commands/agents). Plugins
-run from the school cache directly. This keeps the project clean — plugins are school
+run from the school clone directly. This keeps the project clean — plugins are school
 infrastructure, not project content.
 
 ## Macros
