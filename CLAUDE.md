@@ -110,11 +110,18 @@ Metrics:
 - Standalone `term_ui::select()` for cases where the caller runs the action (e.g. async actions)
 - Session has no UI field — interactive input is handled entirely by term_ui
 
-## Cache Layout
+## Storage Layout
 
-- Git clones: `~/.cache/ace/repos/{owner/repo}/`
-- Index: `~/.cache/ace/index.toml` — tracks downloaded schools (specifier, repo, path)
-- Git operations use `std::process::Command`, no sqlite or git crate
+- School clones: `~/.local/share/ace/{owner/repo}/` (XDG_DATA_HOME) — schools are
+  user *data*, not cache. `UpdateOutcome::Dirty` / `AheadOfOrigin` states can carry
+  in-progress work; losing it to OS cache hygiene would be a foot-gun.
+- Import source cache: `~/.cache/ace/imports/{owner/repo}/` (XDG_CACHE_HOME) —
+  read-only upstream snapshots used by `ace import` and `ace school update`.
+  Safe to sweep; next invocation re-clones.
+- Index: `~/.cache/ace/index.toml` — tracks downloaded schools (specifier, repo, path).
+- Startup hint: bare `ace` invocation warns once if the pre-PROD9-76 flat layout
+  (`~/.cache/ace/{owner/repo}/`) has stray entries. No auto-migration.
+- Git operations use `std::process::Command`, no sqlite or git crate.
 
 ## Linear
 

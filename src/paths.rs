@@ -24,6 +24,11 @@ pub fn user_cache_dir() -> Option<PathBuf> {
     user_cache_dir_from(|k| std::env::var_os(k))
 }
 
+/// Per-user data base directory (e.g. `~/.local/share` on Unix, `%APPDATA%` on Windows).
+pub fn user_data_dir() -> Option<PathBuf> {
+    user_data_dir_from(|k| std::env::var_os(k))
+}
+
 // -- inner fns (env injected for tests) --
 
 #[cfg(unix)]
@@ -45,6 +50,13 @@ fn user_cache_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBu
         .or_else(|| home_dir_from(&get).map(|h| h.join(".cache")))
 }
 
+#[cfg(unix)]
+fn user_data_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
+    non_empty(get("XDG_DATA_HOME"))
+        .map(PathBuf::from)
+        .or_else(|| home_dir_from(&get).map(|h| h.join(".local/share")))
+}
+
 #[cfg(windows)]
 fn home_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
     non_empty(get("USERPROFILE")).map(PathBuf::from)
@@ -58,6 +70,11 @@ fn user_config_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathB
 #[cfg(windows)]
 fn user_cache_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
     non_empty(get("LOCALAPPDATA")).map(PathBuf::from)
+}
+
+#[cfg(windows)]
+fn user_data_dir_from<F: Fn(&str) -> Option<OsString>>(get: F) -> Option<PathBuf> {
+    non_empty(get("APPDATA")).map(PathBuf::from)
 }
 
 fn non_empty(v: Option<OsString>) -> Option<OsString> {
@@ -157,5 +174,37 @@ mod tests {
     fn cache_dir_none_when_nothing_set() {
         let get = env_from(&[]);
         assert_eq!(user_cache_dir_from(get), None);
+    }
+
+    // -- user_data_dir --
+
+    #[test]
+    fn data_dir_uses_xdg_when_set() {
+        let get = env_from(&[("XDG_DATA_HOME", "/tmp/xdg-data"), ("HOME", "/tmp/home-foo")]);
+        assert_eq!(user_data_dir_from(get), Some(PathBuf::from("/tmp/xdg-data")));
+    }
+
+    #[test]
+    fn data_dir_falls_back_to_home_dot_local_share_when_xdg_unset() {
+        let get = env_from(&[("HOME", "/tmp/home-foo")]);
+        assert_eq!(
+            user_data_dir_from(get),
+            Some(PathBuf::from("/tmp/home-foo/.local/share")),
+        );
+    }
+
+    #[test]
+    fn data_dir_treats_empty_xdg_as_unset() {
+        let get = env_from(&[("XDG_DATA_HOME", ""), ("HOME", "/tmp/home-foo")]);
+        assert_eq!(
+            user_data_dir_from(get),
+            Some(PathBuf::from("/tmp/home-foo/.local/share")),
+        );
+    }
+
+    #[test]
+    fn data_dir_none_when_nothing_set() {
+        let get = env_from(&[]);
+        assert_eq!(user_data_dir_from(get), None);
     }
 }

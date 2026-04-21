@@ -36,7 +36,7 @@ Prepare ensures the school is ready to use. It is called by both `ace setup` and
 runs.
 
 1. **Is school cached?** (check `index.toml` for matching specifier)
-   - **No** → **Install**: `git clone --depth 1` into `~/.cache/ace/repos/<owner>/<repo>/`, write
+   - **No** → **Install**: `git clone --depth 1` into `~/.local/share/ace/<owner>/<repo>/` (XDG_DATA_HOME), write
      `index.toml` entry, parse `school.toml`, register MCP servers.
    - **Yes** → **Update**: `git pull` on the cached repo.
 2. **Link**: symlink school folders (`skills/`, `rules/`, `commands/`, `agents/`) from

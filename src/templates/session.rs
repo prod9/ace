@@ -201,11 +201,11 @@ mod tests {
     #[test]
     fn injects_school_cache_and_proposal_steps() {
         let dir = nonexistent_dir();
-        let cache = Path::new("/home/user/.cache/ace/repos/org/school");
+        let cache = Path::new("/home/user/.local/share/ace/org/school");
         let prompt = build_session_prompt("Acme", "", "", &dir, &[], Some(cache), false);
-        assert!(prompt.contains("School cache: /home/user/.cache/ace/repos/org/school"));
+        assert!(prompt.contains("School cache: /home/user/.local/share/ace/org/school"));
         assert!(prompt.contains("guide the user through"));
-        assert!(prompt.contains("git -C /home/user/.cache/ace/repos/org/school"));
+        assert!(prompt.contains("git -C /home/user/.local/share/ace/org/school"));
     }
 
     fn sample_changes() -> Vec<SkillChange> {

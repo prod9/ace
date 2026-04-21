@@ -27,6 +27,38 @@ fn git_command() -> Command {
     cmd
 }
 
+/// Ensure a local clone of `source` exists in the import cache, fetching updates when
+/// already present. Returns the on-disk path of the cached clone.
+pub fn ensure_source_cache(source: &str) -> Result<std::path::PathBuf, GitError> {
+    let cache_root =
+        crate::config::paths::ace_import_cache_dir().map_err(|e| GitError::Exec {
+            cmd: "ensure_source_cache: resolve cache root".to_string(),
+            source: std::io::Error::other(e.to_string()),
+        })?;
+    let normalized = normalize_github_source(source);
+    let url = format!("https://github.com/{normalized}.git");
+    let dest = cache_root.join(&normalized);
+    ensure_source_cache_in(&dest, &url)?;
+    Ok(dest)
+}
+
+fn ensure_source_cache_in(dest: &Path, url: &str) -> Result<(), GitError> {
+    if !dest.join(".git").exists() {
+        if let Some(parent) = dest.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| GitError::Exec {
+                cmd: format!("mkdir -p {}", parent.display()),
+                source: e,
+            })?;
+        }
+        return clone_repo(url, dest);
+    }
+
+    let git = Git::new(dest, OutputMode::Silent);
+    let branch = git.current_branch()?;
+    git.fetch("origin", &branch)?;
+    git.merge_ff_only(&format!("origin/{branch}"))
+}
+
 /// Hint printed alongside git failures that look like auth/transport issues.
 /// Points users at the two supported auth paths: SSH keys or the GitHub CLI.
 pub fn auth_hint() -> &'static str {
@@ -163,14 +195,6 @@ pub fn normalize_github_source(source: &str) -> String {
         .unwrap_or(source);
     let s = s.strip_suffix(".git").unwrap_or(s);
     s.trim_end_matches('/').to_string()
-}
-
-/// Clone a GitHub repo by `owner/repo` specifier into `dest` using a full clone.
-/// Accepts full GitHub URLs or plain `owner/repo` specifiers.
-pub fn clone_github(source: &str, dest: &Path) -> Result<(), GitError> {
-    let normalized = normalize_github_source(source);
-    let url = format!("https://github.com/{normalized}.git");
-    clone_repo(&url, dest)
 }
 
 pub fn ls_remote_tags(repo_url: &str, tag_filter: &str) -> Result<Vec<String>, GitError> {
@@ -456,6 +480,75 @@ mod tests {
         assert_eq!(
             clone_head, remote_head,
             "clone HEAD should match remote after fetch"
+        );
+    }
+
+    fn init_remote_with_commit(message: &str) -> TempDir {
+        let remote = TempDir::new().expect("remote tempdir");
+        let path = remote.path();
+        Command::new("git").args(["init"]).current_dir(path).output().expect("git init");
+        std::fs::write(path.join("f.txt"), message).unwrap();
+        Command::new("git").args(["add", "."]).current_dir(path).output().expect("git add");
+        Command::new("git")
+            .args(["commit", "-m", message])
+            .current_dir(path)
+            .output()
+            .expect("git commit");
+        remote
+    }
+
+    fn add_commit(remote_path: &Path, content: &str) {
+        std::fs::write(remote_path.join("f.txt"), content).unwrap();
+        Command::new("git").args(["add", "."]).current_dir(remote_path).output().expect("git add");
+        Command::new("git")
+            .args(["commit", "-m", content])
+            .current_dir(remote_path)
+            .output()
+            .expect("git commit");
+    }
+
+    fn head_sha(repo: &Path) -> String {
+        let out = Command::new("git")
+            .args(["rev-parse", "HEAD"])
+            .current_dir(repo)
+            .output()
+            .expect("rev-parse");
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    #[test]
+    fn ensure_source_cache_in_clones_on_first_call() {
+        let remote = init_remote_with_commit("first");
+        let url = remote.path().to_string_lossy().to_string();
+        let cache_root = TempDir::new().expect("cache tempdir");
+        let dest = cache_root.path().join("local").join("repo");
+
+        ensure_source_cache_in(&dest, &url).expect("first call should clone");
+
+        assert!(dest.join(".git").exists(), "dest should be a git repo after clone");
+        assert_eq!(head_sha(&dest), head_sha(remote.path()));
+    }
+
+    #[test]
+    fn ensure_source_cache_in_fetches_on_second_call() {
+        let remote = init_remote_with_commit("first");
+        let url = remote.path().to_string_lossy().to_string();
+        let cache_root = TempDir::new().expect("cache tempdir");
+        let dest = cache_root.path().join("local").join("repo");
+
+        ensure_source_cache_in(&dest, &url).expect("first call should clone");
+        let first_sha = head_sha(&dest);
+
+        add_commit(remote.path(), "second");
+        let remote_sha = head_sha(remote.path());
+        assert_ne!(first_sha, remote_sha, "sanity: remote moved");
+
+        ensure_source_cache_in(&dest, &url).expect("second call should fetch");
+
+        assert_eq!(
+            head_sha(&dest),
+            remote_sha,
+            "second call should fast-forward cache to remote HEAD"
         );
     }
 }

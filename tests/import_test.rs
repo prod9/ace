@@ -350,3 +350,66 @@ fn import_all_with_include_experimental_pulls_that_tier() {
     env.assert_exists("skills/shell/SKILL.md");
     env.assert_not_exists("skills/skill-creator/SKILL.md");
 }
+
+// PROD9-76: imports should persist the source clone under the cache dir so that
+// subsequent imports from the same source fetch instead of re-cloning.
+#[test]
+fn import_populates_persistent_source_cache() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.setup_tiered_origin("cached/source", &[
+        "skills/foo",
+        "skills/bar",
+    ]);
+
+    env.ace()
+        .args(["import", "cached/source", "--skill", "foo"])
+        .assert()
+        .success();
+
+    let cache_path = env.path("cache/ace/imports/cached/source");
+    assert!(
+        cache_path.exists(),
+        "import should populate persistent cache at {cache_path:?}",
+    );
+    assert!(
+        cache_path.join(".git").exists(),
+        "cache entry should be a git repo",
+    );
+}
+
+#[test]
+fn import_reuses_source_cache_on_second_call() {
+    let env = TestEnv::new();
+    env.git_init();
+    env.write_file("school.toml", "name = \"test-school\"\n");
+    env.mkdir("skills");
+
+    env.setup_tiered_origin("cached/source", &[
+        "skills/foo",
+        "skills/bar",
+    ]);
+
+    env.ace()
+        .args(["import", "cached/source", "--skill", "foo"])
+        .assert()
+        .success();
+
+    // Drop a sentinel inside the cache. A re-clone would wipe it; a fetch preserves it.
+    let cache_path = env.path("cache/ace/imports/cached/source");
+    let sentinel = cache_path.join(".ace-test-sentinel");
+    std::fs::write(&sentinel, "preserve me").expect("write sentinel");
+
+    env.ace()
+        .args(["import", "cached/source", "--skill", "bar"])
+        .assert()
+        .success();
+
+    assert!(
+        sentinel.exists(),
+        "second import should reuse cache via fetch, not re-clone; sentinel was wiped",
+    );
+}

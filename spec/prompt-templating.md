@@ -84,7 +84,7 @@ parsed template supports `placeholders()` (returns unique names) and `substitute
 |--------------------|---------------------------|-------------------------------|--------------------------------------|
 | `{{ school_name }}`  | `prompt_session.md`, project/school CLAUDE.md templates | School display name | `Acme` |
 | `{{ backend_dir }}`  | `prompt_previous_skills.md`, project CLAUDE.md template | Backend directory name        | `.claude` |
-| `{{ school_cache }}` | `prompt_school_changes.md` | School cache path             | `/home/user/.cache/ace/repos/org/school` |
+| `{{ school_cache }}` | `prompt_school_changes.md` | School clone path             | `/home/user/.local/share/ace/org/school` |
 | `{{ changes }}`      | `prompt_changes.md`       | Formatted change list (built by `session.rs`) | `- Added: \`new-skill\`` |
 
 ### Adding a Placeholder

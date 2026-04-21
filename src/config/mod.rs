@@ -120,6 +120,8 @@ pub enum ConfigError {
     NoConfigDir,
     #[error("cannot locate user cache directory")]
     NoCacheDir,
+    #[error("cannot locate user data directory")]
+    NoDataDir,
 
     // tree
     #[error("no config found, ace setup?")]

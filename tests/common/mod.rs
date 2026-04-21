@@ -270,7 +270,7 @@ impl TestEnv {
     /// Project dir gets git init + ace.toml with flaude backend.
     pub fn setup_remote_school(&self, specifier: &str) -> RemoteSchool {
         let origin = self.path("origin.git");
-        let cache = self.path(&format!("cache/ace/{specifier}"));
+        let cache = self.path(&format!("data/ace/{specifier}"));
         let work = self.path("_school_work");
 
         // 1. Bare origin repo with main as default branch.
@@ -331,6 +331,8 @@ impl TestEnv {
 
         // 4. Index entry.
         let index_path = self.path("cache/ace/index.toml");
+        std::fs::create_dir_all(index_path.parent().expect("index parent"))
+            .expect("create index parent");
         std::fs::write(
             &index_path,
             format!("[[school]]\nspecifier = \"{specifier}\"\nrepo = \"{specifier}\"\n"),
@@ -445,6 +447,7 @@ impl TestEnv {
         cmd.env("PATH", std::env::var("PATH").unwrap_or_default());
         cmd.env("XDG_CONFIG_HOME", self.path("config"));
         cmd.env("XDG_CACHE_HOME", self.path("cache"));
+        cmd.env("XDG_DATA_HOME", self.path("data"));
         cmd.env("GIT_TERMINAL_PROMPT", "0");
         cmd.env("TERM", "dumb");
         cmd.current_dir(self.root());

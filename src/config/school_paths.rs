@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::ConfigError;
-use super::paths::ace_cache_dir;
+use super::paths::ace_data_dir;
 
 #[derive(Clone)]
 pub struct SchoolPaths {
@@ -18,7 +18,7 @@ pub fn resolve(
     let (base, cache) = if source == "." {
         (project_dir.to_path_buf(), None)
     } else {
-        let cache = ace_cache_dir()?.join(&source);
+        let cache = ace_data_dir()?.join(&source);
         (cache.clone(), Some(cache))
     };
     let root = path.map(|p| base.join(p)).unwrap_or(base.clone());
@@ -123,6 +123,8 @@ mod tests {
     fn resolve_remote() {
         let tmp = tempfile::tempdir().expect("tempdir");
         let project = tmp.path().join("myproject");
+        let data_root = super::super::paths::ace_data_dir()
+            .expect("ace_data_dir should resolve in tests");
         let cases: &[(&str, &str, &str)] = &[
             ("prod9/school", "ace/prod9/school", "ace/prod9/school"),
             ("prod9/mono:school", "ace/prod9/mono", "ace/prod9/mono/school"),
@@ -134,6 +136,10 @@ mod tests {
 
             let cache = p.cache.as_ref()
                 .expect("cache should be Some for remote spec");
+            assert!(
+                cache.starts_with(&data_root),
+                "cache {cache:?} should live under data dir {data_root:?}"
+            );
             assert!(cache.ends_with(cache_suffix), "cache {cache:?} should end with {cache_suffix:?}");
             assert!(p.root.ends_with(root_suffix), "root {:?} should end with {root_suffix:?}", p.root);
         }

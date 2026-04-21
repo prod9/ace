@@ -37,16 +37,17 @@ pub enum ImportResult {
 
 impl ImportSkill<'_> {
     pub fn run(&self, ace: &mut Ace) -> Result<ImportResult, ImportError> {
-        let tmp = tempfile::tempdir()?;
+        ace.progress(&format!("Fetching {}", self.source));
+        let cached = match crate::git::ensure_source_cache(self.source) {
+            Ok(p) => p,
+            Err(e) => {
+                ace.warn(&e.to_string());
+                ace.hint(crate::git::auth_hint());
+                return Err(e.into());
+            }
+        };
 
-        ace.progress(&format!("Cloning {}", self.source));
-        if let Err(e) = crate::git::clone_github(self.source, tmp.path()) {
-            ace.warn(&e.to_string());
-            ace.hint(crate::git::auth_hint());
-            return Err(e.into());
-        }
-
-        let skills = discover_skills(tmp.path())?;
+        let skills = discover_skills(&cached)?;
         if skills.is_empty() {
             return Err(ImportError::NoSkills(self.source.to_string()));
         }

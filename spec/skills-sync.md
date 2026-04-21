@@ -60,10 +60,10 @@ redundant data and ensures all projects see the same skill versions immediately 
 single symlink pointing to the school cache's corresponding directory:
 
 ```
-project/.claude/skills/   → ~/.cache/ace/repos/{school}/skills/
-project/.claude/rules/    → ~/.cache/ace/repos/{school}/rules/
-project/.claude/commands/ → ~/.cache/ace/repos/{school}/commands/
-project/.claude/agents/   → ~/.cache/ace/repos/{school}/agents/
+project/.claude/skills/   → ~/.local/share/ace/{school}/skills/
+project/.claude/rules/    → ~/.local/share/ace/{school}/rules/
+project/.claude/commands/ → ~/.local/share/ace/{school}/commands/
+project/.claude/agents/   → ~/.local/share/ace/{school}/agents/
 ```
 
 No per-entry linking, no local overrides. Everyone on the same school works against the same
@@ -79,9 +79,14 @@ allow bringing existing content into the school. After adoption, the symlink tak
 The session prompt nudges the LLM to help merge `previous-skills/` into the school's skills
 folder and propose the changes upstream.
 
-## Cache
+## Storage
 
-- Git clones: `~/.cache/ace/repos/{owner/repo}/`
+- School clones: `~/.local/share/ace/{owner/repo}/` (XDG_DATA_HOME). Schools are
+  user data — `UpdateOutcome::Dirty` / `AheadOfOrigin` states can carry in-progress
+  work that must survive OS cache hygiene.
+- Import source cache: `~/.cache/ace/imports/{owner/repo}/` (XDG_CACHE_HOME).
+  Read-only upstream snapshots used during `ace import` and `ace school update`;
+  safe to delete.
 - Index: `~/.cache/ace/index.toml` — tracks downloaded schools
 - Cache key: remote HEAD SHA
 - On SHA match: no-op

@@ -43,16 +43,17 @@ impl UpdateSchool<'_> {
         let mut count = 0;
 
         for (source, decls) in &by_source {
-            let tmp = tempfile::tempdir()?;
-
             ace.progress(&format!("Fetching {source}"));
-            if let Err(e) = crate::git::clone_github(source, tmp.path()) {
-                ace.warn(&e.to_string());
-                ace.hint(crate::git::auth_hint());
-                return Err(e.into());
-            }
+            let cached = match crate::git::ensure_source_cache(source) {
+                Ok(p) => p,
+                Err(e) => {
+                    ace.warn(&e.to_string());
+                    ace.hint(crate::git::auth_hint());
+                    return Err(e.into());
+                }
+            };
 
-            let discovered = discover_skills(tmp.path())?;
+            let discovered = discover_skills(&cached)?;
             let source_set = SkillSet::from_discovered(&discovered);
 
             for decl in decls {
