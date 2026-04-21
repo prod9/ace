@@ -82,7 +82,7 @@ folder and propose the changes upstream.
 ## Storage
 
 - School clones: `~/.local/share/ace/{owner/repo}/` (XDG_DATA_HOME). Schools are
-  user data — `UpdateOutcome::Dirty` / `AheadOfOrigin` states can carry in-progress
+  user data — `PullOutcome::Dirty` / `AheadOfOrigin` states can carry in-progress
   work that must survive OS cache hygiene.
 - Import source cache: `~/.cache/ace/imports/{owner/repo}/` (XDG_CACHE_HOME).
   Read-only upstream snapshots used during `ace import` and `ace school update`;
@@ -92,6 +92,22 @@ folder and propose the changes upstream.
 - On SHA match: no-op
 - On SHA mismatch: pull + sync
 - First run: full clone + index entry
+
+### Import source cache (`git::ensure_source_cache`)
+
+Both `ace import <source>` and `ace school update` pull skills from upstream
+repositories. Rather than re-cloning each source into a fresh `tempfile::tempdir()`
+on every invocation, ACE maintains a persistent cache at
+`~/.cache/ace/imports/{owner/repo}/` and uses `git::ensure_source_cache(source)`:
+
+- **First call:** `git clone https://github.com/{owner/repo}.git` into the cache
+  path. Returns the on-disk path.
+- **Subsequent calls:** `git fetch origin` + `git merge --ff-only origin/<branch>`
+  on the existing clone. Returns the same path.
+
+The cache is ACE-managed — users should not edit it. Unlike the school clone
+(in XDG_DATA_HOME), the import cache is safe to sweep; next invocation re-clones.
+Parent callers resolve the cache root via `config::paths::ace_import_cache_dir()`.
 
 ### index.toml
 
