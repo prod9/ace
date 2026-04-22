@@ -37,7 +37,7 @@ config, with later layers overriding earlier ones.
 
 <div class="code-block"><pre><span class="comment"># 1. School defaults (read-only, from school.toml)</span>
 <span class="comment"># 2. User-global config</span>
-<span class="val">~/.config/ace/config.toml</span>
+<span class="val">~/.config/ace/ace.toml</span>
 
 <span class="comment"># 3. Project config (checked into git, shared)</span>
 <span class="val">ace.toml</span>
@@ -119,7 +119,7 @@ gitignored and holds machine-specific values like trust level.
   </tr>
 </table>
 
-<h2>// ~/.config/ace/config.toml</h2>
+<h2>// user-global ace.toml</h2>
 
 <p>
 User-global config. Top-level keys are school identifiers. Currently
@@ -127,7 +127,7 @@ used to track which schools the user has registered. Fields inside
 each school entry are reserved for future use.
 </p>
 
-<div class="code-block"><pre><span class="comment"># ~/.config/ace/config.toml</span>
+<div class="code-block"><pre><span class="comment"># ~/.config/ace/ace.toml</span>
 [<span class="val">"prod9/school"</span>]
 
 [<span class="val">"myuser/personal-school"</span>]</pre></div>
