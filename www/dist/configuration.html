@@ -106,6 +106,12 @@ gitignored and holds machine-specific values like trust level.
     <td>Environment variables passed to the backend. Merges additively across layers.</td>
   </tr>
   <tr>
+    <td>resume</td>
+    <td>bool</td>
+    <td><span class="faint">None</span></td>
+    <td>Auto-resume the previous backend session on launch. Personal-only — set in <span class="body-fg">ace.local.toml</span> or user-global config, not checked in.</td>
+  </tr>
+  <tr>
     <td>skip_update</td>
     <td>bool</td>
     <td><span class="body-fg">false</span></td>
@@ -122,21 +128,23 @@ gitignored and holds machine-specific values like trust level.
 <h2>// user-global ace.toml</h2>
 
 <p>
-User-global config. Top-level keys are school identifiers. Currently
-used to track which schools the user has registered. Fields inside
-each school entry are reserved for future use.
+Same schema as project <span class="body-fg">ace.toml</span>. Holds your personal
+defaults across every ACE-managed repo &mdash; typically <span class="body-fg">trust</span>,
+<span class="body-fg">resume</span>, or a fallback <span class="body-fg">school</span>
+and <span class="body-fg">backend</span>. Project config overrides it; local config
+overrides project.
 </p>
 
 <div class="code-block"><pre><span class="comment"># ~/.config/ace/ace.toml</span>
-[<span class="val">"prod9/school"</span>]
-
-[<span class="val">"myuser/personal-school"</span>]</pre></div>
+<span class="key">school</span> = <span class="val">"prod9/school"</span>
+<span class="key">trust</span> = <span class="val">"auto"</span>
+<span class="key">resume</span> = <span class="val">true</span></pre></div>
 
 <h2>// school.toml</h2>
 
 <p>
 Lives at the root of a school repository. Defines the school name,
-backend preference, MCP servers, roles, projects, and skill imports.
+backend preference, MCP servers, projects, and skill imports.
 </p>
 
 <div class="code-block"><pre><span class="comment"># school.toml example</span>
@@ -155,10 +163,6 @@ backend preference, MCP servers, roles, projects, and skill imports.
 [<span class="key">mcp</span>.<span class="key">headers</span>]
 <span class="key">Authorization</span> = <span class="val">"Bearer {{ github_token }}"</span>
 
-[[<span class="key">roles</span>]]
-<span class="key">name</span> = <span class="val">"backend-engineer"</span>
-<span class="key">prompt</span> = <span class="val">"Focus on APIs, data flow, and service behavior."</span>
-
 [[<span class="key">projects</span>]]
 <span class="key">name</span> = <span class="val">"ace"</span>
 <span class="key">repo</span> = <span class="val">"prod9/ace"</span>
@@ -166,7 +170,12 @@ backend preference, MCP servers, roles, projects, and skill imports.
 
 [[<span class="key">imports</span>]]
 <span class="key">skill</span> = <span class="val">"docker"</span>
-<span class="key">source</span> = <span class="val">"prod9/school"</span></pre></div>
+<span class="key">source</span> = <span class="val">"prod9/school"</span>
+
+[[<span class="key">imports</span>]]
+<span class="key">skill</span> = <span class="val">"*"</span>
+<span class="key">source</span> = <span class="val">"company/school"</span>
+<span class="key">include_experimental</span> = <span class="val">true</span></pre></div>
 
 <h3>// top-level keys</h3>
 
@@ -200,34 +209,6 @@ backend preference, MCP servers, roles, projects, and skill imports.
     <td>map (string &rarr; string)</td>
     <td><span class="faint">{}</span></td>
     <td>Environment variables. Merged with ace.toml env (ace.toml wins on conflict).</td>
-  </tr>
-</table>
-
-<h3>// [[roles]]</h3>
-
-<p>
-Optional role definitions that affect session behavior. Users pick a role
-on first run when the school defines any roles.
-</p>
-
-<table>
-  <tr>
-    <th>Key</th>
-    <th>Type</th>
-    <th>Default</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>name</td>
-    <td>string</td>
-    <td><span class="faint">(empty)</span></td>
-    <td>Role identifier stored in local config.</td>
-  </tr>
-  <tr>
-    <td>prompt</td>
-    <td>string</td>
-    <td><span class="faint">(empty)</span></td>
-    <td>Prompt text injected for sessions using that role.</td>
   </tr>
 </table>
 
@@ -301,6 +282,12 @@ Optional project catalog entries that give the AI context about available reposi
     <td>string</td>
     <td><span class="faint">(empty)</span></td>
     <td>Project description written for AI consumption.</td>
+  </tr>
+  <tr>
+    <td>env</td>
+    <td>map (string &rarr; string)</td>
+    <td><span class="faint">{}</span></td>
+    <td>Per-project environment variables exposed to the backend when this project is active.</td>
   </tr>
 </table>
 
