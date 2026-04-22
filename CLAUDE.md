@@ -105,6 +105,11 @@ Metrics:
 
 ## Documentation
 
+- **Flaude is a test-only backend.** It exists so integration tests can exercise
+  the Claude-family code paths without hitting a real binary. Do not mention
+  Flaude on the website (`www/`), in user-facing help text, or in public docs.
+  It's fine to reference in specs, code comments, and CLAUDE.md itself.
+
 ## CLI Conventions
 
 - `ace paths` uses tab-separated `key\tvalue` for machine parseability
