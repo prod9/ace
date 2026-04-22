@@ -1,12 +1,12 @@
 use crate::ace::Ace;
 use crate::config::backend::Backend;
 
-pub struct Remove<'a> {
+pub struct RemoveMcp<'a> {
     pub backend: Backend,
     pub names: &'a [String],
 }
 
-impl Remove<'_> {
+impl RemoveMcp<'_> {
     pub fn run(&self, ace: &mut Ace) -> Result<(), String> {
         for name in self.names {
             match self.backend.mcp_remove(name) {

@@ -69,6 +69,6 @@ What we want instead:
 
 ## Useful Commands
 
-- `ace school update` — re-fetch all imported skills from their sources
+- `ace school pull` — re-fetch all imported skills from their sources
 - `ace diff` — show uncommitted changes in the school clone
 - `ace import <source>` — import a skill from an external repo

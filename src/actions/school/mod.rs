@@ -1,10 +1,7 @@
-pub mod clone;
-pub mod discover;
+pub mod add_import;
 pub mod init;
-pub mod link;
-pub mod pull;
+pub mod pull_imports;
 
-pub use discover::{DiscoveredSkill, Tier, discover_skills};
+pub use add_import::{AddImport, AddImportError, AddImportResult};
 pub use init::{Init, InitError};
-pub use link::{Link, SCHOOL_FOLDERS};
-pub use pull::{ChangeKind, Pull, PullOutcome, SkillChange};
+pub use pull_imports::{PullImports, PullImportsError, PullImportsResult};

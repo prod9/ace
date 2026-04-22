@@ -1,5 +1,3 @@
-pub mod imports;
-pub mod mcp;
 pub mod project;
 pub mod school;
 

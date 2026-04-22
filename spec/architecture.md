@@ -28,11 +28,25 @@ State imports Config types and owns conversion to/from disk representation:
 - **Saving** — converts state back into Config structs for persistence
 
 State owns:
-- **Domain objects** — `School`, `Service`, skills, conventions
+- **Domain objects** — `School`, `SkillSet`, `DiscoveredSkill`, `Tier`, conventions
 - **Merge/resolution rules** — which layers override which, how env keys combine
 - **Serialization boundary** — `from(config structs) -> State`, `to() -> config structs`
+- **Pure reads** — `discover_skills` lives here alongside `SkillSet` since the
+  producer/consumer pipeline is straightforward
 
-Actions receive and mutate the state tree.
+State is data, not behavior. Actions consume it.
+
+### Actions (`src/actions/`)
+
+Peer to State, not nested inside it. Actions are operations *on* State and the
+filesystem. Grouped by user role, not by mutation subject
+(see `spec/decisions/005-action-layout.md`):
+
+- **`actions/project/`** — consumer-side. User is working in their own repo
+  that consumes a school. Covers setup, prepare, clone, link, pull,
+  register/remove MCP, update gitignore.
+- **`actions/school/`** — maintainer-side. User is working inside a school
+  repo, curating skills. Covers init, add_import, pull_imports.
 
 ### Ace (`src/ace/`)
 
@@ -94,6 +108,7 @@ Config ← State ← Ace
 - State imports Config (for disk representation types)
 - Ace and Actions import State (for the domain tree)
 - Config never imports State
+- State never imports Actions
 
 ## Standalone Modules
 

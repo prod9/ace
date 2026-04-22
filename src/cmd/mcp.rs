@@ -5,7 +5,7 @@ use clap::Subcommand;
 use crate::ace::Ace;
 use crate::config::backend::McpStatus;
 use crate::config::school_toml::McpDecl;
-use crate::actions::mcp::{Register, Remove, register};
+use crate::actions::project::{RegisterMcp, RemoveMcp, register_mcp};
 
 use super::CmdError;
 
@@ -51,7 +51,7 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
     let has_missing = entries.iter().any(|e| !registered.contains(&e.name));
 
     if has_missing {
-        Register{ backend, entries: &entries }.run(ace)?;
+        RegisterMcp{ backend, entries: &entries }.run(ace)?;
     }
 
     // -- health check registered servers --
@@ -102,7 +102,7 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
             continue;
         }
 
-        let resolved = register::resolve_headers(entry, ace)?;
+        let resolved = register_mcp::resolve_headers(entry, ace)?;
         let target = resolved.as_ref().unwrap_or(entry);
 
         match backend.mcp_add(target) {
@@ -199,7 +199,7 @@ fn run_reset(ace: &mut Ace, name: Option<String>) -> Result<(), CmdError> {
         }
     };
 
-    Remove{ backend, names: &names }.run(ace)
+    RemoveMcp{ backend, names: &names }.run(ace)
         .map_err(CmdError::Other)?;
 
     Ok(())

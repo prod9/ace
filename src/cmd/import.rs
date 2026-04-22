@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config::school_toml::{self, ImportDecl};
 use crate::git;
-use crate::actions::imports::{Add, AddError, AddResult};
+use crate::actions::school::{AddImport, AddImportError, AddImportResult};
 
 use super::CmdError;
 
@@ -38,7 +38,7 @@ fn run_inner(
     let effective_skill = if all { Some("*") } else { skill };
 
     // Glob patterns are recorded as imports, not copied immediately.
-    // They resolve on `ace school update`.
+    // They resolve on `ace school pull`.
     if let Some(pattern) = effective_skill
         && crate::glob::is_glob(pattern)
     {
@@ -48,7 +48,7 @@ fn run_inner(
         );
     }
 
-    let result = Add {
+    let result = AddImport {
         source: &normalized,
         skill: effective_skill,
         school_root: &school_root,
@@ -56,15 +56,15 @@ fn run_inner(
     .run(ace)?;
 
     match result {
-        AddResult::Done { .. } => {}
-        AddResult::NeedsSelection(skills) => {
+        AddImportResult::Done { .. } => {}
+        AddImportResult::NeedsSelection(skills) => {
             let names: Vec<String> = skills.iter().map(|s| s.name.clone()).collect();
             let selected = ace.prompt_select("Multiple skills found, pick one:", names)?;
 
             let skill = skills.iter().find(|s| s.name == selected)
-                .ok_or_else(|| AddError::SkillNotFound(selected.to_string()))?;
+                .ok_or_else(|| AddImportError::SkillNotFound(selected.to_string()))?;
 
-            Add {
+            AddImport {
                 source: &normalized,
                 skill: Some(&skill.name),
                 school_root: &school_root,
@@ -76,7 +76,7 @@ fn run_inner(
 }
 
 /// Record a glob import entry in school.toml without copying any skills.
-/// Skills matching the pattern are resolved during `ace school update`.
+/// Skills matching the pattern are resolved during `ace school pull`.
 fn add_glob_import(
     ace: &mut Ace,
     school_root: &std::path::Path,
@@ -105,6 +105,6 @@ fn add_glob_import(
 
     school_toml::save(&toml_path, &school)?;
     ace.done(&format!("Added import: {pattern} from {source}"));
-    ace.hint("Run 'ace school update' to fetch matching skills");
+    ace.hint("Run 'ace school pull' to fetch matching skills");
     Ok(())
 }

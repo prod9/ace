@@ -36,9 +36,9 @@ Prepare ensures the school is ready to use. It is called by both `ace setup` and
 runs.
 
 1. **Is school cloned?** (check `index.toml` for matching specifier)
-   - **No** → **Install**: `git clone --depth 1` into `~/.local/share/ace/<owner>/<repo>/` (XDG_DATA_HOME), write
+   - **No** → **Clone**: `git clone --depth 1` into `~/.local/share/ace/<owner>/<repo>/` (XDG_DATA_HOME), write
      `index.toml` entry, parse `school.toml`, register MCP servers.
-   - **Yes** → **Update**: `git pull` on the cached repo.
+   - **Yes** → **Pull**: `git pull --ff-only` on the cached repo.
 2. **Link**: symlink school folders (`skills/`, `rules/`, `commands/`, `agents/`) from
    `<cache>/<folder>/` into `<project>/<backend_dir>/<folder>/`. One symlink per folder. Skips
    folders absent from the school. Preserves existing real directories by renaming them to
@@ -55,19 +55,22 @@ When the user runs `ace` (no subcommand) in a project that already has `ace.toml
 
 ## Actions Summary
 
+All consumer-side actions live in `src/actions/project/` (see
+`spec/decisions/005-action-layout.md`).
+
 | Action    | Responsibility                                          | When                     |
 |-----------|---------------------------------------------------------|--------------------------|
 | Setup     | Guard checks, write `ace.toml`, call Prepare            | `ace setup <spec>`       |
-| Prepare   | Orchestrate Install/Update + Link                       | Setup and normal `ace`   |
-| Install   | `git clone`, index, register MCP                         | School not in cache      |
-| Update    | `git pull --ff-only` on cached repo                     | School already cached    |
-| Link      | Symlink school folders from cache into project          | Always (after install/update) |
+| Prepare   | Orchestrate Clone/Pull + Link                           | Setup and normal `ace`   |
+| Clone     | `git clone`, index, register MCP                         | School not in cache      |
+| Pull      | `git pull --ff-only` on cached repo                     | School already cached    |
+| Link      | Symlink school folders from cache into project          | Always (after clone/pull) |
 
 ## Error Cases
 
 - **Not in git repo** — hard error.
 - **Already set up** — hard error, use `ace` to run.
-- **No network** — Install/Update fail with clear message.
+- **No network** — Clone/Pull fail with clear message.
 - **Invalid school** — fail if not git-cloneable or `school.toml` missing/invalid.
 - **MCP registration failure** — warn per server, continue. Backend handles auth on first use.
 - **No cached schools (no-arg setup)** — error, suggest `ace setup <owner/repo>`.

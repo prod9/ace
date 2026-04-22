@@ -64,16 +64,19 @@ Metrics:
   `rust-coding`, etc.) before proposing changes. Simplification that violates a coding
   principle is a regression, not an improvement.
 - See `rust-coding` skill for general Rust conventions (error handling, serde, Option/Result)
-- Error enums: `ConfigError` for `src/config/`, `SetupError`/`PrepareError` for
-  `src/state/actions/`, `CmdError` for `src/cmd/`. Action-specific errors
-  (`SchoolInitError`, `ImportError`) are fine when well-scoped.
+- Error enums: `ConfigError` for `src/config/`, `SetupError`/`PrepareError` and other
+  action-scoped errors for `src/actions/`, `CmdError` for `src/cmd/`. Action-specific
+  errors (`InitError`, `AddImportError`, `PullImportsError`) are fine when well-scoped.
 - Actions that only produce I/O errors return `std::io::Error` directly — no wrapping.
 - See `spec/configuration.md` for config validation details.
 
 ## Action Pattern
 
 - Actions follow the unit-of-work pattern (see `general-coding` skill)
-- ACE-specific: `run(&self, ace: &mut Ace)`, all actions in `state/actions/`
+- ACE-specific: `run(&self, ace: &mut Ace)`, all actions in `src/actions/`
+- Grouped by user role: `actions/project/` (consumer-side, user in their repo) vs
+  `actions/school/` (maintainer-side, user in a school repo). See
+  `spec/decisions/005-action-layout.md`.
 - `Ace` is the session/context object — it carries state, output sink, and lazy-loaded
   resources. Actions receive it as the single context parameter.
 
@@ -102,6 +105,23 @@ Metrics:
 - Paths printed regardless of whether they exist on disk
 - Command help text lives in clap doc comments / attributes, not in PRDs
 - When modifying commands, ensure `--help` text stays aligned with code behavior
+
+## Backcompat Policy
+
+ACE has real users. Treat CLI verbs, subcommand names, config keys (in `ace.toml`,
+`school.toml`, `ace.local.toml`), and storage paths as public contracts.
+
+- **Renames** — add the new name, keep the old one as an alias. Use clap's
+  `#[command(visible_alias = "...")]` for subcommands; add deprecation hints in
+  help text where useful. Do not remove the old name in a minor/patch release.
+- **Removals** — require a major version bump and a clear release-note callout.
+- **Internal renames** (struct names, error-enum variants, module paths) have no
+  backcompat obligation — they're not part of the contract.
+- **Storage migrations** — prefer detect-and-hint (see `warn_stray_cache_dirs`
+  in `src/main.rs`) over silent auto-migration. Users should know what changed.
+
+When in doubt, add the alias and move on. Breaking a user's `ace ...` command
+or their checked-in `ace.toml` is not acceptable without explicit deprecation.
 
 ## TUI Pattern
 

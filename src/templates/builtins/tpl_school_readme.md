@@ -30,7 +30,7 @@ See `CLAUDE.md` for section details.
 | Task | Command |
 |---|---|
 | Import a skill | `ace import <owner/repo>` |
-| Re-fetch imports | `ace school update` |
+| Re-fetch imports | `ace school pull` |
 | Review local edits | `ace diff` |
 
 Skills are the primary content of this repo. Each skill is a directory under `skills/` with

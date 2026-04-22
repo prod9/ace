@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::actions::school::{DiscoveredSkill, Tier};
+use crate::state::discover::{DiscoveredSkill, Tier};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChangeKind {

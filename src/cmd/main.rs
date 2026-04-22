@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
 use crate::config::backend::SessionOpts;
-use crate::actions::mcp::Register;
+use crate::actions::project::RegisterMcp;
 use crate::actions::project::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
 
@@ -121,7 +121,7 @@ pub(super) async fn prepare_school(
         return Ok(prepare_result);
     }
 
-    if let Err(e) = (Register { backend, entries: &mcp_entries }).run(ace) {
+    if let Err(e) = (RegisterMcp { backend, entries: &mcp_entries }).run(ace) {
         ace.warn(&format!("MCP registration failed: {e}"));
     }
 

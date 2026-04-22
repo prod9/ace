@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::actions::school::SCHOOL_FOLDERS;
+use crate::actions::project::SCHOOL_FOLDERS;
 
 const MARKER_START: &str = "# ACE-managed — do not edit this block.";
 const MARKER_END: &str = "# end ACE";

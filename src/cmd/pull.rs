@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config::school_paths;
 use crate::config::ConfigError;
-use crate::actions::school::{Link, Pull};
+use crate::actions::project::{Link, Pull};
 
 use super::CmdError;
 

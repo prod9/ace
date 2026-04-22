@@ -8,12 +8,12 @@ fn school_update_no_imports() {
     env.git_init();
     env.write_file("school.toml", "name = \"test-school\"\n");
 
-    // No [[imports]] entries — should warn "no imports to update".
+    // No [[imports]] entries — should warn "no imports to pull".
     env.ace()
         .args(["school", "update"])
         .assert()
         .success()
-        .stderr(predicates::str::contains("no imports to update"));
+        .stderr(predicates::str::contains("no imports to pull"));
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn school_update_empty_imports_array() {
         .args(["school", "update"])
         .assert()
         .success()
-        .stderr(predicates::str::contains("no imports to update"));
+        .stderr(predicates::str::contains("no imports to pull"));
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn school_update_without_git_repo() {
         .args(["school", "update"])
         .assert()
         .success()
-        .stderr(predicates::str::contains("no imports to update"));
+        .stderr(predicates::str::contains("no imports to pull"));
 }
 
 #[test]

@@ -7,7 +7,7 @@ use crate::config::skill_meta;
 use crate::config::school_toml;
 use crate::ace::OutputMode;
 use crate::actions::school::{Init, InitError};
-use crate::actions::imports::{Refresh, RefreshResult};
+use crate::actions::school::{PullImports, PullImportsResult};
 
 use super::CmdError;
 
@@ -22,8 +22,9 @@ pub enum Command {
         #[arg(long)]
         force: bool,
     },
-    /// Re-fetch all imported skills from their sources
-    Update,
+    /// Pull imported skills from their upstream sources
+    #[command(visible_alias = "update")]
+    Pull,
     /// List skills in the school
     Skills,
 }
@@ -34,8 +35,8 @@ pub async fn run(ace: &mut Ace, command: Command) {
             let result = run_init(ace, name, force);
             super::exit_on_err(ace, result);
         }
-        Command::Update => {
-            let result = run_update(ace);
+        Command::Pull => {
+            let result = run_pull(ace);
             super::exit_on_err(ace, result);
         }
         Command::Skills => {
@@ -147,13 +148,13 @@ fn count_skill_words(skill_dir: &std::path::Path) -> usize {
     total
 }
 
-fn run_update(ace: &mut Ace) -> Result<(), CmdError> {
+fn run_pull(ace: &mut Ace) -> Result<(), CmdError> {
     let school_root = ace.require_school()?.root.clone();
 
-    let result = Refresh{ school_root: &school_root }.run(ace)?;
+    let result = PullImports{ school_root: &school_root }.run(ace)?;
     match result {
-        RefreshResult::NoImports => ace.warn("no imports to update"),
-        RefreshResult::Updated { .. } => {}
+        PullImportsResult::NoImports => ace.warn("no imports to pull"),
+        PullImportsResult::Updated { .. } => {}
     }
     Ok(())
 }

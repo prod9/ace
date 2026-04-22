@@ -17,8 +17,8 @@ use clap::{Parser, Subcommand};
 use crate::ace::{Ace, IoError};
 use crate::config::{ConfigError, Scope};
 use crate::config::backend::Backend;
-use crate::actions::imports::{AddError, RefreshError};
-use crate::actions::mcp::RegisterError;
+use crate::actions::school::{AddImportError, PullImportsError};
+use crate::actions::project::RegisterMcpError;
 use crate::actions::project::PrepareError;
 use crate::actions::school::InitError;
 use crate::actions::project::SetupError;
@@ -160,13 +160,13 @@ pub(crate) enum CmdError {
     #[error("{0}")]
     Prepare(#[from] PrepareError),
     #[error("{0}")]
-    McpRegister(#[from] RegisterError),
+    McpRegister(#[from] RegisterMcpError),
     #[error("{0}")]
-    Import(#[from] AddError),
+    Import(#[from] AddImportError),
     #[error("{0}")]
     InitSchool(#[from] InitError),
     #[error("{0}")]
-    UpdateSchool(#[from] RefreshError),
+    PullImports(#[from] PullImportsError),
     #[error("{0}")]
     Git(#[from] GitError),
     #[error("{0}")]

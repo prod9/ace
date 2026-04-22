@@ -6,7 +6,7 @@ use crate::config::index_toml;
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
-use crate::actions::school::{self, Link, Pull, PullOutcome, SkillChange};
+use super::{clone, Link, Pull, PullOutcome, SkillChange};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PrepareError {
@@ -58,7 +58,7 @@ impl Prepare<'_> {
                 _ => (Vec::new(), false),
             }
         } else {
-            school::clone::Clone {
+            clone::Clone {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             }
