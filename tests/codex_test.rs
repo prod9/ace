@@ -29,7 +29,7 @@ Authorization = "Bearer test-token-123"
 "#;
 
 #[test]
-fn codex_exec_does_not_send_session_prompt_and_uses_auto_flag() {
+fn codex_exec_does_not_send_session_prompt_and_uses_auto_flags() {
     let env = TestEnv::new();
     env.setup_codex_school(SCHOOL_TOML_BASIC);
     env.write_file("ace.local.toml", "trust = \"auto\"\n");
@@ -49,7 +49,7 @@ exit 0
 "#,
     );
 
-    // Default: resume mode — should get `resume --last --full-auto`
+    // Default: resume mode — should get `resume --last -a on-request --sandbox danger-full-access`
     env.ace_with_path_prefix(&env.path("bin"))
         .assert()
         .success();
@@ -57,10 +57,13 @@ exit 0
     let args = env.read_file("codex-exec-args.txt");
     assert!(args.contains("resume"), "expected resume subcommand, got:\n{args}");
     assert!(args.contains("--last"), "expected --last flag, got:\n{args}");
-    assert!(args.contains("--full-auto"), "expected auto flag, got:\n{args}");
+    assert!(args.contains("--ask-for-approval"), "expected --ask-for-approval flag, got:\n{args}");
+    assert!(args.contains("on-request"), "expected on-request approval policy, got:\n{args}");
+    assert!(args.contains("--sandbox"), "expected --sandbox flag, got:\n{args}");
+    assert!(args.contains("danger-full-access"), "expected danger-full-access sandbox, got:\n{args}");
     assert!(!args.contains("developer_instructions="), "resume should skip developer_instructions:\n{args}");
 
-    // New session: should get `--full-auto -c developer_instructions=...`
+    // New session: should get `-a on-request --sandbox danger-full-access -c developer_instructions=...`
     env.ace_with_path_prefix(&env.path("bin"))
         .args(["new"])
         .assert()
@@ -68,7 +71,7 @@ exit 0
 
     let args = env.read_file("codex-exec-args.txt");
     assert!(!args.contains("resume"), "new should not resume, got:\n{args}");
-    assert!(args.contains("--full-auto"), "expected auto flag, got:\n{args}");
+    assert!(args.contains("danger-full-access"), "expected danger-full-access sandbox, got:\n{args}");
     assert!(args.contains("developer_instructions="), "new should pass developer_instructions:\n{args}");
 }
 

@@ -25,11 +25,7 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
         cmd.args(["resume", "--last"]);
     }
 
-    match opts.trust {
-        Trust::Auto => { cmd.arg("--full-auto"); }
-        Trust::Yolo => { cmd.arg("--dangerously-bypass-approvals-and-sandbox"); }
-        Trust::Default => {}
-    }
+    cmd.args(trust_args(opts.trust));
 
     if !opts.resume {
         cmd.arg("-c");
@@ -42,6 +38,23 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
     cmd.args(&opts.extra_args);
 
     Err(crate::platform::exec_replace(cmd))
+}
+
+/// CLI flags for the given trust level.
+///
+/// `Auto` mirrors `--full-auto` (`-a on-request --sandbox workspace-write`) except
+/// the sandbox is raised to `danger-full-access`: ACE typically runs inside an
+/// externally-sandboxed environment, so codex's internal sandbox fights the outer
+/// one instead of adding protection.
+fn trust_args(trust: Trust) -> &'static [&'static str] {
+    match trust {
+        Trust::Auto => &[
+            "--ask-for-approval", "on-request",
+            "--sandbox", "danger-full-access",
+        ],
+        Trust::Yolo => &["--dangerously-bypass-approvals-and-sandbox"],
+        Trust::Default => &[],
+    }
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
@@ -394,6 +407,27 @@ fn parse_check_output(output: &str) -> Vec<McpStatus> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trust_default_passes_no_flags() {
+        assert!(trust_args(Trust::Default).is_empty());
+    }
+
+    #[test]
+    fn trust_auto_bypasses_sandbox_with_on_request_approval() {
+        assert_eq!(
+            trust_args(Trust::Auto),
+            &["--ask-for-approval", "on-request", "--sandbox", "danger-full-access"],
+        );
+    }
+
+    #[test]
+    fn trust_yolo_bypasses_approvals_and_sandbox() {
+        assert_eq!(
+            trust_args(Trust::Yolo),
+            &["--dangerously-bypass-approvals-and-sandbox"],
+        );
+    }
 
     #[test]
     fn parse_mcp_names_extracts_declared_servers() {
