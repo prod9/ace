@@ -2,7 +2,7 @@
 
 <p>
 ACE supports multiple AI coding backends. Set the backend in ace.toml
-or ace.local.toml with <span style="color:#00ff88;">backend = "value"</span>.
+or ace.local.toml with <span style="color:#cce4ec;">backend = "value"</span>.
 Default: <span style="color:#c0c0c0;">claude</span>.
 </p>
 
@@ -77,14 +77,14 @@ Not all backends support every folder.
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#00ff88;">yes</td>
-    <td style="color:#00ff88;">yes</td>
-    <td style="color:#00ff88;">yes</td>
-    <td style="color:#00ff88;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#00ff88;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
     <td style="color:#555;">&mdash;</td>
     <td style="color:#555;">&mdash;</td>
     <td style="color:#555;">&mdash;</td>
@@ -95,10 +95,10 @@ Not all backends support every folder.
 
 <p>
 Trust modes control backend permission prompts. Set with
-<span style="color:#00ff88;">trust = "auto"</span> or
-<span style="color:#00ff88;">trust = "yolo"</span> in ace.local.toml,
-or use <span style="color:#00ff88;">ace auto</span> /
-<span style="color:#00ff88;">ace yolo</span>.
+<span style="color:#cce4ec;">trust = "auto"</span> or
+<span style="color:#cce4ec;">trust = "yolo"</span> in ace.local.toml,
+or use <span style="color:#cce4ec;">ace auto</span> /
+<span style="color:#cce4ec;">ace yolo</span>.
 </p>
 
 <table>
@@ -110,26 +110,26 @@ or use <span style="color:#00ff88;">ace auto</span> /
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#00ff88;">yes</td>
-    <td style="color:#00ff88;">yes</td>
-    <td style="color:#888;">native Claude trust flags</td>
+    <td style="color:#cce4ec;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
+    <td style="color:#888;">--permission-mode auto / --permission-mode bypassPermissions</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#00ff88;">yes</td>
-    <td style="color:#00ff88;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
+    <td style="color:#cce4ec;">yes</td>
     <td style="color:#888;">--full-auto / --dangerously-bypass-approvals-and-sandbox</td>
   </tr>
 </table>
 
 <div class="note">
-Codex trust mappings are defined in ACE and differ from Claude's native trust flags.
+Each backend maps ACE trust modes to its own CLI flags. The mappings differ between backends.
 </div>
 
 <h2>// MCP registration</h2>
 
 <p>
-ACE registers <span style="color:#00ff88;">[[mcp]]</span> entries from
+ACE registers <span style="color:#cce4ec;">[[mcp]]</span> entries from
 school.toml into the active backend. All entries are remote HTTP endpoints.
 </p>
 
@@ -181,7 +181,7 @@ ACE verifies the backend is authenticated before launching a session.
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#888;">Default backend. Full feature support. MCP servers registered at user scope (<span style="color:#c0c0c0;">-s user</span>), not project scope.</td>
+    <td style="color:#888;">Default backend. Full feature support. MCP servers registered at user scope (<span style="color:#c0c0c0;">-s user</span>), not project scope. Auto-resume via <span style="color:#c0c0c0;">--continue</span> fails when no prior session exists; ACE prints a hint suggesting <span style="color:#c0c0c0;">ace new</span> to start fresh.</td>
   </tr>
   <tr>
     <td>codex</td>

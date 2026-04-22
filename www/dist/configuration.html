@@ -47,7 +47,7 @@ config, with later layers overriding earlier ones.
 
 <div class="note">
 Local overrides project, project overrides user-global,
-user-global overrides school defaults. For <span style="color:#00ff88;">env</span>,
+user-global overrides school defaults. For <span style="color:#cce4ec;">env</span>,
 maps merge additively &mdash; later keys override earlier keys.
 For all other fields, last non-empty value wins.
 </div>
@@ -115,7 +115,7 @@ gitignored and holds machine-specific values like trust level.
     <td>yolo</td>
     <td>bool</td>
     <td><span style="color:#c0c0c0;">false</span></td>
-    <td><span style="color:#555;">Deprecated.</span> Use <span style="color:#00ff88;">trust = "yolo"</span> instead. Kept for backwards compatibility; <span style="color:#c0c0c0;">yolo = true</span> resolves to <span style="color:#c0c0c0;">trust = "yolo"</span>.</td>
+    <td><span style="color:#555;">Deprecated.</span> Use <span style="color:#cce4ec;">trust = "yolo"</span> instead. Kept for backwards compatibility; <span style="color:#c0c0c0;">yolo = true</span> resolves to <span style="color:#c0c0c0;">trust = "yolo"</span>.</td>
   </tr>
 </table>
 
@@ -261,7 +261,7 @@ an MCP server for the backend to use.
     <td>headers</td>
     <td>map (string &rarr; string)</td>
     <td><span style="color:#555;">{}</span></td>
-    <td>HTTP headers sent with requests. Values support <span style="color:#00ff88;">{{ placeholder }}</span> syntax for user-prompted secrets.</td>
+    <td>HTTP headers sent with requests. Values support <span style="color:#cce4ec;">{{ placeholder }}</span> syntax for user-prompted secrets.</td>
   </tr>
   <tr>
     <td>instructions</td>
