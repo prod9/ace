@@ -43,6 +43,14 @@
     <td>Print effective configuration</td>
   </tr>
   <tr>
+    <td>ace config get &lt;key&gt;</td>
+    <td>Read one value. Keys: <span class="muted">school</span>, <span class="muted">backend</span>, <span class="muted">trust</span>, <span class="muted">resume</span>, <span class="muted">session_prompt</span>, <span class="muted">env.KEY</span>.</td>
+  </tr>
+  <tr>
+    <td>ace config set &lt;key&gt; &lt;value&gt;</td>
+    <td>Write a value. Layer inferred from the key; override with <span class="muted">--user</span> / <span class="muted">--project</span> / <span class="muted">--local</span>.</td>
+  </tr>
+  <tr>
     <td>ace paths [key]</td>
     <td>Print resolved filesystem paths</td>
   </tr>
@@ -79,8 +87,8 @@
 <h2>// school management</h2>
 <table>
   <tr>
-    <td>ace school init</td>
-    <td>Initialize a new school repository</td>
+    <td>ace school init [--name N] [--force]</td>
+    <td>Initialize a new school repository. <span class="muted">--name</span> sets the display name (otherwise inferred from the directory). <span class="muted">--force</span> overwrites an existing <span class="muted">school.toml</span>.</td>
   </tr>
   <tr>
     <td>ace school pull</td>
@@ -148,7 +156,8 @@ Disable with <span class="muted">skip_update = true</span> or <span class="muted
 
 <p class="faint small">
 Pass <span class="muted">--porcelain</span> for machine-readable output.
-Temporarily override backend selection with <span class="muted">-b</span>, <span class="muted">--backend</span>, <span class="muted">--claude</span>, <span class="muted">--codex</span>, or <span class="muted">--flaude</span>.
+Temporarily override backend selection with <span class="muted">-b</span>, <span class="muted">--backend</span>, <span class="muted">--claude</span>, or <span class="muted">--codex</span>.
+Scope writes with <span class="muted">--user</span>, <span class="muted">--project</span>, or <span class="muted">--local</span>.
 Pass flags to the backend with <span class="muted">ace -- --flag</span>.
 </p>
 
