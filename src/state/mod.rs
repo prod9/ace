@@ -1,4 +1,5 @@
 pub mod discover;
+pub mod resolver;
 pub mod school;
 pub mod skill_set;
 
