@@ -49,6 +49,8 @@ macro_rules! dispatch {
 }
 
 impl Backend {
+    pub const ALL: &'static [Backend] = &[Backend::Claude, Backend::Codex, Backend::Flaude];
+
     pub fn binary(&self) -> &'static str {
         match self {
             Backend::Claude => "claude",

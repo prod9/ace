@@ -1,12 +1,12 @@
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::ace::Ace;
 use crate::actions::project::SCHOOL_FOLDERS;
+use crate::config::backend::Backend;
 
 const MARKER_START: &str = "# ACE-managed — do not edit this block.";
 const MARKER_END: &str = "# end ACE";
-
-const BACKEND_DIRS: &[&str] = &[".claude", ".agents"];
 
 pub struct UpdateGitignore<'a> {
     pub project_dir: &'a Path,
@@ -42,8 +42,10 @@ fn build_block() -> String {
         "# See: https://github.com/prod9/ace".to_string(),
     ];
 
-    for dir in BACKEND_DIRS {
-        for folder in SCHOOL_FOLDERS {
+    let dirs: BTreeSet<&str> = Backend::ALL.iter().map(|b| b.backend_dir()).collect();
+    let folders: BTreeSet<&str> = SCHOOL_FOLDERS.iter().copied().collect();
+    for dir in &dirs {
+        for folder in &folders {
             lines.push(format!("{dir}/{folder}"));
         }
     }
@@ -149,6 +151,29 @@ mod tests {
 
         assert!(result.contains("before\n"));
         assert!(result.contains("after\n"));
+    }
+
+    #[test]
+    fn block_dirs_alphabetically_sorted() {
+        let block = build_block();
+        let agents_pos = block.find(".agents/skills").expect(".agents/skills present");
+        let claude_pos = block.find(".claude/skills").expect(".claude/skills present");
+        assert!(
+            agents_pos < claude_pos,
+            ".agents/* should appear before .claude/* in gitignore block"
+        );
+    }
+
+    #[test]
+    fn block_folders_alphabetically_sorted_within_dir() {
+        let block = build_block();
+        let agents = block.find(".claude/agents").expect(".claude/agents present");
+        let commands = block.find(".claude/commands").expect(".claude/commands present");
+        let rules = block.find(".claude/rules").expect(".claude/rules present");
+        let skills = block.find(".claude/skills").expect(".claude/skills present");
+        assert!(agents < commands, "agents < commands");
+        assert!(commands < rules, "commands < rules");
+        assert!(rules < skills, "rules < skills");
     }
 
     #[test]
