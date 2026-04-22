@@ -6,7 +6,8 @@ use crate::config::index_toml;
 use crate::git;
 use crate::actions::project::PrepareError;
 
-/// First-time school setup: git clone + index update.
+/// Install or reinstall school: git clone + index update. Also used as the
+/// self-heal path when a prior clone is missing or partial.
 pub struct Clone<'a> {
     pub project_dir: &'a Path,
     pub specifier: &'a str,
