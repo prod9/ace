@@ -1,5 +1,6 @@
 pub mod clone;
 pub mod link;
+pub mod link_skills;
 pub mod prepare;
 pub mod pull;
 pub mod register_mcp;
