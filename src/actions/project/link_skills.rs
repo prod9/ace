@@ -8,11 +8,13 @@
 //! ACE-managed predicate: a symlink whose target resolves textually inside
 //! the school clone's `skills/` subtree. No marker files.
 
-// Wired into Link / Prepare in the next commit. Module-level allow keeps the
-// staged-integration warnings quiet until then; removed when callers land.
-#![allow(dead_code)]
-
+use std::collections::HashMap;
+use std::io;
 use std::path::{Path, PathBuf};
+
+use crate::config::tree::Tree;
+use crate::state::discover::discover_skills;
+use crate::state::resolver::{self, Decision, Resolution};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesiredLink {
@@ -121,6 +123,154 @@ pub fn classify(name: &str, kind_input: ClassifyInput, school_skills_root: &Path
 pub enum ClassifyInput {
     Symlink(PathBuf),
     Other,
+}
+
+/// Discover + resolve + map back to `(name, path)` pairs ready for linking.
+///
+/// Walks the school's `skills/` tree once for discovery, then runs the
+/// resolver against the three config layers, then joins included skills
+/// back to their on-disk paths.
+pub fn prepare(school_root: &Path, tree: &Tree) -> io::Result<PreparedSkills> {
+    let discovered = discover_skills(school_root)?;
+    let names: Vec<String> = discovered.iter().map(|d| d.name.clone()).collect();
+    let path_by_name: HashMap<String, PathBuf> = discovered
+        .into_iter()
+        .map(|d| (d.name, d.path))
+        .collect();
+
+    let resolution = resolver::resolve(
+        &names,
+        &tree.ace_user,
+        &tree.ace_project,
+        &tree.ace_local,
+    );
+
+    let desired: Vec<DesiredLink> = resolution
+        .skills
+        .iter()
+        .filter(|s| s.decision == Decision::Included)
+        .filter_map(|s| {
+            path_by_name.get(&s.name).map(|target| DesiredLink {
+                name: s.name.clone(),
+                target: target.clone(),
+            })
+        })
+        .collect();
+
+    Ok(PreparedSkills { desired, resolution })
+}
+
+#[derive(Debug)]
+pub struct PreparedSkills {
+    pub desired: Vec<DesiredLink>,
+    pub resolution: Resolution,
+}
+
+/// Reconcile per-skill symlinks under `project_skills_dir`.
+///
+/// - Migrates the legacy whole-dir symlink (if `project_skills_dir` is itself
+///   a symlink, unlink it) and ensures `project_skills_dir` is a real dir.
+/// - Reads current entries, classifies vs `school_skills_root`, plans, executes.
+/// - Returns reconciliation summary including warnings for foreign entries.
+pub fn reconcile(
+    school_skills_root: &Path,
+    project_skills_dir: &Path,
+    desired: &[DesiredLink],
+) -> io::Result<ReconcileResult> {
+    if is_symlink(project_skills_dir) {
+        std::fs::remove_file(project_skills_dir)?;
+    }
+    std::fs::create_dir_all(project_skills_dir)?;
+
+    let current = scan_current(project_skills_dir, school_skills_root)?;
+    let plan = plan(desired, &current);
+
+    let mut warnings = Vec::new();
+    let mut created = 0;
+    let mut repointed = 0;
+    let mut removed = 0;
+    for action in &plan.actions {
+        match action {
+            LinkAction::Create { name, target } => {
+                create_symlink(target, &project_skills_dir.join(name))?;
+                created += 1;
+            }
+            LinkAction::Repoint { name, target } => {
+                let path = project_skills_dir.join(name);
+                std::fs::remove_file(&path)?;
+                create_symlink(target, &path)?;
+                repointed += 1;
+            }
+            LinkAction::Remove { name } => {
+                std::fs::remove_file(project_skills_dir.join(name))?;
+                removed += 1;
+            }
+            LinkAction::SkipForeign { name, reason } => {
+                warnings.push(format!("cannot link {name}: {reason}"));
+            }
+        }
+    }
+
+    Ok(ReconcileResult {
+        created,
+        repointed,
+        removed,
+        warnings,
+    })
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct ReconcileResult {
+    pub created: usize,
+    pub repointed: usize,
+    pub removed: usize,
+    pub warnings: Vec<String>,
+}
+
+impl ReconcileResult {
+    pub fn changed(&self) -> bool {
+        self.created + self.repointed + self.removed > 0
+    }
+}
+
+fn scan_current(
+    project_skills_dir: &Path,
+    school_skills_root: &Path,
+) -> io::Result<Vec<CurrentEntry>> {
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(project_skills_dir)? {
+        let entry = entry?;
+        let name = match entry.file_name().to_str() {
+            Some(s) => s.to_string(),
+            None => continue,
+        };
+        let path = entry.path();
+        let kind_input = if is_symlink(&path) {
+            let target = std::fs::read_link(&path)?;
+            ClassifyInput::Symlink(target)
+        } else {
+            ClassifyInput::Other
+        };
+        out.push(classify(&name, kind_input, school_skills_root));
+    }
+    Ok(out)
+}
+
+fn is_symlink(path: &Path) -> bool {
+    path.symlink_metadata()
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+}
+
+fn create_symlink(target: &Path, link: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link)
+    }
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_dir(target, link)
+    }
 }
 
 #[cfg(test)]

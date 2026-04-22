@@ -1,7 +1,8 @@
 use crate::ace::Ace;
+use crate::actions::project::link_skills;
+use crate::actions::project::{clone, Link, Pull};
 use crate::config::school_paths;
 use crate::config::ConfigError;
-use crate::actions::project::{clone, Link, Pull};
 
 use super::CmdError;
 
@@ -45,13 +46,32 @@ async fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
 
     // Re-link in case new folders appeared.
     let backend = ace.state().backend;
+    let tree = ace.state().config.clone();
+    let prepared = link_skills::prepare(&school_paths.root, &tree)
+        .map_err(|e| CmdError::Other(format!("scan school skills: {e}")))?;
 
-    Link {
+    let result = Link {
         school_root: &school_paths.root,
         project_dir: &project_dir,
         backend_dir: backend.backend_dir(),
+        skills: &prepared.desired,
     }
     .run(ace)?;
+    for warning in &result.skill_warnings {
+        ace.warn(warning);
+    }
+    for unknown in &prepared.resolution.unknown_patterns {
+        ace.warn(&format!(
+            "skill pattern matched no skill: {} (in {:?} {:?})",
+            unknown.pattern, unknown.scope, unknown.field
+        ));
+    }
+    for collision in &prepared.resolution.collisions {
+        ace.warn(&format!(
+            "skill {} appears in both include_skills and exclude_skills at {:?} scope",
+            collision.skill, collision.scope
+        ));
+    }
 
     Ok(())
 }

@@ -2,6 +2,7 @@ use std::io;
 use std::path::Path;
 
 use crate::ace::Ace;
+use crate::actions::project::link_skills::{self, DesiredLink};
 use crate::actions::project::PrepareError;
 
 /// Create a directory-level symlink pointing at `target` at `link`.
@@ -18,15 +19,24 @@ fn create_dir_symlink(target: &Path, link: &Path) -> io::Result<()> {
 pub const SCHOOL_FOLDERS: &[&str] = &["skills", "rules", "commands", "agents"];
 
 /// Symlink school folders from cache into the project.
+///
+/// `skills` is special: rather than a whole-dir symlink, the skills folder
+/// becomes a real dir populated with per-skill symlinks driven by `skills`.
+/// The other folders (rules/commands/agents) remain whole-dir symlinks.
 pub struct Link<'a> {
     pub school_root: &'a Path,
     pub project_dir: &'a Path,
     pub backend_dir: &'a str,
+    /// Per-skill (name, target) pairs for the skills folder. Computed by
+    /// the caller from discovery + resolver. Empty = no skills linked
+    /// (skills dir exists but is empty).
+    pub skills: &'a [DesiredLink],
 }
 
 impl Link<'_> {
     pub fn run(&self, _ace: &mut Ace) -> Result<LinkResult, PrepareError> {
         let mut folders = Vec::new();
+        let mut skill_warnings = Vec::new();
 
         for &name in SCHOOL_FOLDERS {
             let school_dir = self.school_root.join(name);
@@ -35,20 +45,35 @@ impl Link<'_> {
             }
 
             let project_dir = self.project_dir.join(self.backend_dir).join(name);
-            let previous_dir = self.project_dir.join(self.backend_dir).join(format!("previous-{name}"));
 
+            if name == "skills" {
+                let result = link_skills::reconcile(&school_dir, &project_dir, self.skills)
+                    .map_err(PrepareError::Write)?;
+                folders.push(FolderResult {
+                    name,
+                    linked: result.changed(),
+                    adopted: false,
+                });
+                skill_warnings.extend(result.warnings);
+                continue;
+            }
+
+            let previous_dir = self.project_dir.join(self.backend_dir).join(format!("previous-{name}"));
             let adopted = adopt_previous(&project_dir, &previous_dir)?;
             let linked = ensure_symlink(&project_dir, &school_dir)?;
             folders.push(FolderResult { name, linked, adopted });
         }
 
-        Ok(LinkResult { folders })
+        Ok(LinkResult { folders, skill_warnings })
     }
 }
 
 #[derive(Debug, Default)]
 pub struct LinkResult {
     pub folders: Vec<FolderResult>,
+    /// Per-skill warnings (e.g. foreign entries blocking a managed link).
+    /// Caller surfaces these via `ace.warn`.
+    pub skill_warnings: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -196,7 +221,11 @@ mod tests {
         }
 
         fn link(&self) -> Result<LinkResult, PrepareError> {
-            link_all(&self.school(), &self.project())
+            link_all(&self.school(), &self.project(), &[])
+        }
+
+        fn link_with_skills(&self, skills: &[DesiredLink]) -> Result<LinkResult, PrepareError> {
+            link_all(&self.school(), &self.project(), skills)
         }
     }
 
@@ -222,136 +251,177 @@ mod tests {
     fn link_no_school_folders() {
         let fix = TestFixture::new();
         let result = fix.link().expect("should succeed");
-        assert!(!result.linked("skills"));
-        assert!(!result.adopted("skills"));
         assert!(result.folders.is_empty());
     }
 
+    // Non-skills folders still use whole-dir symlinks.
+
     #[test]
-    fn link_creates_folder_symlink() {
+    fn link_creates_whole_dir_symlink_for_rules() {
         let fix = TestFixture::new();
-        fix.add_school_entry_with_content("skills", "git-commit", "SKILL.md", "# Git Commit");
-        fix.add_school_entry_with_content("skills", "code-review", "SKILL.md", "# Code Review");
+        fix.add_school_entry_with_content("rules", "indent", "rule.md", "# Indent");
 
         let result = fix.link().expect("should create symlink");
-        assert!(result.linked("skills"));
+        assert!(result.linked("rules"));
 
-        let link = fix.project_folder("skills");
+        let link = fix.project_folder("rules");
         assert!(link.symlink_metadata().expect("link exists").file_type().is_symlink());
 
         let target = std::fs::read_link(&link).expect("read link");
-        assert_eq!(target, fix.school_folder("skills"));
-
-        let content = std::fs::read_to_string(link.join("git-commit").join("SKILL.md"))
-            .expect("read through symlink");
-        assert_eq!(content, "# Git Commit");
+        assert_eq!(target, fix.school_folder("rules"));
     }
 
     #[test]
-    fn link_skips_correct_symlink() {
+    fn link_skips_correct_symlink_for_rules() {
         let fix = TestFixture::new();
-        fix.add_school_entry("skills", "my-skill");
+        fix.add_school_entry("rules", "indent");
 
-        let project_skills = fix.project_folder("skills");
-        std::fs::create_dir_all(project_skills.parent().expect("has parent"))
+        let project_rules = fix.project_folder("rules");
+        std::fs::create_dir_all(project_rules.parent().expect("has parent"))
             .expect("mkdir parent");
-        create_dir_symlink(&fix.school_folder("skills"), &project_skills)
+        create_dir_symlink(&fix.school_folder("rules"), &project_rules)
             .expect("create symlink");
 
         let result = fix.link().expect("should skip existing");
-        assert!(!result.linked("skills"));
+        assert!(!result.linked("rules"));
     }
 
     #[test]
-    fn link_replaces_stale_symlink() {
+    fn link_replaces_stale_symlink_for_rules() {
         let fix = TestFixture::new();
-        fix.add_school_entry("skills", "my-skill");
+        fix.add_school_entry("rules", "indent");
 
-        let project_skills = fix.project_folder("skills");
-        std::fs::create_dir_all(project_skills.parent().expect("has parent"))
+        let project_rules = fix.project_folder("rules");
+        std::fs::create_dir_all(project_rules.parent().expect("has parent"))
             .expect("mkdir parent");
-        create_dir_symlink(&fix.root.join("nonexistent"), &project_skills)
+        create_dir_symlink(&fix.root.join("nonexistent"), &project_rules)
             .expect("create stale symlink");
 
         let result = fix.link().expect("should replace stale");
-        assert!(result.linked("skills"));
+        assert!(result.linked("rules"));
 
-        let target = std::fs::read_link(&project_skills).expect("read link");
-        assert_eq!(target, fix.school_folder("skills"));
+        let target = std::fs::read_link(&project_rules).expect("read link");
+        assert_eq!(target, fix.school_folder("rules"));
     }
 
     #[test]
-    fn link_adopts_empty_dir() {
+    fn rules_dir_is_adopted_on_first_setup() {
         let fix = TestFixture::new();
-        fix.add_school_entry("skills", "my-skill");
-
-        std::fs::create_dir_all(fix.project_folder("skills")).expect("mkdir");
+        fix.add_school_entry("rules", "school-rule");
+        fix.add_real_entry("rules", "my-rule", "rule.md", "# My");
 
         let result = fix.link().expect("should adopt and link");
-        assert!(result.adopted("skills"));
-        assert!(result.linked("skills"));
+        assert!(result.linked("rules"));
+        assert!(result.adopted("rules"));
 
-        let target = std::fs::read_link(fix.project_folder("skills")).expect("read link");
-        assert_eq!(target, fix.school_folder("skills"));
-        assert!(fix.previous_folder("skills").exists());
+        let prev = fix.previous_folder("rules").join("my-rule").join("rule.md");
+        let content = std::fs::read_to_string(prev).expect("moved rule should exist");
+        assert_eq!(content, "# My");
     }
 
+    // Skills folder uses per-skill reconciliation (no whole-dir symlink).
+
     #[test]
-    fn adopt_renames_dir_on_first_setup() {
+    fn link_skills_creates_real_dir_with_per_skill_symlinks() {
         let fix = TestFixture::new();
-        fix.add_school_entry("skills", "school-skill");
-        fix.add_real_entry("skills", "my-skill", "SKILL.md", "# My Skill");
+        fix.add_school_entry_with_content("skills", "rust-coding", "SKILL.md", "# Rust");
+        fix.add_school_entry_with_content("skills", "go-coding", "SKILL.md", "# Go");
 
-        let result = fix.link().expect("should adopt and link");
-        assert!(result.linked("skills"), "school skills linked");
-        assert!(result.adopted("skills"), "skills dir adopted");
+        let desired = vec![
+            DesiredLink {
+                name: "rust-coding".to_string(),
+                target: fix.school_folder("skills").join("rust-coding"),
+            },
+            DesiredLink {
+                name: "go-coding".to_string(),
+                target: fix.school_folder("skills").join("go-coding"),
+            },
+        ];
 
-        let prev = fix.previous_folder("skills").join("my-skill").join("SKILL.md");
-        let content = std::fs::read_to_string(prev).expect("moved skill should exist");
-        assert_eq!(content, "# My Skill");
+        let result = fix.link_with_skills(&desired).expect("link should succeed");
+        assert!(result.linked("skills"));
 
+        let skills_dir = fix.project_folder("skills");
+        assert!(skills_dir.is_dir(), "skills should be a real dir");
         assert!(
-            fix.project_folder("skills").symlink_metadata().expect("exists").file_type().is_symlink(),
-            "project skills should be a symlink"
+            !skills_dir.symlink_metadata().expect("exists").file_type().is_symlink(),
+            "skills dir must not be a symlink"
         );
+
+        for name in ["rust-coding", "go-coding"] {
+            let link = skills_dir.join(name);
+            assert!(
+                link.symlink_metadata().expect("exists").file_type().is_symlink(),
+                "{name} should be a symlink"
+            );
+            let content = std::fs::read_to_string(link.join("SKILL.md"))
+                .expect("read through link");
+            assert!(!content.is_empty());
+        }
     }
 
     #[test]
-    fn adopt_errors_if_previous_exists() {
+    fn link_skills_migrates_legacy_whole_dir_symlink() {
         let fix = TestFixture::new();
-        fix.add_school_entry("skills", "school-skill");
-        fix.add_real_entry("skills", "my-skill", "SKILL.md", "");
+        fix.add_school_entry_with_content("skills", "rust-coding", "SKILL.md", "# Rust");
 
-        std::fs::create_dir_all(fix.previous_folder("skills")).expect("create prev dir");
-
-        let err = fix.link().expect_err("should error");
-        let msg = format!("{err}");
-        assert!(msg.contains("already exists"), "error: {msg}");
-    }
-
-    #[test]
-    fn adopt_skips_when_already_symlinked() {
-        let fix = TestFixture::new();
-        fix.add_school_entry("skills", "my-skill");
-
+        // Pre-step-3 layout: single symlink for the whole skills folder.
         let project_skills = fix.project_folder("skills");
         std::fs::create_dir_all(project_skills.parent().expect("has parent"))
             .expect("mkdir parent");
         create_dir_symlink(&fix.school_folder("skills"), &project_skills)
-            .expect("create symlink");
+            .expect("create legacy symlink");
 
-        let result = fix.link().expect("should succeed");
-        assert!(!result.adopted("skills"), "no adoption when already symlinked");
+        let desired = vec![DesiredLink {
+            name: "rust-coding".to_string(),
+            target: fix.school_folder("skills").join("rust-coding"),
+        }];
+
+        let result = fix.link_with_skills(&desired).expect("migration should succeed");
+        assert!(result.linked("skills"));
+
+        assert!(
+            !project_skills.symlink_metadata().expect("exists").file_type().is_symlink(),
+            "legacy symlink must have been migrated to a real dir"
+        );
+
+        let per_skill = project_skills.join("rust-coding");
+        assert!(per_skill.symlink_metadata().expect("exists").file_type().is_symlink());
     }
 
     #[test]
-    fn link_all_four_folders() {
+    fn link_skills_warns_on_foreign_entry() {
+        let fix = TestFixture::new();
+        fix.add_school_entry_with_content("skills", "rust-coding", "SKILL.md", "# Rust");
+
+        // User dropped a real dir at the colliding name.
+        let user_dir = fix.project_folder("skills").join("rust-coding");
+        std::fs::create_dir_all(&user_dir).expect("mkdir user dir");
+
+        let desired = vec![DesiredLink {
+            name: "rust-coding".to_string(),
+            target: fix.school_folder("skills").join("rust-coding"),
+        }];
+
+        let result = fix.link_with_skills(&desired).expect("should soft-fail");
+        assert_eq!(result.skill_warnings.len(), 1);
+        assert!(result.skill_warnings[0].contains("rust-coding"));
+        assert!(result.skill_warnings[0].contains("not managed"));
+    }
+
+    #[test]
+    fn link_all_four_folders_with_one_skill() {
         let fix = TestFixture::new();
         for folder in SCHOOL_FOLDERS {
-            fix.add_school_entry(folder, "test-entry");
+            fix.add_school_entry(folder, "entry");
         }
 
-        let result = fix.link().expect("should link all");
+        let desired = vec![DesiredLink {
+            name: "entry".to_string(),
+            target: fix.school_folder("skills").join("entry"),
+        }];
+
+        let result = fix.link_with_skills(&desired).expect("should link all");
         assert_eq!(result.folders.len(), 4);
         for folder in SCHOOL_FOLDERS {
             assert!(result.linked(folder), "{folder} should be linked");
@@ -364,7 +434,12 @@ mod tests {
         fix.add_school_entry("skills", "a-skill");
         fix.add_school_entry("commands", "a-command");
 
-        let result = fix.link().expect("should link partial");
+        let desired = vec![DesiredLink {
+            name: "a-skill".to_string(),
+            target: fix.school_folder("skills").join("a-skill"),
+        }];
+
+        let result = fix.link_with_skills(&desired).expect("should link partial");
         assert_eq!(result.folders.len(), 2);
         assert!(result.linked("skills"));
         assert!(result.linked("commands"));
@@ -372,9 +447,14 @@ mod tests {
         assert!(!result.linked("agents"));
     }
 
-    /// Helper — exercises the same loop as Link::run without needing an Ace instance.
-    fn link_all(school_root: &Path, project_dir: &Path) -> Result<LinkResult, PrepareError> {
+    /// Helper — mirrors `Link::run` for tests that don't construct an Ace instance.
+    fn link_all(
+        school_root: &Path,
+        project_dir: &Path,
+        skills: &[DesiredLink],
+    ) -> Result<LinkResult, PrepareError> {
         let mut folders = Vec::new();
+        let mut skill_warnings = Vec::new();
 
         for &name in SCHOOL_FOLDERS {
             let school_dir = school_root.join(name);
@@ -383,13 +463,25 @@ mod tests {
             }
 
             let proj_dir = project_dir.join(".claude").join(name);
-            let prev_dir = project_dir.join(".claude").join(format!("previous-{name}"));
 
+            if name == "skills" {
+                let result = link_skills::reconcile(&school_dir, &proj_dir, skills)
+                    .map_err(PrepareError::Write)?;
+                folders.push(FolderResult {
+                    name,
+                    linked: result.changed(),
+                    adopted: false,
+                });
+                skill_warnings.extend(result.warnings);
+                continue;
+            }
+
+            let prev_dir = project_dir.join(".claude").join(format!("previous-{name}"));
             let adopted = adopt_previous(&proj_dir, &prev_dir)?;
             let linked = ensure_symlink(&proj_dir, &school_dir)?;
             folders.push(FolderResult { name, linked, adopted });
         }
 
-        Ok(LinkResult { folders })
+        Ok(LinkResult { folders, skill_warnings })
     }
 }

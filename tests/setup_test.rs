@@ -11,8 +11,9 @@ fn setup_embedded_school() {
     env.assert_exists("ace.toml");
     env.assert_contains("ace.toml", "school");
 
-    // Skills symlinked into .claude/skills -> project root skills/.
-    env.assert_symlink(".claude/skills", "skills");
+    // Skills folder is a real dir; per-skill symlinks point into school skills/.
+    env.assert_skills_dir_is_real(".claude/skills");
+    env.assert_symlink(".claude/skills/maverick", "skills/maverick");
 
     // CLAUDE.md generated with school name.
     env.assert_exists("CLAUDE.md");
@@ -61,7 +62,10 @@ fn setup_links_all_four_folders() {
         .assert()
         .success();
 
-    for folder in &["skills", "rules", "commands", "agents"] {
+    // skills is a real dir with per-skill symlinks; the others are whole-dir symlinks.
+    env.assert_skills_dir_is_real(".claude/skills");
+    env.assert_symlink(".claude/skills/example", "skills/example");
+    for folder in &["rules", "commands", "agents"] {
         env.assert_symlink(&format!(".claude/{folder}"), folder);
     }
 }
@@ -83,23 +87,25 @@ fn setup_links_partial_folders() {
         .assert()
         .success();
 
-    env.assert_symlink(".claude/skills", "skills");
+    env.assert_skills_dir_is_real(".claude/skills");
+    env.assert_symlink(".claude/skills/my-skill", "skills/my-skill");
     env.assert_symlink(".claude/commands", "commands");
     env.assert_not_exists(".claude/rules");
     env.assert_not_exists(".claude/agents");
 }
 
 #[test]
-fn setup_adopts_existing_backend_dir() {
+fn setup_preserves_user_skill_alongside_school_skill() {
+    // Per-skill linking means a user-curated skill at .claude/skills/<name>/
+    // (not colliding with any school skill name) is left in place. The school
+    // skill gets a per-skill symlink alongside it. No previous-skills/ rename.
     let env = TestEnv::new();
     env.git_init();
     env.write_file("school.toml", "name = \"test-school\"\n");
 
-    // School has skills/.
     env.mkdir("skills/school-skill");
     env.write_file("skills/school-skill/SKILL.md", "# School\n");
 
-    // Project already has a real .claude/skills/ dir with content.
     env.mkdir(".claude/skills/my-local-skill");
     env.write_file(".claude/skills/my-local-skill/SKILL.md", "# Local\n");
 
@@ -108,12 +114,14 @@ fn setup_adopts_existing_backend_dir() {
         .assert()
         .success();
 
-    // Original dir renamed to previous-skills/.
-    env.assert_exists(".claude/previous-skills/my-local-skill/SKILL.md");
-    env.assert_contains(".claude/previous-skills/my-local-skill/SKILL.md", "Local");
+    // User's skill survives in place — no rename, no warning (no name collision).
+    env.assert_exists(".claude/skills/my-local-skill/SKILL.md");
+    env.assert_contains(".claude/skills/my-local-skill/SKILL.md", "Local");
+    env.assert_not_exists(".claude/previous-skills");
 
-    // Symlink now points to school skills.
-    env.assert_symlink(".claude/skills", "skills");
+    // School skill is added as a per-skill symlink.
+    env.assert_skills_dir_is_real(".claude/skills");
+    env.assert_symlink(".claude/skills/school-skill", "skills/school-skill");
 }
 
 #[test]
@@ -121,18 +129,18 @@ fn setup_idempotent_relink() {
     let env = TestEnv::new();
     env.setup_embedded("goose");
 
-    env.assert_symlink(".claude/skills", "skills");
+    env.assert_symlink(".claude/skills/maverick", "skills/maverick");
 
     // Delete ace.toml to allow re-setup.
     std::fs::remove_file(env.path("ace.toml")).expect("remove ace.toml");
 
-    // Re-setup — symlink should still be correct.
+    // Re-setup — link should still be correct.
     env.ace()
         .args(["setup", "."])
         .assert()
         .success();
 
-    env.assert_symlink(".claude/skills", "skills");
+    env.assert_symlink(".claude/skills/maverick", "skills/maverick");
 }
 
 #[test]
@@ -163,8 +171,9 @@ fn setup_embedded_with_subpath() {
     env.assert_exists("ace.toml");
     env.assert_contains("ace.toml", ".:school");
 
-    // Symlinks should point into school/ subdir.
-    env.assert_symlink(".claude/skills", "school/skills");
+    // Per-skill symlinks should point into school/skills/.
+    env.assert_skills_dir_is_real(".claude/skills");
+    env.assert_symlink(".claude/skills/sub-skill", "school/skills/sub-skill");
 }
 
 #[test]
@@ -209,7 +218,8 @@ fn setup_codex_backend() {
         .assert()
         .success();
 
-    env.assert_symlink(".agents/skills", "skills");
+    env.assert_skills_dir_is_real(".agents/skills");
+    env.assert_symlink(".agents/skills/test-skill", "skills/test-skill");
     env.assert_exists("AGENTS.md");
     env.assert_contains("AGENTS.md", "slider");
     env.assert_not_exists("CLAUDE.md");
@@ -229,7 +239,8 @@ fn setup_backend_flag_overrides_configured_backend() {
         .assert()
         .success();
 
-    env.assert_symlink(".agents/skills", "skills");
+    env.assert_skills_dir_is_real(".agents/skills");
+    env.assert_symlink(".agents/skills/test-skill", "skills/test-skill");
     env.assert_exists("AGENTS.md");
     env.assert_not_exists("CLAUDE.md");
 }

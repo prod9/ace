@@ -137,6 +137,21 @@ impl TestEnv {
         assert!(!path.exists(), "{} should not exist", path.display());
     }
 
+    /// Assert that the given path is a real directory, not a symlink. Useful
+    /// for the new per-skill layout where `<backend>/skills/` is a real dir.
+    pub fn assert_skills_dir_is_real(&self, rel: &str) {
+        let path = self.path(rel);
+        let meta = path
+            .symlink_metadata()
+            .unwrap_or_else(|_| panic!("{} should exist", path.display()));
+        assert!(
+            !meta.file_type().is_symlink(),
+            "{} should be a real dir, not a symlink",
+            path.display()
+        );
+        assert!(meta.is_dir(), "{} should be a directory", path.display());
+    }
+
     pub fn assert_symlink(&self, link: &str, expected_target: &str) {
         let link_path = self.path(link);
         let meta = link_path

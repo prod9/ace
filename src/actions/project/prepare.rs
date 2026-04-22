@@ -5,6 +5,7 @@ use crate::config::backend::Backend;
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
+use super::link_skills;
 use super::{clone, Link, Pull, PullOutcome, SkillChange};
 
 #[derive(Debug, thiserror::Error)]
@@ -75,10 +76,19 @@ impl Prepare<'_> {
             }
         };
 
+        // Resolve which skills to link before constructing Link.
+        // require_state was already invoked transitively via Pull/specifier;
+        // tree is available on State.config.
+        ace.require_state()?;
+        let tree = ace.state().config.clone();
+        let prepared = link_skills::prepare(&school_paths.root, &tree)
+            .map_err(PrepareError::Write)?;
+
         let result = Link {
             school_root: &school_paths.root,
             project_dir: self.project_dir,
             backend_dir: self.backend_dir,
+            skills: &prepared.desired,
         }
         .run(ace)?;
         for folder in &result.folders {
@@ -96,6 +106,21 @@ impl Prepare<'_> {
                     ));
                 }
             }
+        }
+        for warning in &result.skill_warnings {
+            ace.warn(warning);
+        }
+        for unknown in &prepared.resolution.unknown_patterns {
+            ace.warn(&format!(
+                "skill pattern matched no skill: {} (in {:?} {:?})",
+                unknown.pattern, unknown.scope, unknown.field
+            ));
+        }
+        for collision in &prepared.resolution.collisions {
+            ace.warn(&format!(
+                "skill {} appears in both include_skills and exclude_skills at {:?} scope",
+                collision.skill, collision.scope
+            ));
         }
 
         Ok(PrepareResult {
