@@ -45,6 +45,12 @@ Workflow:
 - **One logical change per commit** — each commit should contain exactly one sensible grouping
   of related changes. Don't lump unrelated work into a single commit, and don't split a
   coherent change across multiple commits unnecessarily.
+- **Test-first, always.** For every code change (new feature, fix, refactor that alters
+  behavior), write a failing test FIRST, then run it and confirm it fails *for the right
+  reason*: the assertion fires on the missing behavior, not a compile error, not a typo,
+  not an unrelated panic. If the code won't compile without a stub, add an `unimplemented!()`
+  stub so the test compiles and fails at runtime. Only after seeing a meaningful red do you
+  start implementing. No "I'll add the test after" — after means never.
 - **Never lose conversation state.** Before ANY context switch (compaction, task switch,
   tangent, side-ask, or any new thread), capture unfinished work first: save to the
   backend's built-in memory if available, create issues for pending tasks, update specs
