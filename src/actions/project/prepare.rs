@@ -2,7 +2,6 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::config::backend::Backend;
-use crate::config::index_toml;
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
@@ -44,7 +43,24 @@ fn is_supported(backend: Backend, folder: &str) -> bool {
 
 impl Prepare<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
-        let (changes, school_is_dirty) = if is_cached(self.specifier)? {
+        // Decide install-vs-update by on-disk state, not the index.
+        // A stale index entry (clone dir deleted, pre-XDG upgrade, etc.) would
+        // otherwise route us into Pull and hit "school not installed".
+        let school_paths = school_paths::resolve(self.project_dir, self.specifier)?;
+        let needs_clone = school_paths
+            .clone_path
+            .as_ref()
+            .is_some_and(|p| !p.join(".git").exists());
+
+        let (changes, school_is_dirty) = if needs_clone {
+            clone::Clone {
+                specifier: self.specifier,
+                project_dir: self.project_dir,
+            }
+            .run(ace)
+            .await?;
+            (Vec::new(), false)
+        } else {
             let outcome = (Pull {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
@@ -57,17 +73,7 @@ impl Prepare<'_> {
                 PullOutcome::Updated { changes } => (changes, false),
                 _ => (Vec::new(), false),
             }
-        } else {
-            clone::Clone {
-                specifier: self.specifier,
-                project_dir: self.project_dir,
-            }
-            .run(ace)
-            .await?;
-            (Vec::new(), false)
         };
-
-        let school_paths = school_paths::resolve(self.project_dir, self.specifier)?;
 
         let result = Link {
             school_root: &school_paths.root,
@@ -97,12 +103,4 @@ impl Prepare<'_> {
             school_is_dirty,
         })
     }
-}
-
-fn is_cached(specifier: &str) -> Result<bool, PrepareError> {
-    let index_path = index_toml::index_path()
-        .map_err(|e| PrepareError::Clone(format!("index path: {e}")))?;
-    let index = index_toml::load(&index_path)
-        .map_err(|e| PrepareError::Clone(format!("load index: {e}")))?;
-    Ok(index.school.iter().any(|s| s.specifier == specifier))
 }

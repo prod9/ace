@@ -77,3 +77,70 @@ fn pull_backend_flag_relinks_for_overridden_backend() {
     let link = std::fs::read_link(env.path(".agents/skills")).expect("read .agents/skills symlink");
     assert_eq!(link, school.cache.join("skills"));
 }
+
+// -- Stale-index self-heal --
+//
+// When the index.toml entry references a clone that no longer exists on disk
+// (e.g. user deleted ~/.local/share/ace, or upgraded from a pre-XDG layout
+// where the clone never migrated), ace should re-clone instead of erroring
+// with "clone failed: school not installed".
+
+#[test]
+fn bare_ace_reclones_when_clone_dir_missing() {
+    let env = TestEnv::new();
+    let school = env.setup_remote_school("test/school");
+
+    std::fs::remove_dir_all(&school.cache).expect("remove clone dir");
+
+    env.ace().assert().success();
+
+    assert!(
+        school.cache.join(".git").exists(),
+        "ace should have re-cloned the school",
+    );
+}
+
+#[test]
+fn bare_ace_reclones_when_git_dir_missing() {
+    let env = TestEnv::new();
+    let school = env.setup_remote_school("test/school");
+
+    std::fs::remove_dir_all(school.cache.join(".git")).expect("remove .git");
+
+    env.ace().assert().success();
+
+    assert!(
+        school.cache.join(".git").exists(),
+        "ace should have re-cloned the school",
+    );
+}
+
+#[test]
+fn ace_pull_reclones_when_clone_missing() {
+    let env = TestEnv::new();
+    let school = env.setup_remote_school("test/school");
+
+    std::fs::remove_dir_all(&school.cache).expect("remove clone dir");
+
+    env.ace().args(["pull"]).assert().success();
+
+    assert!(
+        school.cache.join(".git").exists(),
+        "ace pull should have re-cloned the school",
+    );
+}
+
+#[test]
+fn self_heal_does_not_duplicate_index_entry() {
+    let env = TestEnv::new();
+    let school = env.setup_remote_school("test/school");
+
+    std::fs::remove_dir_all(&school.cache).expect("remove clone dir");
+
+    env.ace().assert().success();
+
+    let index = std::fs::read_to_string(env.path("cache/ace/index.toml"))
+        .expect("read index.toml");
+    let count = index.matches("specifier = \"test/school\"").count();
+    assert_eq!(count, 1, "index should have exactly one entry, got:\n{index}");
+}

@@ -339,7 +339,21 @@ impl TestEnv {
         )
         .expect("write index.toml");
 
-        // 5. Project dir: git init + ace.toml.
+        // 5. gitconfig insteadOf redirect so ace re-clones (self-heal path)
+        // route through the sandbox origin instead of github.com.
+        let gh_url = format!("https://github.com/{specifier}.git");
+        let file_url = format!("file://{}", origin.display());
+        let config_block = format!("[url \"{file_url}\"]\n\tinsteadOf = {gh_url}\n");
+        let gitconfig_path = self.path(".gitconfig");
+        if gitconfig_path.exists() {
+            let mut existing = std::fs::read_to_string(&gitconfig_path).expect("read gitconfig");
+            existing.push_str(&config_block);
+            std::fs::write(&gitconfig_path, existing).expect("append gitconfig");
+        } else {
+            std::fs::write(&gitconfig_path, config_block).expect("write gitconfig");
+        }
+
+        // 6. Project dir: git init + ace.toml.
         self.git_init();
         self.write_file(
             "ace.toml",

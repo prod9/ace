@@ -24,6 +24,13 @@ impl Clone<'_> {
                 .map_err(|e| PrepareError::Clone(format!("mkdir: {e}")))?;
         }
 
+        // Partial clone dir (no .git) left behind by a prior aborted install or
+        // pre-XDG migration — remove it so git clone has a clean target.
+        if clone_path.exists() && !clone_path.join(".git").exists() {
+            std::fs::remove_dir_all(clone_path)
+                .map_err(|e| PrepareError::Clone(format!("remove stale clone dir: {e}")))?;
+        }
+
         let raw_repo = self.specifier.split_once(':').map_or(
             self.specifier,
             |(owner_repo, _)| owner_repo,

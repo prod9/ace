@@ -1,33 +1,49 @@
 use crate::ace::Ace;
 use crate::config::school_paths;
 use crate::config::ConfigError;
-use crate::actions::project::{Link, Pull};
+use crate::actions::project::{clone, Link, Pull};
 
 use super::CmdError;
 
-pub fn run(ace: &mut Ace) {
-    let result = run_inner(ace);
+pub async fn run(ace: &mut Ace) {
+    let result = run_inner(ace).await;
     super::exit_on_err(ace, result);
 }
 
-fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
+async fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     ace.require_state()?;
 
     let specifier = ace.state().school_specifier.clone()
         .ok_or(ConfigError::NoSchool)?;
 
     let project_dir = ace.project_dir().to_path_buf();
+    let school_paths = school_paths::resolve(&project_dir, &specifier)?;
 
-    let outcome = (Pull {
-        specifier: &specifier,
-        project_dir: &project_dir,
-        force: true,
-    })
-    .run(ace)?;
-    outcome.emit(ace);
+    // Self-heal: if the clone dir is gone (stale index, deleted cache, etc.),
+    // clone instead of pulling — Pull would otherwise error "school not installed".
+    let needs_clone = school_paths
+        .clone_path
+        .as_ref()
+        .is_some_and(|p| !p.join(".git").exists());
+
+    if needs_clone {
+        clone::Clone {
+            specifier: &specifier,
+            project_dir: &project_dir,
+        }
+        .run(ace)
+        .await?;
+    } else {
+        let outcome = (Pull {
+            specifier: &specifier,
+            project_dir: &project_dir,
+            force: true,
+        })
+        .run(ace)?;
+        outcome.emit(ace);
+    }
 
     // Re-link in case new folders appeared.
-    let school_paths = school_paths::resolve(&project_dir, &specifier)?;
     let backend = ace.state().backend;
 
     Link {

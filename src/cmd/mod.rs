@@ -217,7 +217,7 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
         Command::Paths { key } => paths::run(ace, key.as_deref()).await,
         Command::Mcp { command } => mcp::run(ace, command),
         Command::School { command } => school::run(ace, command).await,
-        Command::Pull => pull::run(ace),
+        Command::Pull => pull::run(ace).await,
         Command::New => main::run(ace, cli.backend_args, false).await,
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
