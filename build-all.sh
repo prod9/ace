@@ -9,7 +9,23 @@ set -euo pipefail
 #
 # Prerequisites:
 #   cargo install cargo-zigbuild
-#   zig (v0.12+) — https://ziglang.org/download/
+#   zig 0.14.x — https://ziglang.org/download/
+#
+# Zig version notes:
+#   - 0.14 is the known-good version. Pinned because:
+#   - 0.16 ships a broken `ar` (regression of zig#14707), which breaks
+#     `ring` and other crates: rust-cross/cargo-zigbuild#433.
+#   - 0.13 / earlier may also work but are not actively tested.
+#   `brew install zig` currently pulls 0.16 — install 0.14 manually
+#   from the ziglang.org archives if your package manager is too new.
+#
+# macOS cross-compilation note:
+#   *-apple-darwin targets are built with plain `cargo build` (Apple's
+#   toolchain handles arm64<->x86_64 natively when the rust target is
+#   installed). Zig 0.14 cannot resolve Apple frameworks (e.g. `objc`)
+#   when SDKROOT is set — its sysroot doesn't understand Apple's SDK
+#   layout — so we never invoke zigbuild for darwin targets and only
+#   export SDKROOT along the cargo-build path.
 
 TARGETS=(
   aarch64-apple-darwin
@@ -24,28 +40,30 @@ TARGETS=(
 OUTDIR="${1:-target/dist}"
 mkdir -p "$OUTDIR"
 
-HOST_TARGET="$(rustc -vV | awk '/^host:/ { print $2 }')"
 HOST_OS="$(uname -s)"
 
 # --- Filter targets by host OS ----------------------------------------------
 
-build_targets=()
+darwin_targets=()
+zig_targets=()
 skipped=()
 
 for target in "${TARGETS[@]}"; do
   case "$target" in
     *-apple-darwin)
       if [ "$HOST_OS" = "Darwin" ]; then
-        build_targets+=("$target")
+        darwin_targets+=("$target")
       else
         skipped+=("$target")
       fi
       ;;
     *)
-      build_targets+=("$target")
+      zig_targets+=("$target")
       ;;
   esac
 done
+
+build_targets=("${darwin_targets[@]}" "${zig_targets[@]}")
 
 if [ ${#skipped[@]} -gt 0 ]; then
   echo "Skipping (need macOS runner): ${skipped[*]}"
@@ -74,16 +92,27 @@ if ! command -v zig &>/dev/null; then
   exit 1
 fi
 
-# Ensure SDKROOT is set for framework linking (macOS only).
+# Optional: sccache speeds up repeat builds by caching rustc invocations
+# across targets and runs. Detect-and-enable; print a hint if absent.
+if command -v sccache &>/dev/null; then
+  export RUSTC_WRAPPER=sccache
+  echo "Using sccache: $(sccache --version 2>&1 | head -1)"
+else
+  echo "Hint: install sccache for faster repeat builds — cargo install sccache"
+fi
+
+# Resolve SDKROOT for the cargo-build (Apple toolchain) path on macOS.
+# NOT exported globally — zigbuild on darwin targets breaks if SDKROOT is set
+# (zig 0.14 can't resolve Apple frameworks like `objc` through its own sysroot).
+# We pass SDKROOT only into the `cargo build` invocations for *-apple-darwin.
+SDKROOT_RESOLVED=""
 if [ "$HOST_OS" = "Darwin" ]; then
-  if [ -z "${SDKROOT:-}" ]; then
-    SDKROOT="$(xcrun --show-sdk-path 2>/dev/null || true)"
-    if [ -z "$SDKROOT" ]; then
-      echo "Error: SDKROOT not set and xcrun failed."
-      exit 1
-    fi
-    export SDKROOT
+  SDKROOT_RESOLVED="${SDKROOT:-$(xcrun --show-sdk-path 2>/dev/null || true)}"
+  if [ -z "$SDKROOT_RESOLVED" ]; then
+    echo "Error: SDKROOT not set and xcrun failed."
+    exit 1
   fi
+  unset SDKROOT
 fi
 
 # Ensure all required Rust targets are installed.
@@ -95,32 +124,70 @@ for target in "${build_targets[@]}"; do
 done
 
 # --- Build targets -----------------------------------------------------------
+#
+# Each group is built with a single multi-target invocation so cargo walks
+# the dep graph once and shares artifact resolution across targets. On group
+# failure we re-run per-target to surface which one broke (a fused error
+# can't tell us).
 
 failed=()
 
-for target in "${build_targets[@]}"; do
-  echo "==> $target"
+# Build a target group: $1 = label, $2 = "darwin"|"zig", remaining args = targets.
+# Each target has its own target/<triple>/ subdir, so output collisions are impossible.
+build_group() {
+  local label="$1" mode="$2"
+  shift 2
+  local -a targets=("$@")
+  [ ${#targets[@]} -gt 0 ] || return 0
 
-  if [ "$target" = "$HOST_TARGET" ]; then
-    cmd=(cargo build --release --target "$target")
-  else
-    cmd=(cargo zigbuild --release --target "$target")
-  fi
+  echo "==> $label group: ${targets[*]}"
+
+  local -a target_flags=()
+  for t in "${targets[@]}"; do
+    target_flags+=(--target "$t")
+  done
+
+  local -a cmd
+  case "$mode" in
+    darwin) cmd=(env SDKROOT="$SDKROOT_RESOLVED" cargo build --release "${target_flags[@]}") ;;
+    zig)    cmd=(cargo zigbuild --release "${target_flags[@]}") ;;
+  esac
 
   if "${cmd[@]}"; then
-    case "$target" in
-      *-windows-*)
-        cp "target/$target/release/ace.exe" "$OUTDIR/ace-$target.exe"
-        echo "    -> $OUTDIR/ace-$target.exe"
-        ;;
-      *)
-        cp "target/$target/release/ace" "$OUTDIR/ace-$target"
-        echo "    -> $OUTDIR/ace-$target"
-        ;;
+    return 0
+  fi
+
+  echo "    !! group build failed — retrying per-target to isolate"
+  for t in "${targets[@]}"; do
+    case "$mode" in
+      darwin) cmd=(env SDKROOT="$SDKROOT_RESOLVED" cargo build --release --target "$t") ;;
+      zig)    cmd=(cargo zigbuild --release --target "$t") ;;
     esac
-  else
-    echo "    !! FAILED"
-    failed+=("$target")
+    if ! "${cmd[@]}"; then
+      echo "    !! FAILED: $t"
+      failed+=("$t")
+    fi
+  done
+}
+
+build_group "darwin" darwin "${darwin_targets[@]}"
+build_group "zig"    zig    "${zig_targets[@]}"
+
+# Collect outputs for every target the build actually produced.
+for target in "${build_targets[@]}"; do
+  case "$target" in
+    *-windows-*)
+      bin="target/$target/release/ace.exe"
+      out="$OUTDIR/ace-$target.exe"
+      ;;
+    *)
+      bin="target/$target/release/ace"
+      out="$OUTDIR/ace-$target"
+      ;;
+  esac
+  if [ -f "$bin" ]; then
+    cp "$bin" "$out"
+    echo "    -> $out"
   fi
 done
 
