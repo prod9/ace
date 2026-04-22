@@ -53,7 +53,7 @@ fn show(ace: &mut Ace) -> Result<(), CmdError> {
         trust: state.trust,
         resume: if state.resume { None } else { Some(false) },
         skip_update: if state.skip_update { Some(true) } else { None },
-        yolo: false,
+        ..AceToml::default()
     };
 
     let output = toml::to_string_pretty(&effective)

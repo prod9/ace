@@ -23,6 +23,12 @@ Each layer can set:
 - `env` — environment variables (additive merge, later keys override)
 - `skip_update` — disable automatic version check and background upgrade. Default: `false`.
   See [upgrade.md](upgrade.md). Also overridden by `ACE_SKIP_UPDATE=1` env var.
+- `skills` — per-project skill whitelist. Last-wins replace across scopes; empty
+  at all scopes = "all skills". See [Skills selection](#skills-selection).
+- `include_skills` — always-add skill patterns. **Union across all scopes**
+  (exception to last-wins). See [Skills selection](#skills-selection).
+- `exclude_skills` — always-remove skill patterns. **Union across all scopes**
+  (exception to last-wins). See [Skills selection](#skills-selection).
 
 ### Personal-only fields
 
@@ -36,6 +42,67 @@ project-committed `ace.toml` or `school.toml`. They are personal workflow prefer
   Backends that don't support resume start fresh silently.
 
 Resolution for personal-only fields: local wins over user. Project layer is skipped entirely.
+
+## Skills Selection
+
+Three fields control which of the school's skills the backend loads at session start.
+Resolution is two-stage: each field merges across the three scopes per its own rule,
+then the merged values combine via `(skills − exclude_skills) ∪ include_skills`.
+
+### Per-field merge
+
+- `skills` — last-wins replace (local > project > user, first non-empty). Empty at
+  every scope leaves the base set as "all discovered skills."
+- `include_skills` — union of all three scopes, dedup, order preserved
+  (user → project → local on first occurrence).
+- `exclude_skills` — same merge as `include_skills`.
+
+`skills` follows the standard last-wins rule. `include_skills` and `exclude_skills`
+are the documented exceptions: they exist precisely to add or remove guarantees
+on top of whichever `skills` value won, so unioning across scopes is the point.
+
+### Resolution
+
+```
+effective = (skills_base − exclude_skills) ∪ include_skills
+```
+
+Exclude is applied before include, so include is authoritative when an item appears
+in both: a skill explicitly named in `include_skills` will be loaded even if a
+matching pattern in `exclude_skills` would have removed it.
+
+### Use cases
+
+| Want | Where | What |
+|---|---|---|
+| Always add `issue-*` globally | user | `include_skills = ["issue-*"]` |
+| This repo only needs rust-coding | project | `skills = ["rust-coding"]` |
+| Replace project's choice on this machine | local | `skills = ["debug-*"]` |
+| Skip a global include in this repo | local | `exclude_skills = ["issue-*"]` |
+| Add a skill on this machine only | local | `include_skills = ["debug-tools"]` |
+
+### Empty vs missing
+
+`skills = []` and an absent `skills` key are equivalent — both mean "this scope
+contributes nothing." Same for `include_skills` and `exclude_skills`.
+
+### Warnings
+
+Detected during resolution against the discovered skill set:
+
+- **Same-scope `include_skills` ∩ `exclude_skills` collision** — both fields in
+  the same file end up matching the same resolved skill. Almost always a typo.
+  Distinct from cross-scope collision (user includes, local excludes), which is
+  the feature.
+- **Unknown skill patterns** — a pattern in any of the three fields matches no
+  discovered skill. Likely typo or stale config.
+- **`skills` filter active without project contribution** — effective `skills`
+  base is non-empty but the project scope contributed nothing to it. User or
+  local scope narrowed what the school would have shipped. Suppressed when
+  project also contributes (the project author's curation is intentional).
+
+Use `ace skills list` for the resolved set with provenance, and
+`ace explain <name>` for a single-skill resolution trace.
 
 ## Scope Flags
 

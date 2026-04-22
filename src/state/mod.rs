@@ -165,13 +165,8 @@ mod tests {
     fn ace(school: &str, env: &[(&str, &str)]) -> AceToml {
         AceToml {
             school: school.to_string(),
-            backend: None,
-            session_prompt: None,
             env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
-            trust: Trust::Default,
-            resume: None,
-            skip_update: None,
-            yolo: false,
+            ..AceToml::default()
         }
     }
 

@@ -47,6 +47,19 @@ pub struct AceToml {
     /// Deprecated: use `trust = "yolo"` instead. Kept for backcompat.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub yolo: bool,
+
+    /// Per-project skill whitelist. Empty = all skills (base for resolution).
+    /// Last-wins merge across scopes (local > project > user).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub skills: Vec<String>,
+
+    /// Always-add skill patterns. Union across all scopes.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub include_skills: Vec<String>,
+
+    /// Always-remove skill patterns. Union across all scopes.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub exclude_skills: Vec<String>,
 }
 
 pub fn load(path: &Path) -> Result<AceToml, ConfigError> {
