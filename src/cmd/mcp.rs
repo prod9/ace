@@ -5,7 +5,7 @@ use clap::Subcommand;
 use crate::ace::Ace;
 use crate::config::backend::McpStatus;
 use crate::config::school_toml::McpDecl;
-use crate::state::actions::mcp::{Register, Remove, register};
+use crate::actions::mcp::{Register, Remove, register};
 
 use super::CmdError;
 

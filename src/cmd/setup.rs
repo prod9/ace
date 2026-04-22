@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config::index_toml;
 use crate::git;
-use crate::state::actions::project::{Setup, UpdateGitignore};
+use crate::actions::project::{Setup, UpdateGitignore};
 use crate::templates;
 
 use super::CmdError;

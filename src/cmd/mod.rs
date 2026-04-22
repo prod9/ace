@@ -17,11 +17,11 @@ use clap::{Parser, Subcommand};
 use crate::ace::{Ace, IoError};
 use crate::config::{ConfigError, Scope};
 use crate::config::backend::Backend;
-use crate::state::actions::imports::{AddError, RefreshError};
-use crate::state::actions::mcp::RegisterError;
-use crate::state::actions::PrepareError;
-use crate::state::actions::school::InitError;
-use crate::state::actions::project::SetupError;
+use crate::actions::imports::{AddError, RefreshError};
+use crate::actions::mcp::RegisterError;
+use crate::actions::project::PrepareError;
+use crate::actions::school::InitError;
+use crate::actions::project::SetupError;
 use crate::git::GitError;
 
 #[derive(Parser)]

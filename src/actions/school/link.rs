@@ -2,7 +2,7 @@ use std::io;
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::state::actions::PrepareError;
+use crate::actions::project::PrepareError;
 
 /// Create a directory-level symlink pointing at `target` at `link`.
 /// Platform-split: Unix uses `std::os::unix::fs::symlink`; Windows uses

@@ -1,6 +1,7 @@
 #![deny(warnings)]
 
 mod ace;
+mod actions;
 mod cmd;
 mod config;
 mod fsutil;

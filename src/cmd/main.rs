@@ -1,8 +1,8 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
 use crate::config::backend::SessionOpts;
-use crate::state::actions::mcp::Register;
-use crate::state::actions::{Prepare, PrepareResult};
+use crate::actions::mcp::Register;
+use crate::actions::project::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
 
 use super::CmdError;

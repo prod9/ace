@@ -4,15 +4,15 @@ use crate::ace::Ace;
 use crate::config;
 use crate::config::index_toml;
 use crate::git;
-use crate::state::actions::PrepareError;
+use crate::actions::project::PrepareError;
 
 /// First-time school setup: git clone + index update.
-pub struct Install<'a> {
+pub struct Clone<'a> {
     pub project_dir: &'a Path,
     pub specifier: &'a str,
 }
 
-impl Install<'_> {
+impl Clone<'_> {
     pub async fn run(&self, ace: &mut Ace) -> Result<(), PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
         let Some(clone_path) = &school_paths.clone_path else {
