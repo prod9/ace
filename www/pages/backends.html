@@ -2,15 +2,15 @@
 
 <p>
 ACE supports multiple AI coding backends. Set the backend in ace.toml
-or ace.local.toml with <span style="color:#cce4ec;">backend = "value"</span>.
-Default: <span style="color:#c0c0c0;">claude</span>.
+or ace.local.toml with <span class="hi">backend = "value"</span>.
+Default: <span class="body-fg">claude</span>.
 </p>
 
 <h2>// cli override</h2>
 
 <p>
 Override the configured backend for a single invocation without editing
-config. Flags are global — they work on any <span style="color:#c0c0c0;">ace</span>
+config. Flags are global — they work on any <span class="body-fg">ace</span>
 subcommand.
 </p>
 
@@ -21,15 +21,15 @@ subcommand.
   </tr>
   <tr>
     <td>-b, --backend &lt;value&gt;</td>
-    <td style="color:#888;">explicit backend name (claude, codex)</td>
+    <td class="muted">explicit backend name (claude, codex)</td>
   </tr>
   <tr>
     <td>--claude</td>
-    <td style="color:#888;">shortcut for <span style="color:#c0c0c0;">--backend claude</span></td>
+    <td class="muted">shortcut for <span class="body-fg">--backend claude</span></td>
   </tr>
   <tr>
     <td>--codex</td>
-    <td style="color:#888;">shortcut for <span style="color:#c0c0c0;">--backend codex</span></td>
+    <td class="muted">shortcut for <span class="body-fg">--backend codex</span></td>
   </tr>
 </table>
 
@@ -77,17 +77,17 @@ Not all backends support every folder.
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#cce4ec;">yes</td>
+    <td class="hi">yes</td>
+    <td class="hi">yes</td>
+    <td class="hi">yes</td>
+    <td class="hi">yes</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#555;">&mdash;</td>
-    <td style="color:#555;">&mdash;</td>
-    <td style="color:#555;">&mdash;</td>
+    <td class="hi">yes</td>
+    <td class="faint">&mdash;</td>
+    <td class="faint">&mdash;</td>
+    <td class="faint">&mdash;</td>
   </tr>
 </table>
 
@@ -95,10 +95,10 @@ Not all backends support every folder.
 
 <p>
 Trust modes control backend permission prompts. Set with
-<span style="color:#cce4ec;">trust = "auto"</span> or
-<span style="color:#cce4ec;">trust = "yolo"</span> in ace.local.toml,
-or use <span style="color:#cce4ec;">ace auto</span> /
-<span style="color:#cce4ec;">ace yolo</span>.
+<span class="hi">trust = "auto"</span> or
+<span class="hi">trust = "yolo"</span> in ace.local.toml,
+or use <span class="hi">ace auto</span> /
+<span class="hi">ace yolo</span>.
 </p>
 
 <table>
@@ -110,15 +110,15 @@ or use <span style="color:#cce4ec;">ace auto</span> /
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#888;">--permission-mode auto / --permission-mode bypassPermissions</td>
+    <td class="hi">yes</td>
+    <td class="hi">yes</td>
+    <td class="muted">--permission-mode auto / --permission-mode bypassPermissions</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#cce4ec;">yes</td>
-    <td style="color:#888;">--full-auto / --dangerously-bypass-approvals-and-sandbox</td>
+    <td class="hi">yes</td>
+    <td class="hi">yes</td>
+    <td class="muted">--full-auto / --dangerously-bypass-approvals-and-sandbox</td>
   </tr>
 </table>
 
@@ -129,7 +129,7 @@ Each backend maps ACE trust modes to its own CLI flags. The mappings differ betw
 <h2>// MCP registration</h2>
 
 <p>
-ACE registers <span style="color:#cce4ec;">[[mcp]]</span> entries from
+ACE registers <span class="hi">[[mcp]]</span> entries from
 school.toml into the active backend. All entries are remote HTTP endpoints.
 </p>
 
@@ -141,13 +141,13 @@ school.toml into the active backend. All entries are remote HTTP endpoints.
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#888;">CLI: <span style="color:#c0c0c0;">claude mcp add -t http -s user</span></td>
-    <td style="color:#888;">auto on 401</td>
+    <td class="muted">CLI: <span class="body-fg">claude mcp add -t http -s user</span></td>
+    <td class="muted">auto on 401</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#888;">CLI-first: <span style="color:#c0c0c0;">codex mcp add</span></td>
-    <td style="color:#888;">in-session via /mcp</td>
+    <td class="muted">CLI-first: <span class="body-fg">codex mcp add</span></td>
+    <td class="muted">in-session via /mcp</td>
   </tr>
 </table>
 
@@ -164,11 +164,11 @@ ACE verifies the backend is authenticated before launching a session.
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#888;"><span style="color:#c0c0c0;">~/.claude.json</span> exists</td>
+    <td class="muted"><span class="body-fg">~/.claude.json</span> exists</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#888;"><span style="color:#c0c0c0;">~/.codex/auth.json</span> exists, or <span style="color:#c0c0c0;">CODEX_API_KEY</span> / <span style="color:#c0c0c0;">OPENAI_API_KEY</span> set</td>
+    <td class="muted"><span class="body-fg">~/.codex/auth.json</span> exists, or <span class="body-fg">CODEX_API_KEY</span> / <span class="body-fg">OPENAI_API_KEY</span> set</td>
   </tr>
 </table>
 
@@ -181,10 +181,10 @@ ACE verifies the backend is authenticated before launching a session.
   </tr>
   <tr>
     <td>claude</td>
-    <td style="color:#888;">Default backend. Full feature support. MCP servers registered at user scope (<span style="color:#c0c0c0;">-s user</span>), not project scope. Auto-resume via <span style="color:#c0c0c0;">--continue</span> fails when no prior session exists; ACE prints a hint suggesting <span style="color:#c0c0c0;">ace new</span> to start fresh.</td>
+    <td class="muted">Default backend. Full feature support. MCP servers registered at user scope (<span class="body-fg">-s user</span>), not project scope. Auto-resume via <span class="body-fg">--continue</span> fails when no prior session exists; ACE prints a hint suggesting <span class="body-fg">ace new</span> to start fresh.</td>
   </tr>
   <tr>
     <td>codex</td>
-    <td style="color:#888;">MCP registration is CLI-first. MCP auth and ongoing management happen inside Codex via <span style="color:#c0c0c0;">/mcp</span>. Only <span style="color:#c0c0c0;">skills/</span> is linked.</td>
+    <td class="muted">MCP registration is CLI-first. MCP auth and ongoing management happen inside Codex via <span class="body-fg">/mcp</span>. Only <span class="body-fg">skills/</span> is linked.</td>
   </tr>
 </table>

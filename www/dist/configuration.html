@@ -47,7 +47,7 @@ config, with later layers overriding earlier ones.
 
 <div class="note">
 Local overrides project, project overrides user-global,
-user-global overrides school defaults. For <span style="color:#cce4ec;">env</span>,
+user-global overrides school defaults. For <span class="hi">env</span>,
 maps merge additively &mdash; later keys override earlier keys.
 For all other fields, last non-empty value wins.
 </div>
@@ -78,44 +78,44 @@ gitignored and holds machine-specific values like trust level.
   <tr>
     <td>school</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
-    <td>School specifier, e.g. <span style="color:#c0c0c0;">"prod9/school"</span>. Last non-empty wins across layers.</td>
+    <td><span class="faint">(empty)</span></td>
+    <td>School specifier, e.g. <span class="body-fg">"prod9/school"</span>. Last non-empty wins across layers.</td>
   </tr>
   <tr>
     <td>backend</td>
     <td><span class="tag">claude</span> <span class="tag">codex</span></td>
-    <td><span style="color:#c0c0c0;">claude</span></td>
-    <td>Which AI backend to launch. Highest-priority <span style="color:#c0c0c0;">Some</span> wins (local &rarr; project &rarr; user).</td>
+    <td><span class="body-fg">claude</span></td>
+    <td>Which AI backend to launch. Highest-priority <span class="body-fg">Some</span> wins (local &rarr; project &rarr; user).</td>
   </tr>
   <tr>
     <td>trust</td>
     <td><span class="tag">default</span> <span class="tag">auto</span> <span class="tag">yolo</span></td>
-    <td><span style="color:#c0c0c0;">default</span></td>
-    <td>Backend permission mode. <span style="color:#c0c0c0;">auto</span> = auto-accept safe operations. <span style="color:#c0c0c0;">yolo</span> = bypass all permission prompts.</td>
+    <td><span class="body-fg">default</span></td>
+    <td>Backend permission mode. <span class="body-fg">auto</span> = auto-accept safe operations. <span class="body-fg">yolo</span> = bypass all permission prompts.</td>
   </tr>
   <tr>
     <td>session_prompt</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Additional prompt text prepended to the backend session. Last non-empty wins.</td>
   </tr>
   <tr>
     <td>env</td>
     <td>map (string &rarr; string)</td>
-    <td><span style="color:#555;">{}</span></td>
+    <td><span class="faint">{}</span></td>
     <td>Environment variables passed to the backend. Merges additively across layers.</td>
   </tr>
   <tr>
     <td>skip_update</td>
     <td>bool</td>
-    <td><span style="color:#c0c0c0;">false</span></td>
-    <td>Disable automatic version check and background upgrade. Also overridden by <span style="color:#c0c0c0;">ACE_SKIP_UPDATE=1</span>.</td>
+    <td><span class="body-fg">false</span></td>
+    <td>Disable automatic version check and background upgrade. Also overridden by <span class="body-fg">ACE_SKIP_UPDATE=1</span>.</td>
   </tr>
   <tr>
     <td>yolo</td>
     <td>bool</td>
-    <td><span style="color:#c0c0c0;">false</span></td>
-    <td><span style="color:#555;">Deprecated.</span> Use <span style="color:#cce4ec;">trust = "yolo"</span> instead. Kept for backwards compatibility; <span style="color:#c0c0c0;">yolo = true</span> resolves to <span style="color:#c0c0c0;">trust = "yolo"</span>.</td>
+    <td><span class="body-fg">false</span></td>
+    <td><span class="faint">Deprecated.</span> Use <span class="hi">trust = "yolo"</span> instead. Kept for backwards compatibility; <span class="body-fg">yolo = true</span> resolves to <span class="body-fg">trust = "yolo"</span>.</td>
   </tr>
 </table>
 
@@ -180,25 +180,25 @@ backend preference, MCP servers, roles, projects, and skill imports.
   <tr>
     <td>name</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>School display name. Must be non-empty (validated after load).</td>
   </tr>
   <tr>
     <td>backend</td>
     <td><span class="tag">claude</span> <span class="tag">codex</span></td>
-    <td><span style="color:#555;">None</span></td>
+    <td><span class="faint">None</span></td>
     <td>Default backend for the school. Overridden by ace.toml layers.</td>
   </tr>
   <tr>
     <td>session_prompt</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Prompt text prepended to every session using this school.</td>
   </tr>
   <tr>
     <td>env</td>
     <td>map (string &rarr; string)</td>
-    <td><span style="color:#555;">{}</span></td>
+    <td><span class="faint">{}</span></td>
     <td>Environment variables. Merged with ace.toml env (ace.toml wins on conflict).</td>
   </tr>
 </table>
@@ -220,13 +220,13 @@ on first run when the school defines any roles.
   <tr>
     <td>name</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Role identifier stored in local config.</td>
   </tr>
   <tr>
     <td>prompt</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Prompt text injected for sessions using that role.</td>
   </tr>
 </table>
@@ -248,25 +248,25 @@ an MCP server for the backend to use.
   <tr>
     <td>name</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Server identifier. Must be unique across all MCP entries.</td>
   </tr>
   <tr>
     <td>url</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Server URL (SSE endpoint).</td>
   </tr>
   <tr>
     <td>headers</td>
     <td>map (string &rarr; string)</td>
-    <td><span style="color:#555;">{}</span></td>
-    <td>HTTP headers sent with requests. Values support <span style="color:#cce4ec;">{{ placeholder }}</span> syntax for user-prompted secrets.</td>
+    <td><span class="faint">{}</span></td>
+    <td>HTTP headers sent with requests. Values support <span class="hi">{{ placeholder }}</span> syntax for user-prompted secrets.</td>
   </tr>
   <tr>
     <td>instructions</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Usage instructions passed to the backend for this server.</td>
   </tr>
 </table>
@@ -287,19 +287,19 @@ Optional project catalog entries that give the AI context about available reposi
   <tr>
     <td>name</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Short project identifier.</td>
   </tr>
   <tr>
     <td>repo</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Git-cloneable repository URL or shorthand.</td>
   </tr>
   <tr>
     <td>description</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
+    <td><span class="faint">(empty)</span></td>
     <td>Project description written for AI consumption.</td>
   </tr>
 </table>
@@ -308,9 +308,9 @@ Optional project catalog entries that give the AI context about available reposi
 
 <p>
 Import skills from other school repositories. Skill discovery scans four tiers under
-<span style="color:#c0c0c0;">skills/</span>: the default <span style="color:#c0c0c0;">skills/&lt;name&gt;</span> and
-<span style="color:#c0c0c0;">skills/.curated/&lt;name&gt;</span> (both Curated), plus
-<span style="color:#c0c0c0;">skills/.experimental/</span> and <span style="color:#c0c0c0;">skills/.system/</span>.
+<span class="body-fg">skills/</span>: the default <span class="body-fg">skills/&lt;name&gt;</span> and
+<span class="body-fg">skills/.curated/&lt;name&gt;</span> (both Curated), plus
+<span class="body-fg">skills/.experimental/</span> and <span class="body-fg">skills/.system/</span>.
 Explicit names resolve from any tier. Glob patterns match only Curated by default.
 </p>
 
@@ -324,26 +324,26 @@ Explicit names resolve from any tier. Glob patterns match only Curated by defaul
   <tr>
     <td>skill</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
-    <td>Skill name or glob pattern (e.g. <span style="color:#c0c0c0;">"*-coding"</span>, <span style="color:#c0c0c0;">"*"</span>).</td>
+    <td><span class="faint">(empty)</span></td>
+    <td>Skill name or glob pattern (e.g. <span class="body-fg">"*-coding"</span>, <span class="body-fg">"*"</span>).</td>
   </tr>
   <tr>
     <td>source</td>
     <td>string</td>
-    <td><span style="color:#555;">(empty)</span></td>
-    <td>School specifier to import from, e.g. <span style="color:#c0c0c0;">"prod9/school"</span>.</td>
+    <td><span class="faint">(empty)</span></td>
+    <td>School specifier to import from, e.g. <span class="body-fg">"prod9/school"</span>.</td>
   </tr>
   <tr>
     <td>include_experimental</td>
     <td>bool</td>
-    <td><span style="color:#c0c0c0;">false</span></td>
-    <td>For glob entries: also match skills under <span style="color:#c0c0c0;">skills/.experimental/</span>.</td>
+    <td><span class="body-fg">false</span></td>
+    <td>For glob entries: also match skills under <span class="body-fg">skills/.experimental/</span>.</td>
   </tr>
   <tr>
     <td>include_system</td>
     <td>bool</td>
-    <td><span style="color:#c0c0c0;">false</span></td>
-    <td>For glob entries: also match skills under <span style="color:#c0c0c0;">skills/.system/</span>.</td>
+    <td><span class="body-fg">false</span></td>
+    <td>For glob entries: also match skills under <span class="body-fg">skills/.system/</span>.</td>
   </tr>
 </table>
 
