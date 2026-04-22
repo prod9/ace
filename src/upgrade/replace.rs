@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+#[cfg(unix)]
 pub fn staging_path(exe: &Path) -> PathBuf {
     let mut p = exe.as_os_str().to_owned();
     p.push(".new");
