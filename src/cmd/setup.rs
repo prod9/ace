@@ -74,7 +74,9 @@ fn normalize_specifier(spec: &str) -> String {
 fn resolve_from_cache(ace: &mut Ace) -> Result<String, CmdError> {
     let index_path = index_toml::index_path()
         .map_err(|e| CmdError::Other(format!("{e}")))?;
-    let index = index_toml::load(&index_path)
+    let legacy_path = index_toml::legacy_index_path()
+        .map_err(|e| CmdError::Other(format!("{e}")))?;
+    let index = index_toml::load_or_migrate(&index_path, &legacy_path)
         .map_err(|e| CmdError::Other(format!("{e}")))?;
 
     let specs = index_toml::list_specifiers(&index);

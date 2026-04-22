@@ -138,7 +138,10 @@ or their checked-in `ace.toml` is not acceptable without explicit deprecation.
 - Import source cache: `~/.cache/ace/imports/{owner/repo}/` (XDG_CACHE_HOME) —
   read-only upstream snapshots used by `ace import` and `ace school update`.
   Safe to sweep; next invocation re-clones.
-- Index: `~/.cache/ace/index.toml` — tracks downloaded schools (specifier, repo, path).
+- Index: `~/.local/share/ace/index.toml` — tracks downloaded schools (specifier, repo,
+  path). Sits alongside the school clones (user data, not cache). Legacy location
+  `~/.cache/ace/index.toml` is one-shot migrated via `index_toml::load_or_migrate`;
+  legacy file is left on disk and surfaced by `warn_stray_cache_dirs` for manual cleanup.
 - Startup hint: bare `ace` invocation warns once if the pre-PROD9-76 flat layout
   (`~/.cache/ace/{owner/repo}/`) has stray entries. No auto-migration.
 - Git operations use `std::process::Command`, no sqlite or git crate.

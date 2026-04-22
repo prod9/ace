@@ -60,7 +60,9 @@ impl Clone<'_> {
 fn update_index(source: &str) -> Result<(), PrepareError> {
     let index_path = index_toml::index_path()
         .map_err(|e| PrepareError::Clone(format!("index path: {e}")))?;
-    let mut index = index_toml::load(&index_path)
+    let legacy_path = index_toml::legacy_index_path()
+        .map_err(|e| PrepareError::Clone(format!("legacy index path: {e}")))?;
+    let mut index = index_toml::load_or_migrate(&index_path, &legacy_path)
         .map_err(|e| PrepareError::Clone(format!("load index: {e}")))?;
     index_toml::upsert(&mut index, source);
     index_toml::save(&index_path, &index)

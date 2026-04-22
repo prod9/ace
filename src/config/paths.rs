@@ -40,9 +40,12 @@ pub fn ace_import_cache_dir() -> Result<PathBuf, ConfigError> {
     ace_cache_dir().map(|c| c.join("imports"))
 }
 
-/// Detect stray directories under the old cache layout — anything other than
-/// `imports/` or the `index.toml` file signals a pre-PROD9-76 install. Returns the
-/// list of stray entry paths so the caller can print a one-time hint.
+/// Detect stray directories under the old cache layout — any top-level directory
+/// other than `imports/` signals a pre-PROD9-76 install (or a legacy `index.toml`
+/// file left over from before the index moved to the data dir). Non-directory
+/// files that aren't `index.toml` (e.g. the self-update `latest_version` cache)
+/// are left alone. Returns the list of stray entry paths so the caller can print
+/// a one-time hint.
 pub fn detect_stray_cache_dirs(cache_root: &std::path::Path) -> Vec<PathBuf> {
     let Ok(entries) = std::fs::read_dir(cache_root) else {
         return Vec::new();
@@ -52,7 +55,13 @@ pub fn detect_stray_cache_dirs(cache_root: &std::path::Path) -> Vec<PathBuf> {
         .filter_map(Result::ok)
         .filter(|e| {
             let name = e.file_name();
-            name != "imports" && name != "index.toml"
+            if name == "imports" {
+                return false;
+            }
+            if name == "index.toml" {
+                return true;
+            }
+            e.file_type().map(|t| t.is_dir()).unwrap_or(false)
         })
         .map(|e| e.path())
         .collect()
@@ -68,7 +77,6 @@ mod tests {
         let cache_root = tmp.path();
 
         std::fs::create_dir_all(cache_root.join("imports/owner/repo")).unwrap();
-        std::fs::write(cache_root.join("index.toml"), "").unwrap();
         std::fs::create_dir_all(cache_root.join("prod9/school")).unwrap();
         std::fs::create_dir_all(cache_root.join("other-owner/other-repo")).unwrap();
 
@@ -86,9 +94,35 @@ mod tests {
             !stray.iter().any(|p| p.ends_with("imports")),
             "imports/ is the new cache layout — should not be flagged; got {stray:?}",
         );
+    }
+
+    #[test]
+    fn detect_stray_cache_dirs_flags_legacy_index_toml() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let cache_root = tmp.path();
+
+        std::fs::create_dir_all(cache_root.join("imports")).unwrap();
+        std::fs::write(cache_root.join("index.toml"), "").unwrap();
+
+        let stray = detect_stray_cache_dirs(cache_root);
         assert!(
-            !stray.iter().any(|p| p.ends_with("index.toml")),
-            "index.toml is expected — should not be flagged; got {stray:?}",
+            stray.iter().any(|p| p.ends_with("index.toml")),
+            "legacy index.toml should be flagged as stray; got {stray:?}",
+        );
+    }
+
+    #[test]
+    fn detect_stray_cache_dirs_ignores_latest_version_file() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let cache_root = tmp.path();
+
+        std::fs::create_dir_all(cache_root.join("imports")).unwrap();
+        std::fs::write(cache_root.join("latest_version"), "0.4.1").unwrap();
+
+        let stray = detect_stray_cache_dirs(cache_root);
+        assert!(
+            !stray.iter().any(|p| p.ends_with("latest_version")),
+            "latest_version (self-update cache) is not old-layout garbage; got {stray:?}",
         );
     }
 
@@ -98,7 +132,6 @@ mod tests {
         let cache_root = tmp.path();
 
         std::fs::create_dir_all(cache_root.join("imports")).unwrap();
-        std::fs::write(cache_root.join("index.toml"), "").unwrap();
 
         let stray = detect_stray_cache_dirs(cache_root);
         assert!(stray.is_empty(), "clean cache should report no stray; got {stray:?}");
