@@ -123,7 +123,74 @@ gitignored and holds machine-specific values like trust level.
     <td><span class="body-fg">false</span></td>
     <td><span class="faint">Deprecated.</span> Use <span class="hi">trust = "yolo"</span> instead. Kept for backwards compatibility; <span class="body-fg">yolo = true</span> resolves to <span class="body-fg">trust = "yolo"</span>.</td>
   </tr>
+  <tr>
+    <td>skills</td>
+    <td>list of glob patterns</td>
+    <td><span class="faint">[]</span></td>
+    <td>Whitelist of skills to load. Last non-empty wins across layers; empty everywhere = all discovered skills. See <a href="#skills-selection">skills selection</a>.</td>
+  </tr>
+  <tr>
+    <td>include_skills</td>
+    <td>list of glob patterns</td>
+    <td><span class="faint">[]</span></td>
+    <td>Always-add patterns. <strong>Union across all scopes</strong> — exception to last-wins. See <a href="#skills-selection">skills selection</a>.</td>
+  </tr>
+  <tr>
+    <td>exclude_skills</td>
+    <td>list of glob patterns</td>
+    <td><span class="faint">[]</span></td>
+    <td>Always-remove patterns. <strong>Union across all scopes</strong> — exception to last-wins. See <a href="#skills-selection">skills selection</a>.</td>
+  </tr>
 </table>
+
+<h3 id="skills-selection">// skills selection</h3>
+
+<p>
+Three fields control which of the school's skills are loaded by the backend at session start.
+Each has one consistent rule across all scopes; the field name signals intent, the scope is mechanical.
+</p>
+
+<table>
+  <tr>
+    <th>Field</th>
+    <th>Merge rule</th>
+    <th>Effect</th>
+  </tr>
+  <tr>
+    <td>skills</td>
+    <td>last-wins replace (local &gt; project &gt; user, first non-empty)</td>
+    <td>Sets the base set. Empty everywhere &rarr; base = all discovered skills.</td>
+  </tr>
+  <tr>
+    <td>include_skills</td>
+    <td>union across all scopes</td>
+    <td>Always added on top of the base.</td>
+  </tr>
+  <tr>
+    <td>exclude_skills</td>
+    <td>union across all scopes</td>
+    <td>Always removed from the base.</td>
+  </tr>
+</table>
+
+<p>
+Resolution: <span class="body-fg">effective = (skills_base &minus; exclude_skills) &cup; include_skills</span>.
+Exclude is applied before include, so <span class="body-fg">include_skills</span> is authoritative when an item appears in both.
+</p>
+
+<div class="code-block"><pre><span class="comment"># user ace.toml — global "always-add" preferences</span>
+<span class="key">include_skills</span> = [<span class="val">"issue-*"</span>]
+
+<span class="comment"># project ace.toml — this repo only needs rust-coding</span>
+<span class="key">skills</span> = [<span class="val">"rust-coding"</span>]
+
+<span class="comment"># ace.local.toml — opt out of a global include just for this repo</span>
+<span class="key">exclude_skills</span> = [<span class="val">"issue-*"</span>]</pre></div>
+
+<p>
+Glob patterns use <span class="body-fg">*</span> as a wildcard (no <span class="body-fg">**</span> or character classes).
+Foreign entries in <span class="body-fg">&lt;backend&gt;/skills/</span> (real files or symlinks pointing outside the school clone) are left alone unless their name collides with a desired skill, in which case the link is skipped with a warning.
+</p>
 
 <h2>// user-global ace.toml</h2>
 
