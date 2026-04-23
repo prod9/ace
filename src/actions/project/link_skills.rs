@@ -8,10 +8,13 @@
 //! ACE-managed predicate: a symlink whose target resolves textually inside
 //! the school clone's `skills/` subtree. No marker files.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::ace::Ace;
+use crate::actions::project::link::LinkResult;
 use crate::config::tree::Tree;
 use crate::state::discover::discover_skills;
 use crate::state::resolver::{self, Decision, Resolution};
@@ -54,49 +57,55 @@ pub struct LinkPlan {
 
 /// Compute the reconciliation plan. Pure: no I/O.
 pub fn plan(desired: &[DesiredLink], current: &[CurrentEntry]) -> LinkPlan {
-    let mut actions = Vec::new();
-    let mut seen = std::collections::HashSet::new();
+    let desired_names: HashSet<&str> = desired.iter().map(|d| d.name.as_str()).collect();
 
-    for want in desired {
-        seen.insert(want.name.as_str());
+    let actions_for_desired = desired.iter().filter_map(|want| {
         let existing = current.iter().find(|c| c.name == want.name);
-        match existing {
-            None => actions.push(LinkAction::Create {
-                name: want.name.clone(),
-                target: want.target.clone(),
+        decide_action(want, existing)
+    });
+
+    let actions_for_orphans = current.iter().filter_map(|entry| {
+        if desired_names.contains(entry.name.as_str()) {
+            return None;
+        }
+        match entry.kind {
+            EntryKind::ManagedSymlink { .. } => Some(LinkAction::Remove {
+                name: entry.name.clone(),
             }),
-            Some(entry) => match &entry.kind {
-                EntryKind::ManagedSymlink { target } if target == &want.target => {} // up-to-date
-                EntryKind::ManagedSymlink { .. } => actions.push(LinkAction::Repoint {
-                    name: want.name.clone(),
-                    target: want.target.clone(),
-                }),
-                EntryKind::ForeignSymlink { target } => actions.push(LinkAction::SkipForeign {
-                    name: want.name.clone(),
-                    reason: format!(
-                        "symlink points outside school clone: {}",
-                        target.display()
-                    ),
-                }),
-                EntryKind::ForeignEntry => actions.push(LinkAction::SkipForeign {
-                    name: want.name.clone(),
-                    reason: "not managed by ace (file or directory exists)".to_string(),
-                }),
-            },
+            // Foreign orphans: leave alone, no warning needed.
+            EntryKind::ForeignSymlink { .. } | EntryKind::ForeignEntry => None,
         }
-    }
+    });
 
-    for entry in current {
-        if seen.contains(entry.name.as_str()) {
-            continue;
-        }
-        if matches!(entry.kind, EntryKind::ManagedSymlink { .. }) {
-            actions.push(LinkAction::Remove { name: entry.name.clone() });
-        }
-        // Foreign entries with no desired counterpart: leave alone, no warning needed.
+    LinkPlan {
+        actions: actions_for_desired.chain(actions_for_orphans).collect(),
     }
+}
 
-    LinkPlan { actions }
+/// Decide what to do with one desired link given the current state of that
+/// name's entry. `None` means "already correct, no action needed."
+fn decide_action(want: &DesiredLink, existing: Option<&CurrentEntry>) -> Option<LinkAction> {
+    let Some(entry) = existing else {
+        return Some(LinkAction::Create {
+            name: want.name.clone(),
+            target: want.target.clone(),
+        });
+    };
+    match &entry.kind {
+        EntryKind::ManagedSymlink { target } if target == &want.target => None,
+        EntryKind::ManagedSymlink { .. } => Some(LinkAction::Repoint {
+            name: want.name.clone(),
+            target: want.target.clone(),
+        }),
+        EntryKind::ForeignSymlink { target } => Some(LinkAction::SkipForeign {
+            name: want.name.clone(),
+            reason: format!("symlink points outside school clone: {}", target.display()),
+        }),
+        EntryKind::ForeignEntry => Some(LinkAction::SkipForeign {
+            name: want.name.clone(),
+            reason: "not managed by ace (file or directory exists)".to_string(),
+        }),
+    }
 }
 
 /// Classify a directory entry. Reads the symlink target if applicable;
@@ -185,38 +194,49 @@ pub fn reconcile(
     let current = scan_current(project_skills_dir, school_skills_root)?;
     let plan = plan(desired, &current);
 
-    let mut warnings = Vec::new();
-    let mut created = 0;
-    let mut repointed = 0;
-    let mut removed = 0;
+    let mut result = ReconcileResult::default();
     for action in &plan.actions {
         match action {
             LinkAction::Create { name, target } => {
-                create_symlink(target, &project_skills_dir.join(name))?;
-                created += 1;
+                create_dir_symlink(target, &project_skills_dir.join(name))?;
+                result.created += 1;
             }
             LinkAction::Repoint { name, target } => {
                 let path = project_skills_dir.join(name);
-                std::fs::remove_file(&path)?;
-                create_symlink(target, &path)?;
-                repointed += 1;
+                fs::remove_file(&path)?;
+                create_dir_symlink(target, &path)?;
+                result.repointed += 1;
             }
             LinkAction::Remove { name } => {
-                std::fs::remove_file(project_skills_dir.join(name))?;
-                removed += 1;
+                fs::remove_file(project_skills_dir.join(name))?;
+                result.removed += 1;
             }
             LinkAction::SkipForeign { name, reason } => {
-                warnings.push(format!("cannot link {name}: {reason}"));
+                result.warnings.push(format!("cannot link {name}: {reason}"));
             }
         }
     }
+    Ok(result)
+}
 
-    Ok(ReconcileResult {
-        created,
-        repointed,
-        removed,
-        warnings,
-    })
+/// Emit user-visible warnings for resolution diagnostics + link warnings.
+/// Shared by all callers that run the prepare → reconcile sequence.
+pub fn emit_warnings(ace: &mut Ace, prepared: &PreparedSkills, link_result: &LinkResult) {
+    for warning in &link_result.skill_warnings {
+        ace.warn(warning);
+    }
+    for unknown in &prepared.resolution.unknown_patterns {
+        ace.warn(&format!(
+            "skill pattern matched no skill: {} (in {:?} {:?})",
+            unknown.pattern, unknown.scope, unknown.field
+        ));
+    }
+    for collision in &prepared.resolution.collisions {
+        ace.warn(&format!(
+            "skill {} appears in both include_skills and exclude_skills at {:?} scope",
+            collision.skill, collision.scope
+        ));
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -238,7 +258,7 @@ fn scan_current(
     school_skills_root: &Path,
 ) -> io::Result<Vec<CurrentEntry>> {
     let mut out = Vec::new();
-    for entry in std::fs::read_dir(project_skills_dir)? {
+    for entry in fs::read_dir(project_skills_dir)? {
         let entry = entry?;
         let name = match entry.file_name().to_str() {
             Some(s) => s.to_string(),
@@ -246,8 +266,7 @@ fn scan_current(
         };
         let path = entry.path();
         let kind_input = if is_symlink(&path) {
-            let target = std::fs::read_link(&path)?;
-            ClassifyInput::Symlink(target)
+            ClassifyInput::Symlink(fs::read_link(&path)?)
         } else {
             ClassifyInput::Other
         };
@@ -256,13 +275,15 @@ fn scan_current(
     Ok(out)
 }
 
-fn is_symlink(path: &Path) -> bool {
+pub(super) fn is_symlink(path: &Path) -> bool {
     path.symlink_metadata()
         .map(|m| m.file_type().is_symlink())
         .unwrap_or(false)
 }
 
-fn create_symlink(target: &Path, link: &Path) -> io::Result<()> {
+/// Create a directory-level symlink. Platform-split: Unix uses `symlink`;
+/// Windows uses `symlink_dir` (directory symlinks don't require admin).
+pub(super) fn create_dir_symlink(target: &Path, link: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {
         std::os::unix::fs::symlink(target, link)

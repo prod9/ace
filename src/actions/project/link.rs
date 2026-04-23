@@ -1,19 +1,8 @@
-use std::io;
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::actions::project::link_skills::{self, DesiredLink};
+use crate::actions::project::link_skills::{self, create_dir_symlink, is_symlink, DesiredLink};
 use crate::actions::project::PrepareError;
-
-/// Create a directory-level symlink pointing at `target` at `link`.
-/// Platform-split: Unix uses `std::os::unix::fs::symlink`; Windows uses
-/// `std::os::windows::fs::symlink_dir` (directory symlinks don't require admin).
-fn create_dir_symlink(target: &Path, link: &Path) -> io::Result<()> {
-    #[cfg(unix)]
-    { std::os::unix::fs::symlink(target, link) }
-    #[cfg(windows)]
-    { std::os::windows::fs::symlink_dir(target, link) }
-}
 
 /// Folders that ACE links from the school clone into the project.
 pub const SCHOOL_FOLDERS: &[&str] = &["skills", "rules", "commands", "agents"];
@@ -144,12 +133,6 @@ fn adopt_previous(
 
     std::fs::rename(project_dir, previous_dir).map_err(PrepareError::Write)?;
     Ok(true)
-}
-
-fn is_symlink(path: &Path) -> bool {
-    path.symlink_metadata()
-        .map(|m| m.file_type().is_symlink())
-        .unwrap_or(false)
 }
 
 enum LinkStatus {

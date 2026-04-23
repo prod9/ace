@@ -57,21 +57,7 @@ async fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
         skills: &prepared.desired,
     }
     .run(ace)?;
-    for warning in &result.skill_warnings {
-        ace.warn(warning);
-    }
-    for unknown in &prepared.resolution.unknown_patterns {
-        ace.warn(&format!(
-            "skill pattern matched no skill: {} (in {:?} {:?})",
-            unknown.pattern, unknown.scope, unknown.field
-        ));
-    }
-    for collision in &prepared.resolution.collisions {
-        ace.warn(&format!(
-            "skill {} appears in both include_skills and exclude_skills at {:?} scope",
-            collision.skill, collision.scope
-        ));
-    }
+    link_skills::emit_warnings(ace, &prepared, &result);
 
     Ok(())
 }

@@ -105,13 +105,13 @@ pub fn resolve(
     apply_phase(
         &mut state,
         &mut unknown_patterns,
-        Field::ExcludeSkills,
+        Phase::Exclude,
         scoped(user, project, local, |a| &a.exclude_skills),
     );
     apply_phase(
         &mut state,
         &mut unknown_patterns,
-        Field::IncludeSkills,
+        Phase::Include,
         scoped(user, project, local, |a| &a.include_skills),
     );
 
@@ -195,12 +195,51 @@ fn apply_base(
     }
 }
 
+/// Restricted phase indicator — `Skills` is intentionally absent. The base
+/// phase is handled by `apply_base`; everything else is exclude or include.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Phase {
+    Exclude,
+    Include,
+}
+
+impl Phase {
+    fn field(self) -> Field {
+        match self {
+            Phase::Exclude => Field::ExcludeSkills,
+            Phase::Include => Field::IncludeSkills,
+        }
+    }
+
+    fn decision(self) -> Decision {
+        match self {
+            Phase::Exclude => Decision::Excluded,
+            Phase::Include => Decision::Included,
+        }
+    }
+
+    /// Op to record when a pattern matches this skill, or `None` to skip
+    /// because the skill is already in the target decision (no state change).
+    fn op_for(self, skill: &ResolvedSkill) -> Option<Op> {
+        match (self, skill.decision) {
+            (Phase::Exclude, Decision::Excluded) => None,
+            (Phase::Exclude, Decision::Included) => Some(Op::Removed),
+            (Phase::Include, Decision::Included) => Some(Op::Added),
+            (Phase::Include, Decision::Excluded) => {
+                let was_removed = skill.trace.iter().any(|e| e.op == Op::Removed);
+                Some(if was_removed { Op::ReAdded } else { Op::Added })
+            }
+        }
+    }
+}
+
 fn apply_phase(
     state: &mut BTreeMap<String, ResolvedSkill>,
     unknown: &mut Vec<UnknownPattern>,
-    field: Field,
+    phase: Phase,
     sources: Vec<(Scope, &[String])>,
 ) {
+    let field = phase.field();
     for (scope, patterns) in sources {
         for pattern in patterns {
             let mut matched = false;
@@ -209,20 +248,16 @@ fn apply_phase(
                     continue;
                 }
                 matched = true;
-                let op = step_op(field, skill);
-                if let Some(op) = op {
-                    skill.trace.push(Entry {
-                        scope,
-                        field,
-                        pattern: pattern.clone(),
-                        op,
-                    });
-                    skill.decision = match field {
-                        Field::ExcludeSkills => Decision::Excluded,
-                        Field::IncludeSkills => Decision::Included,
-                        Field::Skills => skill.decision,
-                    };
-                }
+                let Some(op) = phase.op_for(skill) else {
+                    continue;
+                };
+                skill.trace.push(Entry {
+                    scope,
+                    field,
+                    pattern: pattern.clone(),
+                    op,
+                });
+                skill.decision = phase.decision();
             }
             if !matched {
                 unknown.push(UnknownPattern {
@@ -232,21 +267,6 @@ fn apply_phase(
                 });
             }
         }
-    }
-}
-
-/// Decide what `Op` to record for this skill in this phase, or `None` to skip
-/// (e.g. excluding a skill that's already excluded — no state change to record).
-fn step_op(field: Field, skill: &ResolvedSkill) -> Option<Op> {
-    match (field, skill.decision) {
-        (Field::ExcludeSkills, Decision::Included) => Some(Op::Removed),
-        (Field::ExcludeSkills, Decision::Excluded) => None,
-        (Field::IncludeSkills, Decision::Excluded) => {
-            let was_removed = skill.trace.iter().any(|e| e.op == Op::Removed);
-            Some(if was_removed { Op::ReAdded } else { Op::Added })
-        }
-        (Field::IncludeSkills, Decision::Included) => Some(Op::Added),
-        (Field::Skills, _) => None,
     }
 }
 
