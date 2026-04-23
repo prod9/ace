@@ -13,8 +13,13 @@ ACE links four folder types from the school into the project:
 | `commands/`| Slash commands for the backend             |
 | `agents/`  | Agent configurations                       |
 
-All four use the same symlink + adoption pattern. Only folders that exist in the school are
-linked — absent folders are silently skipped.
+Linking strategy differs by folder:
+
+- `skills/` — `<backend>/skills/` is a real directory containing per-skill symlinks
+  (one per Included skill in the resolution; see [Skills Selection](#skill-selection)).
+- `rules/`, `commands/`, `agents/` — single whole-dir symlink to the school's folder.
+
+Only folders that exist in the school are linked — absent folders are silently skipped.
 
 ### Backend support matrix
 
@@ -45,10 +50,14 @@ saving a few seconds.
 
 ## Skill Selection
 
-ACE does not decide which skills to apply. It syncs all skills from the school into the
-project. Skill selection is handled by the project's backend instructions file (for example
-`CLAUDE.md` or `AGENTS.md`), which tells the backend what school content exists and how to use
-it.
+Per-repo skill selection runs through the three fields documented in
+[`configuration.md`](configuration.md#skills-selection): `skills` (whitelist, last-wins),
+`include_skills` (additive, union), and `exclude_skills` (subtractive, union). The resolver
+in `state::resolver` produces a per-skill `Resolution` with provenance traces; only skills
+with `Decision::Included` get linked into `<backend>/skills/`.
+
+When all three fields are unset across all scopes, every discovered skill is linked
+(implicit-all base). This is the default for fresh setups.
 
 ## Symlinks Over Copies
 
@@ -56,28 +65,59 @@ Sync into projects using symlinks, not file copies. Multiple projects sharing th
 (e.g. frontend and backend repos in the same org) all point to the same local clone. This avoids
 redundant data and ensures all projects see the same skill versions immediately after a pull.
 
-**One folder-level symlink per folder**, not per-entry symlinks. Each project folder is a
-single symlink pointing to the school clone's corresponding directory:
+**Two link shapes:**
 
-```
-project/.claude/skills/   → ~/.local/share/ace/{school}/skills/
-project/.claude/rules/    → ~/.local/share/ace/{school}/rules/
-project/.claude/commands/ → ~/.local/share/ace/{school}/commands/
-project/.claude/agents/   → ~/.local/share/ace/{school}/agents/
-```
+- **Per-skill symlinks for `skills/`.** `<backend>/skills/` is a real directory; each Included
+  skill gets its own symlink inside, pointing at the discovered skill path in the school clone:
+  ```
+  project/.claude/skills/                    (real directory)
+  project/.claude/skills/rust-coding         → ~/.local/share/ace/{school}/skills/rust-coding/
+  project/.claude/skills/issue-tracker       → ~/.local/share/ace/{school}/skills/issue-tracker/
+  ```
+- **Whole-dir symlinks for the rest.** `rules/`, `commands/`, `agents/` are single symlinks
+  to the school's corresponding directory:
+  ```
+  project/.claude/rules/    → ~/.local/share/ace/{school}/rules/
+  project/.claude/commands/ → ~/.local/share/ace/{school}/commands/
+  project/.claude/agents/   → ~/.local/share/ace/{school}/agents/
+  ```
 
-No per-entry linking, no local overrides. Everyone on the same school works against the same
-set of files. To change a skill, edit through symlinks and propose changes back to the school.
+To change a skill, edit through the symlink and propose changes back to the school.
 
-### First-time adoption
+### Reconciliation
 
-When a project has an existing real directory for any of the four folders (pre-ACE or
-hand-written), ACE renames it to `previous-{name}/` before creating the symlink. This is a
-single bulk rename — the whole folder is the management unit. This is a one-time migration to
-allow bringing existing content into the school. After adoption, the symlink takes over and
-`previous-{name}/` remains as a prompt for the user to consolidate them into the school.
-The session prompt nudges the LLM to help merge `previous-skills/` into the school's skills
-folder and propose the changes upstream.
+Each `ace` / `ace pull` / `ace setup` run reconciles `<backend>/skills/` against the resolved
+Included set:
+
+- Add a symlink for any new skill.
+- Re-point a managed symlink that targets a stale path (skill moved within the school).
+- Remove managed symlinks for skills no longer in the resolved set.
+- Skip + warn when an entry name collides with a non-managed file or symlink.
+
+**ACE-managed predicate**: a symlink whose target path resolves textually inside the school
+clone's `skills/` subtree. No marker files. Anything else (real files, real subdirs, symlinks
+pointing outside the school) is treated as user content and left alone — except when its name
+collides with a desired skill, in which case the link is skipped with a warning so the user
+can resolve the conflict.
+
+### First-time adoption (rules/commands/agents only)
+
+For `rules/`, `commands/`, and `agents/`, an existing real directory at the link path is
+renamed to `previous-{name}/` before the symlink is created. This is a one-time bulk
+migration so pre-ACE content is preserved, and the session prompt may nudge the LLM to help
+merge `previous-{name}/` back into the school.
+
+The skills folder no longer triggers this adoption — its per-skill reconciler handles a
+mix of managed and foreign entries directly. A `previous-skills/` directory only exists on
+projects upgraded from a pre-2026-04-23 ACE that performed the bulk rename before the
+per-skill layout shipped; the legacy directory is left in place for the user to consolidate
+manually.
+
+### Migrating from the legacy whole-dir symlink
+
+ACE versions before 2026-04-23 created `<backend>/skills` as a single symlink to
+`<school>/skills/`. The reconciler detects that legacy symlink, removes it, and rebuilds
+`<backend>/skills/` as a real directory with per-skill symlinks inside. No user action required.
 
 ## Storage
 

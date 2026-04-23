@@ -39,10 +39,16 @@ runs.
    - **No** → **Clone**: `git clone --depth 1` into `~/.local/share/ace/<owner>/<repo>/` (XDG_DATA_HOME), write
      `index.toml` entry, parse `school.toml`, register MCP servers.
    - **Yes** → **Pull**: `git pull --ff-only` on the cached repo.
-2. **Link**: symlink school folders (`skills/`, `rules/`, `commands/`, `agents/`) from
-   `<cache>/<folder>/` into `<project>/<backend_dir>/<folder>/`. One symlink per folder. Skips
-   folders absent from the school. Preserves existing real directories by renaming them to
-   `previous-<folder>/` before creating the symlink (first-time adoption).
+2. **Link**: sync school folders into `<project>/<backend_dir>/`. Two shapes:
+   - `skills/` becomes a real directory with per-skill symlinks (one per Included skill from
+     the resolution — see [skills-sync.md](skills-sync.md#skill-selection) and
+     [configuration.md](configuration.md#skills-selection)).
+   - `rules/`, `commands/`, `agents/` are whole-dir symlinks. An existing real directory at
+     the link path is renamed to `previous-<folder>/` first (one-time adoption). Adoption
+     does not apply to `skills/` — its reconciler handles a mix of managed and foreign
+     entries directly.
+
+   Folders absent from the school are skipped.
 
 ## Normal `ace` Run
 

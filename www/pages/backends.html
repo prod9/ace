@@ -63,7 +63,10 @@ subcommand.
 <h2>// linked folders</h2>
 
 <p>
-ACE symlinks school folders into the project's backend directory.
+ACE links school folders into the project's backend directory.
+<span class="body-fg">skills/</span> becomes a real directory with per-skill symlinks
+(driven by <span class="body-fg">skills</span>/<span class="body-fg">include_skills</span>/<span class="body-fg">exclude_skills</span> in
+<span class="body-fg">ace.toml</span>); the rest are whole-directory symlinks.
 Not all backends support every folder.
 </p>
 

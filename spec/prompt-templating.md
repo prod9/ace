@@ -27,7 +27,9 @@ Built by concatenating layers, separated by blank lines:
    schools). Contains proposal workflow steps. Rendered with `{{ school_clone }}`. When the
    clone has uncommitted changes, `prompt_dirty_school.md` is appended (no placeholders).
 7. **Previous skills** — `prompt_previous_skills.md`, only when a `previous-skills/` directory
-   exists. Consolidation guidance. Rendered with `{{ backend_dir }}`.
+   exists. Consolidation guidance. Rendered with `{{ backend_dir }}`. Note: post-2026-04-23
+   ACE no longer creates `previous-skills/` (per-skill linking handles foreign entries
+   in-place); this layer only fires for projects that adopted the legacy whole-dir layout.
 
 Empty/absent layers are skipped.
 
