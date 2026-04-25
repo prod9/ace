@@ -41,6 +41,26 @@ impl Scope {
             Scope::Local => &paths.local,
         }
     }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Scope::User => "user",
+            Scope::Project => "project",
+            Scope::Local => "local",
+        }
+    }
+}
+
+#[cfg(test)]
+mod scope_tests {
+    use super::*;
+
+    #[test]
+    fn label_strings() {
+        assert_eq!(Scope::User.label(), "user");
+        assert_eq!(Scope::Project.label(), "project");
+        assert_eq!(Scope::Local.label(), "local");
+    }
 }
 
 /// Parsed config key for get/set operations.

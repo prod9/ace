@@ -80,7 +80,7 @@ fn mutate_op(ace: &mut Ace, op: Op) -> Result<(), CmdError> {
     let scope = ace.scope_override().unwrap_or(Scope::Project);
     let summary = describe(&op);
     EditSkillsConfig { scope, op }.run(ace)?;
-    ace.done(&format!("{summary} ({})", scope_name(scope)));
+    ace.done(&format!("{summary} ({})", scope.label()));
     Ok(())
 }
 
@@ -107,13 +107,5 @@ fn reset_target(include: bool, exclude: bool) -> ResetTarget {
         (false, true) => ResetTarget::Exclude,
         // Both flags set, or neither (bare `reset`), means clear everything.
         _ => ResetTarget::Both,
-    }
-}
-
-fn scope_name(s: Scope) -> &'static str {
-    match s {
-        Scope::User => "user",
-        Scope::Project => "project",
-        Scope::Local => "local",
     }
 }
