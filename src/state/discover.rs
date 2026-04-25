@@ -8,6 +8,17 @@ pub enum Tier {
     System,
 }
 
+impl Tier {
+    #[allow(dead_code)] // wired in step 2 of the skills domain unification
+    pub fn label(self) -> &'static str {
+        match self {
+            Tier::Curated => "curated",
+            Tier::Experimental => "experimental",
+            Tier::System => "system",
+        }
+    }
+}
+
 pub struct DiscoveredSkill {
     pub name: String,
     pub path: PathBuf,
