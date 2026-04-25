@@ -16,8 +16,15 @@ pub enum Op {
     Include(Vec<String>),
     /// Append patterns to `exclude_skills`. Silent no-op on duplicates within scope.
     Exclude(Vec<String>),
-    /// Reset entries. If both flags false, treat as both true (reset all).
-    Reset { include: bool, exclude: bool },
+    /// Clear one or both selection lists.
+    Reset(ResetTarget),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResetTarget {
+    Include,
+    Exclude,
+    Both,
 }
 
 pub struct EditSkillsConfig {
@@ -44,14 +51,12 @@ pub fn apply(toml: &mut AceToml, op: &Op) {
     match op {
         Op::Include(patterns) => append_dedup(&mut toml.include_skills, patterns),
         Op::Exclude(patterns) => append_dedup(&mut toml.exclude_skills, patterns),
-        // Bare `reset` (no flags) clears both, matching the `--include --exclude` case.
-        Op::Reset { include: false, exclude: false }
-        | Op::Reset { include: true, exclude: true } => {
+        Op::Reset(ResetTarget::Include) => toml.include_skills.clear(),
+        Op::Reset(ResetTarget::Exclude) => toml.exclude_skills.clear(),
+        Op::Reset(ResetTarget::Both) => {
             toml.include_skills.clear();
             toml.exclude_skills.clear();
         }
-        Op::Reset { include: true, exclude: false } => toml.include_skills.clear(),
-        Op::Reset { include: false, exclude: true } => toml.exclude_skills.clear(),
     }
 }
 
@@ -150,7 +155,7 @@ mod tests {
             exclude_skills: vs(&["c"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Reset { include: true, exclude: false });
+        apply(&mut t, &Op::Reset(ResetTarget::Include));
         assert!(t.include_skills.is_empty());
         assert_eq!(t.exclude_skills, vs(&["c"]));
     }
@@ -162,31 +167,19 @@ mod tests {
             exclude_skills: vs(&["b", "c"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Reset { include: false, exclude: true });
+        apply(&mut t, &Op::Reset(ResetTarget::Exclude));
         assert_eq!(t.include_skills, vs(&["a"]));
         assert!(t.exclude_skills.is_empty());
     }
 
     #[test]
-    fn reset_both_drops_both_when_flags_explicit() {
+    fn reset_both_drops_both_lists() {
         let mut t = AceToml {
             include_skills: vs(&["a"]),
             exclude_skills: vs(&["b"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Reset { include: true, exclude: true });
-        assert!(t.include_skills.is_empty());
-        assert!(t.exclude_skills.is_empty());
-    }
-
-    #[test]
-    fn reset_no_flags_drops_both_lists() {
-        let mut t = AceToml {
-            include_skills: vs(&["a"]),
-            exclude_skills: vs(&["b"]),
-            ..AceToml::default()
-        };
-        apply(&mut t, &Op::Reset { include: false, exclude: false });
+        apply(&mut t, &Op::Reset(ResetTarget::Both));
         assert!(t.include_skills.is_empty());
         assert!(t.exclude_skills.is_empty());
     }
@@ -199,7 +192,7 @@ mod tests {
             exclude_skills: vs(&["b"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Reset { include: false, exclude: false });
+        apply(&mut t, &Op::Reset(ResetTarget::Both));
         assert_eq!(t.skills, vs(&["allowlist"]));
     }
 

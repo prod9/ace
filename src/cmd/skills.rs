@@ -1,7 +1,7 @@
 use clap::Subcommand;
 
 use crate::ace::Ace;
-use crate::actions::project::edit_skills_config::{EditSkillsConfig, Op};
+use crate::actions::project::edit_skills_config::{EditSkillsConfig, Op, ResetTarget};
 use crate::actions::project::list_skills::{render_names, render_table};
 use crate::config::Scope;
 use crate::glob;
@@ -50,7 +50,7 @@ fn run_inner(
         Some(Command::Include { patterns }) => mutate(ace, validate_all(&patterns)?, Op::Include),
         Some(Command::Exclude { patterns }) => mutate(ace, validate_all(&patterns)?, Op::Exclude),
         Some(Command::Reset { include, exclude }) => {
-            mutate_op(ace, Op::Reset { include, exclude })
+            mutate_op(ace, Op::Reset(reset_target(include, exclude)))
         }
     }
 }
@@ -95,9 +95,18 @@ fn describe(op: &Op) -> String {
     match op {
         Op::Include(p) => format!("included {}", p.join(", ")),
         Op::Exclude(p) => format!("excluded {}", p.join(", ")),
-        Op::Reset { include: true, exclude: false } => "reset include_skills".to_string(),
-        Op::Reset { include: false, exclude: true } => "reset exclude_skills".to_string(),
-        Op::Reset { .. } => "reset include_skills and exclude_skills".to_string(),
+        Op::Reset(ResetTarget::Include) => "reset include_skills".to_string(),
+        Op::Reset(ResetTarget::Exclude) => "reset exclude_skills".to_string(),
+        Op::Reset(ResetTarget::Both) => "reset include_skills and exclude_skills".to_string(),
+    }
+}
+
+fn reset_target(include: bool, exclude: bool) -> ResetTarget {
+    match (include, exclude) {
+        (true, false) => ResetTarget::Include,
+        (false, true) => ResetTarget::Exclude,
+        // Both flags set, or neither (bare `reset`), means clear everything.
+        _ => ResetTarget::Both,
     }
 }
 
