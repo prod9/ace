@@ -6,12 +6,12 @@ use crate::templates;
 
 use super::CmdError;
 
-pub async fn run(ace: &mut Ace, specifier: Option<&str>) {
-    let result = run_inner(ace, specifier).await;
+pub fn run(ace: &mut Ace, specifier: Option<&str>) {
+    let result = run_inner(ace, specifier);
     super::exit_on_err(ace, result);
 }
 
-async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdError> {
+fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdError> {
     let project_dir = ace.project_dir().to_path_buf();
 
     let resolved = match specifier {
@@ -27,7 +27,7 @@ async fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdErro
 
     // Prepare school (install/update/link + MCP).
     ace.require_state()?;
-    super::main::prepare_school(ace, &resolved).await?;
+    super::main::prepare_school(ace, &resolved)?;
 
     // Post-prepare setup: gitignore and instructions file.
     let backend = ace.state().backend;

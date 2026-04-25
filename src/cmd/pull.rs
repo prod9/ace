@@ -6,12 +6,12 @@ use crate::config::ConfigError;
 
 use super::CmdError;
 
-pub async fn run(ace: &mut Ace) {
-    let result = run_inner(ace).await;
+pub fn run(ace: &mut Ace) {
+    let result = run_inner(ace);
     super::exit_on_err(ace, result);
 }
 
-async fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
+fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     ace.require_state()?;
 
     let specifier = ace.state().school_specifier.clone()
@@ -32,8 +32,7 @@ async fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
             specifier: &specifier,
             project_dir: &project_dir,
         }
-        .run(ace)
-        .await?;
+        .run(ace)?;
     } else {
         let outcome = (Pull {
             specifier: &specifier,

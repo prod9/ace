@@ -175,7 +175,7 @@ pub(crate) enum CmdError {
     Other(String),
 }
 
-pub async fn run(ace: &mut Ace, cli: Cli) {
+pub fn run(ace: &mut Ace, cli: Cli) {
     let backend_override = match resolve_backend_override(&cli) {
         Ok(backend) => backend,
         Err(err) => {
@@ -203,22 +203,22 @@ pub async fn run(ace: &mut Ace, cli: Cli) {
     }
 
     let Some(command) = cli.command else {
-        return main::run(ace, cli.backend_args, true).await;
+        return main::run(ace, cli.backend_args, true);
     };
 
     match command {
-        Command::Setup { specifier } => setup::run(ace, specifier.as_deref()).await,
+        Command::Setup { specifier } => setup::run(ace, specifier.as_deref()),
         Command::Import { source, skill, all, include_experimental, include_system } => {
             import::run(ace, &source, skill.as_deref(), all, include_experimental, include_system)
         }
-        Command::Diff => diff::run(ace).await,
+        Command::Diff => diff::run(ace),
         Command::Fmt | Command::Format => fmt::run(ace),
-        Command::Config { command } => config::run(ace, command).await,
-        Command::Paths { key } => paths::run(ace, key.as_deref()).await,
+        Command::Config { command } => config::run(ace, command),
+        Command::Paths { key } => paths::run(ace, key.as_deref()),
         Command::Mcp { command } => mcp::run(ace, command),
-        Command::School { command } => school::run(ace, command).await,
-        Command::Pull => pull::run(ace).await,
-        Command::New => main::run(ace, cli.backend_args, false).await,
+        Command::School { command } => school::run(ace, command),
+        Command::Pull => pull::run(ace),
+        Command::New => main::run(ace, cli.backend_args, false),
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Command::Upgrade { silent, force, version } => upgrade::run(ace, silent, force, version),

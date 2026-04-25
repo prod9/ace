@@ -31,7 +31,7 @@ fn main() {
     let mut ace = ace::Ace::new(project_dir, mode);
     migrate_legacy_index_toml(&mut ace);
     warn_stray_cache_dirs(&mut ace);
-    smol::block_on(cmd::run(&mut ace, cli));
+    cmd::run(&mut ace, cli);
 }
 
 /// One-shot read-migration for the pre-PROD9-76 `~/.cache/ace/index.toml` location.

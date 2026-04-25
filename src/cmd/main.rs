@@ -7,18 +7,18 @@ use crate::templates::session::build_session_prompt;
 
 use super::CmdError;
 
-pub async fn run(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) {
-    let result = run_inner(ace, backend_args, should_resume).await;
+pub fn run(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) {
+    let result = run_inner(ace, backend_args, should_resume);
     super::exit_on_err(ace, result);
 }
 
-async fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> Result<(), CmdError> {
+fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> Result<(), CmdError> {
     ace.require_state()?;
 
     let specifier = ace.state().school_specifier.clone()
         .ok_or(ConfigError::NoSchool)?;
 
-    let prepare_result = prepare_school(ace, &specifier).await?;
+    let prepare_result = prepare_school(ace, &specifier)?;
 
     let project_dir = ace.project_dir().to_path_buf();
     let school_paths = ace.require_school()?;
@@ -77,7 +77,7 @@ async fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool
 ///
 /// Called by both bare `ace` and `ace setup`. Reloads state after linking so
 /// school.toml is available for MCP registration and downstream callers.
-pub(super) async fn prepare_school(
+pub(super) fn prepare_school(
     ace: &mut Ace,
     specifier: &str,
 ) -> Result<PrepareResult, CmdError> {
@@ -90,8 +90,7 @@ pub(super) async fn prepare_school(
         backend_dir: preliminary_backend.backend_dir(),
         backend: preliminary_backend,
     })
-    .run(ace)
-    .await?;
+    .run(ace)?;
 
     // Reload with fresh school.toml after Prepare.
     ace.reload_state()?;

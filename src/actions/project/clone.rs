@@ -14,7 +14,7 @@ pub struct Clone<'a> {
 }
 
 impl Clone<'_> {
-    pub async fn run(&self, ace: &mut Ace) -> Result<(), PrepareError> {
+    pub fn run(&self, ace: &mut Ace) -> Result<(), PrepareError> {
         let school_paths = config::school_paths::resolve(self.project_dir, self.specifier)?;
         let Some(clone_path) = &school_paths.clone_path else {
             return Ok(()); // embedded school

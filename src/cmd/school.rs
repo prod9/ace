@@ -29,7 +29,7 @@ pub enum Command {
     Skills,
 }
 
-pub async fn run(ace: &mut Ace, command: Command) {
+pub fn run(ace: &mut Ace, command: Command) {
     match command {
         Command::Init { name, force } => {
             let result = run_init(ace, name, force);

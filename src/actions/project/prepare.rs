@@ -43,7 +43,7 @@ fn is_supported(backend: Backend, folder: &str) -> bool {
 }
 
 impl Prepare<'_> {
-    pub async fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
+    pub fn run(&self, ace: &mut Ace) -> Result<PrepareResult, PrepareError> {
         // Decide install-vs-update by on-disk state, not the index.
         // A stale index entry (clone dir deleted, pre-XDG upgrade, etc.) would
         // otherwise route us into Pull and hit "school not installed".
@@ -58,8 +58,7 @@ impl Prepare<'_> {
                 specifier: self.specifier,
                 project_dir: self.project_dir,
             }
-            .run(ace)
-            .await?;
+            .run(ace)?;
             (Vec::new(), false)
         } else {
             let outcome = (Pull {

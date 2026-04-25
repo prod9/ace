@@ -23,7 +23,7 @@ pub enum Command {
     },
 }
 
-pub async fn run(ace: &mut Ace, command: Option<Command>) {
+pub fn run(ace: &mut Ace, command: Option<Command>) {
     let result = run_inner(ace, command);
     super::exit_on_err(ace, result);
 }

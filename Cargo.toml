@@ -15,7 +15,6 @@ ctrlc = "3"
 indicatif = { version = "0.18.4", default-features = false, features = ["unicode-width"] }
 inquire = { version = "0.9.3", default-features = false, features = ["console", "one-liners"] }
 serde = { version = "1.0.228", features = ["derive"] }
-smol = "2.0.2"
 tempfile = "3.26.0"
 thiserror = "2.0.18"
 toml = "1.0.3"

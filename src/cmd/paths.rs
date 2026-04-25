@@ -3,7 +3,7 @@ use crate::config::{paths, school_paths};
 
 use super::CmdError;
 
-pub async fn run(ace: &mut Ace, key: Option<&str>) {
+pub fn run(ace: &mut Ace, key: Option<&str>) {
     let result = run_inner(ace, key);
     super::exit_on_err(ace, result);
 }

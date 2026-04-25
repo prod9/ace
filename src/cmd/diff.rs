@@ -3,7 +3,7 @@ use crate::config::ConfigError;
 
 use super::CmdError;
 
-pub async fn run(ace: &mut Ace) {
+pub fn run(ace: &mut Ace) {
     let result = run_inner(ace);
     super::exit_on_err(ace, result);
 }
