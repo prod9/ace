@@ -55,12 +55,32 @@ pub enum Decision {
     Excluded,
 }
 
+impl Decision {
+    pub fn label(self) -> &'static str {
+        match self {
+            Decision::Included => "active",
+            Decision::Excluded => "excluded",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Op {
     SetBase,
     Added,
     Removed,
     ReAdded,
+}
+
+impl Op {
+    pub fn label(self) -> &'static str {
+        match self {
+            Op::SetBase => "base",
+            Op::Added => "added",
+            Op::Removed => "removed",
+            Op::ReAdded => "re-added",
+        }
+    }
 }
 
 /// Provenance scope for a trace entry. Distinct from `config::Scope` —
@@ -73,11 +93,32 @@ pub enum Scope {
     Local,
 }
 
+impl Scope {
+    pub fn label(self) -> &'static str {
+        match self {
+            Scope::Implicit => "implicit",
+            Scope::User => "user",
+            Scope::Project => "project",
+            Scope::Local => "local",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Field {
     Skills,
     IncludeSkills,
     ExcludeSkills,
+}
+
+impl Field {
+    pub fn label(self) -> &'static str {
+        match self {
+            Field::Skills => "skills",
+            Field::IncludeSkills => "include_skills",
+            Field::ExcludeSkills => "exclude_skills",
+        }
+    }
 }
 
 pub fn resolve(

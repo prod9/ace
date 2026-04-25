@@ -9,7 +9,6 @@ pub enum Tier {
 }
 
 impl Tier {
-    #[allow(dead_code)] // wired in step 2 of the skills domain unification
     pub fn label(self) -> &'static str {
         match self {
             Tier::Curated => "curated",

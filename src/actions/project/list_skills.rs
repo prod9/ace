@@ -1,143 +1,74 @@
-//! Build and render the `ace skills` listing.
+//! Render the `ace skills` listing.
 //!
-//! Pure: takes a `Resolution` (from `state::resolver`) plus a name→tier map
-//! (from `state::discover`) and produces row data. Renderers turn rows into
-//! tab-separated tables or bare-name listings. The action wrapper does I/O.
+//! Walks `Skills<Resolved>` directly — no intermediate row struct. Default
+//! hides excluded; `show_excluded` flips that. Output sorted by name (the
+//! resolver emits skills in BTreeMap order, so the iterator is already sorted).
 
-use std::collections::HashMap;
 use std::fmt::Write;
 
-use crate::state::discover::Tier;
-use crate::state::resolver::{Decision, Entry, Field, Resolution, ResolvedSkill, Scope};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Active,
-    Excluded,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SkillRow {
-    pub name: String,
-    pub tier: Option<Tier>,
-    pub status: Status,
-    /// Scope+field of the last contribution (None only when no trace exists,
-    /// which doesn't happen in practice — every skill gets at least an Implicit base).
-    pub source: Option<(Scope, Field)>,
-    pub reason: String,
-}
-
-/// Build rows from a resolution. Default hides excluded; `show_excluded`
-/// includes them. Output sorted by name.
-pub fn build_rows(
-    resolution: &Resolution,
-    tiers: &HashMap<String, Tier>,
-    show_excluded: bool,
-) -> Vec<SkillRow> {
-    let mut rows: Vec<SkillRow> = resolution
-        .skills
-        .iter()
-        .filter(|s| show_excluded || s.decision == Decision::Included)
-        .map(|s| SkillRow {
-            name: s.name.clone(),
-            tier: tiers.get(&s.name).copied(),
-            status: status_of(s),
-            source: s.trace.last().map(|e| (e.scope, e.field)),
-            reason: reason_for(s),
-        })
-        .collect();
-    rows.sort_by(|a, b| a.name.cmp(&b.name));
-    rows
-}
-
-fn status_of(s: &ResolvedSkill) -> Status {
-    match s.decision {
-        Decision::Included => Status::Active,
-        Decision::Excluded => Status::Excluded,
-    }
-}
-
-/// Human-readable summary of the last trace contribution.
-fn reason_for(s: &ResolvedSkill) -> String {
-    let Some(last) = s.trace.last() else {
-        return String::new();
-    };
-    format_entry(last)
-}
-
-fn format_entry(e: &Entry) -> String {
-    let scope = scope_label(e.scope);
-    let field = field_label(e.field);
-    match e.scope {
-        Scope::Implicit => "implicit base (no skills filter)".to_string(),
-        _ => format!("{scope}: {field} \"{}\"", e.pattern),
-    }
-}
-
-fn scope_label(s: Scope) -> &'static str {
-    match s {
-        Scope::Implicit => "implicit",
-        Scope::User => "user",
-        Scope::Project => "project",
-        Scope::Local => "local",
-    }
-}
-
-fn field_label(f: Field) -> &'static str {
-    match f {
-        Field::Skills => "skills",
-        Field::IncludeSkills => "include_skills",
-        Field::ExcludeSkills => "exclude_skills",
-    }
-}
-
-fn tier_label(t: Option<Tier>) -> &'static str {
-    match t {
-        Some(Tier::Curated) => "curated",
-        Some(Tier::Experimental) => "experimental",
-        Some(Tier::System) => "system",
-        None => "-",
-    }
-}
-
-fn status_label(s: Status) -> &'static str {
-    match s {
-        Status::Active => "active",
-        Status::Excluded => "excluded",
-    }
-}
+use crate::state::resolver::{Entry, Scope};
+use crate::state::skills::{Resolved, Skill, Skills};
 
 /// Tab-separated table with header. Matches `ace paths` style for machine parsing.
-pub fn render_table(rows: &[SkillRow]) -> String {
+pub fn render_table(skills: &Skills<Resolved>, show_excluded: bool) -> String {
     let mut out = String::from("NAME\tTIER\tSTATUS\tREASON\n");
-    for r in rows {
+    for skill in visible(skills, show_excluded) {
         let _ = writeln!(
             out,
             "{}\t{}\t{}\t{}",
-            r.name,
-            tier_label(r.tier),
-            status_label(r.status),
-            r.reason,
+            skill.name,
+            skill.tier.label(),
+            skill.state.decision.label(),
+            reason_for(skill),
         );
     }
     out
 }
 
 /// Bare names, one per line. Scriptable.
-pub fn render_names(rows: &[SkillRow]) -> String {
+pub fn render_names(skills: &Skills<Resolved>, show_excluded: bool) -> String {
     let mut out = String::new();
-    for r in rows {
-        out.push_str(&r.name);
+    for skill in visible(skills, show_excluded) {
+        out.push_str(&skill.name);
         out.push('\n');
     }
     out
+}
+
+fn visible(
+    skills: &Skills<Resolved>,
+    show_excluded: bool,
+) -> impl Iterator<Item = &Skill<Resolved>> {
+    skills
+        .iter()
+        .filter(move |s| show_excluded || s.state.decision == crate::state::resolver::Decision::Included)
+}
+
+/// Human-readable summary of the last trace contribution. Used in the REASON
+/// column. `Implicit` gets a special-case phrasing; everything else reads as
+/// `<scope>: <field> "<pattern>"`.
+fn reason_for(skill: &Skill<Resolved>) -> String {
+    let Some(last) = skill.state.trace.last() else {
+        return String::new();
+    };
+    format_reason(last)
+}
+
+fn format_reason(e: &Entry) -> String {
+    match e.scope {
+        Scope::Implicit => "implicit base (no skills filter)".to_string(),
+        _ => format!("{}: {} \"{}\"", e.scope.label(), e.field.label(), e.pattern),
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::config::ace_toml::AceToml;
-    use crate::state::resolver::resolve;
+    use crate::config::tree::Tree;
+    use crate::state::discover::{DiscoveredSkill, Tier};
+    use crate::state::skills::Discovered;
+    use std::path::PathBuf;
 
     fn ace(skills: &[&str], inc: &[&str], exc: &[&str]) -> AceToml {
         AceToml {
@@ -148,128 +79,150 @@ mod tests {
         }
     }
 
-    fn names() -> Vec<String> {
-        ["a", "b", "rust-coding", "rust-fmt"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect()
+    fn tree(user: AceToml, project: AceToml, local: AceToml) -> Tree {
+        Tree {
+            ace_user: user,
+            ace_project: project,
+            ace_local: local,
+            school_backend: None,
+            school_toml: None,
+            school_paths: None,
+        }
     }
 
-    fn all_curated() -> HashMap<String, Tier> {
-        names().into_iter().map(|n| (n, Tier::Curated)).collect()
+    fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
+        DiscoveredSkill {
+            name: name.to_string(),
+            path: PathBuf::from(format!("/school/{name}")),
+            tier,
+        }
+    }
+
+    fn all_curated(names: &[&str]) -> Vec<DiscoveredSkill> {
+        names.iter().map(|n| discovered(n, Tier::Curated)).collect()
+    }
+
+    fn resolve(disc: Vec<DiscoveredSkill>, tree: &Tree) -> Skills<Resolved> {
+        Skills::<Discovered>::from_discovered(&disc).resolve(tree)
     }
 
     #[test]
     fn default_hides_excluded() {
-        let r = resolve(
-            &names(),
-            &AceToml::default(),
-            &ace(&["rust-*"], &[], &[]),
-            &AceToml::default(),
+        let s = resolve(
+            all_curated(&["a", "b", "rust-coding", "rust-fmt"]),
+            &tree(AceToml::default(), ace(&["rust-*"], &[], &[]), AceToml::default()),
         );
-        let rows = build_rows(&r, &all_curated(), false);
-        let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
+        let out = render_table(&s, false);
+        let lines: Vec<&str> = out.lines().skip(1).collect();
+        let names: Vec<&str> = lines.iter().map(|l| l.split('\t').next().unwrap()).collect();
         assert_eq!(names, vec!["rust-coding", "rust-fmt"]);
-        assert!(rows.iter().all(|r| r.status == Status::Active));
+        assert!(lines.iter().all(|l| l.contains("\tactive\t")));
     }
 
     #[test]
     fn show_all_includes_excluded() {
-        let r = resolve(
-            &names(),
-            &AceToml::default(),
-            &ace(&["rust-*"], &[], &[]),
-            &AceToml::default(),
+        let s = resolve(
+            all_curated(&["a", "b", "rust-coding", "rust-fmt"]),
+            &tree(AceToml::default(), ace(&["rust-*"], &[], &[]), AceToml::default()),
         );
-        let rows = build_rows(&r, &all_curated(), true);
-        assert_eq!(rows.len(), 4);
-        let excluded: Vec<&str> = rows
+        let out = render_table(&s, true);
+        let data_lines: Vec<&str> = out.lines().skip(1).collect();
+        assert_eq!(data_lines.len(), 4);
+        let excluded: Vec<&str> = data_lines
             .iter()
-            .filter(|r| r.status == Status::Excluded)
-            .map(|r| r.name.as_str())
+            .filter(|l| l.contains("\texcluded\t"))
+            .map(|l| l.split('\t').next().unwrap())
             .collect();
         assert_eq!(excluded, vec!["a", "b"]);
     }
 
     #[test]
     fn rows_sorted_by_name() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let rows = build_rows(&r, &all_curated(), false);
-        let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
-        let mut sorted = names.clone();
+        let s = resolve(
+            all_curated(&["rust-fmt", "a", "rust-coding", "b"]),
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let out = render_names(&s, false);
+        let lines: Vec<&str> = out.lines().collect();
+        let mut sorted = lines.clone();
         sorted.sort();
-        assert_eq!(names, sorted);
+        assert_eq!(lines, sorted);
     }
 
     #[test]
-    fn source_picks_last_contribution() {
-        // Project sets base, user adds via include — last contribution is User/IncludeSkills.
-        let r = resolve(
-            &names(),
-            &ace(&[], &["rust-*"], &[]),
-            &ace(&["a"], &[], &[]),
-            &AceToml::default(),
+    fn reason_picks_last_contribution() {
+        let s = resolve(
+            all_curated(&["a", "rust-coding", "rust-fmt"]),
+            &tree(
+                ace(&[], &["rust-*"], &[]),
+                ace(&["a"], &[], &[]),
+                AceToml::default(),
+            ),
         );
-        let rows = build_rows(&r, &all_curated(), false);
-        let rc = rows.iter().find(|r| r.name == "rust-coding").expect("rust-coding row");
-        assert_eq!(rc.source, Some((Scope::User, Field::IncludeSkills)));
-        assert!(rc.reason.contains("user"));
-        assert!(rc.reason.contains("include_skills"));
-        assert!(rc.reason.contains("rust-*"));
+        let out = render_table(&s, false);
+        let line = out.lines().find(|l| l.starts_with("rust-coding\t")).expect("rc");
+        assert!(line.contains("user"));
+        assert!(line.contains("include_skills"));
+        assert!(line.contains("rust-*"));
     }
 
     #[test]
     fn implicit_base_reason_when_all_empty() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let rows = build_rows(&r, &all_curated(), false);
-        let a = rows.iter().find(|r| r.name == "a").expect("a row");
-        assert_eq!(a.source, Some((Scope::Implicit, Field::Skills)));
-        assert!(a.reason.contains("implicit"));
+        let s = resolve(
+            all_curated(&["a"]),
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let out = render_table(&s, false);
+        let line = out.lines().find(|l| l.starts_with("a\t")).expect("a");
+        assert!(line.contains("implicit"));
     }
 
     #[test]
     fn tier_passthrough() {
-        let mut tiers = HashMap::new();
-        tiers.insert("a".to_string(), Tier::Curated);
-        tiers.insert("b".to_string(), Tier::Experimental);
-        tiers.insert("rust-coding".to_string(), Tier::System);
-        // rust-fmt intentionally absent → tier should be None
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let rows = build_rows(&r, &tiers, false);
-        let tier = |name: &str| {
-            rows.iter().find(|r| r.name == name).expect("row").tier
+        let disc = vec![
+            discovered("a", Tier::Curated),
+            discovered("b", Tier::Experimental),
+            discovered("c", Tier::System),
+        ];
+        let s = resolve(disc, &tree(AceToml::default(), AceToml::default(), AceToml::default()));
+        let out = render_table(&s, false);
+        let tier_for = |name: &str| -> String {
+            out.lines()
+                .find(|l| l.starts_with(&format!("{name}\t")))
+                .unwrap()
+                .split('\t')
+                .nth(1)
+                .unwrap()
+                .to_string()
         };
-        assert_eq!(tier("a"), Some(Tier::Curated));
-        assert_eq!(tier("b"), Some(Tier::Experimental));
-        assert_eq!(tier("rust-coding"), Some(Tier::System));
-        assert_eq!(tier("rust-fmt"), None);
+        assert_eq!(tier_for("a"), "curated");
+        assert_eq!(tier_for("b"), "experimental");
+        assert_eq!(tier_for("c"), "system");
     }
 
     #[test]
     fn excluded_row_reports_removal_reason() {
-        let r = resolve(
-            &names(),
-            &AceToml::default(),
-            &ace(&[], &[], &["a"]),
-            &AceToml::default(),
+        let s = resolve(
+            all_curated(&["a", "b"]),
+            &tree(AceToml::default(), ace(&[], &[], &["a"]), AceToml::default()),
         );
-        let rows = build_rows(&r, &all_curated(), true);
-        let a = rows.iter().find(|r| r.name == "a").expect("a row");
-        assert_eq!(a.status, Status::Excluded);
-        assert_eq!(a.source, Some((Scope::Project, Field::ExcludeSkills)));
-        assert!(a.reason.contains("project"));
-        assert!(a.reason.contains("exclude_skills"));
+        let out = render_table(&s, true);
+        let line = out.lines().find(|l| l.starts_with("a\t")).expect("a");
+        assert!(line.contains("\texcluded\t"));
+        assert!(line.contains("project"));
+        assert!(line.contains("exclude_skills"));
     }
 
     #[test]
-    fn render_table_has_header_and_one_line_per_row() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let rows = build_rows(&r, &all_curated(), false);
-        let out = render_table(&rows);
+    fn render_table_has_header_and_one_line_per_skill() {
+        let s = resolve(
+            all_curated(&["a", "b"]),
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let out = render_table(&s, false);
         let lines: Vec<&str> = out.lines().collect();
         assert_eq!(lines[0], "NAME\tTIER\tSTATUS\tREASON");
-        assert_eq!(lines.len(), 1 + rows.len());
-        // every data line has 4 tab-separated fields
+        assert_eq!(lines.len(), 3);
         for line in &lines[1..] {
             assert_eq!(line.split('\t').count(), 4, "line: {line:?}");
         }
@@ -277,16 +230,19 @@ mod tests {
 
     #[test]
     fn render_names_one_per_line() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let rows = build_rows(&r, &all_curated(), false);
-        let out = render_names(&rows);
+        let s = resolve(
+            all_curated(&["a", "b", "rust-coding"]),
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let out = render_names(&s, false);
         let lines: Vec<&str> = out.lines().collect();
-        assert_eq!(lines, vec!["a", "b", "rust-coding", "rust-fmt"]);
+        assert_eq!(lines, vec!["a", "b", "rust-coding"]);
     }
 
     #[test]
-    fn render_table_empty_rows_just_header() {
-        let out = render_table(&[]);
+    fn render_table_empty_just_header() {
+        let s = resolve(vec![], &tree(AceToml::default(), AceToml::default(), AceToml::default()));
+        let out = render_table(&s, false);
         assert_eq!(out, "NAME\tTIER\tSTATUS\tREASON\n");
     }
 }

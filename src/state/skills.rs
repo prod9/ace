@@ -8,9 +8,10 @@
 //! Wraps the existing `state::discover` + `state::resolver` pure logic
 //! during the migration. Old modules go away once all callers move here.
 
-// Public API is wired into production paths in step 2 (read paths) onward.
-// Module-level allow keeps the staged-integration warnings off the build until
-// then; removed when callers land.
+// `from_discovered` / `filter_tiers` / `matching` / `copy_into` / `names`
+// land in step 4 (pull_imports + add_import migration). `included` /
+// `diagnostics` land in step 3 (link_skills migration). Module-level allow
+// keeps staged-integration warnings off the build until then.
 #![allow(dead_code)]
 
 use std::collections::HashMap;

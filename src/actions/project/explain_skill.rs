@@ -1,27 +1,11 @@
 //! Detailed explanation of a single skill's resolution + provenance.
 //!
-//! Pure: takes a `Resolution`, a name→tier map, and a target name; returns
-//! the full trace formatted for human reading. Unknown names produce a list
-//! of near-matches (simple substring / prefix overlap, no Levenshtein).
+//! Pure: takes `&Skills<Resolved>` and a target name; either returns a
+//! reference to the matching `Skill<Resolved>` (caller renders) or an
+//! `ExplainError::NotFound` carrying near-match suggestions.
 
-use std::collections::HashMap;
-
-use crate::state::discover::Tier;
-use crate::state::resolver::{Decision, Entry, Field, Op, Resolution, ResolvedSkill, Scope};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ExplainOutput {
-    pub name: String,
-    pub tier: Option<Tier>,
-    pub status: Status,
-    pub trace_lines: Vec<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Status {
-    Active,
-    Excluded,
-}
+use crate::state::resolver::Entry;
+use crate::state::skills::{Resolved, Skill, Skills};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ExplainError {
@@ -37,55 +21,48 @@ fn format_near(near: &[String]) -> String {
     }
 }
 
-pub fn build(
-    resolution: &Resolution,
-    tiers: &HashMap<String, Tier>,
+pub fn find_or_suggest<'a>(
+    skills: &'a Skills<Resolved>,
     name: &str,
-) -> Result<ExplainOutput, ExplainError> {
-    let Some(skill) = resolution.skills.iter().find(|s| s.name == name) else {
-        let near = near_matches(name, &resolution.skills);
-        return Err(ExplainError::NotFound { name: name.to_string(), near });
-    };
-
-    Ok(ExplainOutput {
-        name: skill.name.clone(),
-        tier: tiers.get(&skill.name).copied(),
-        status: status_of(skill),
-        trace_lines: skill.trace.iter().map(format_entry).collect(),
+) -> Result<&'a Skill<Resolved>, ExplainError> {
+    if let Some(skill) = skills.find(name) {
+        return Ok(skill);
+    }
+    Err(ExplainError::NotFound {
+        name: name.to_string(),
+        near: near_matches(name, skills),
     })
 }
 
-fn status_of(s: &ResolvedSkill) -> Status {
-    match s.decision {
-        Decision::Included => Status::Active,
-        Decision::Excluded => Status::Excluded,
+/// Render a single resolved skill's explanation block.
+pub fn render(skill: &Skill<Resolved>) -> String {
+    let mut s = format!(
+        "{} ({})\n  status: {}\n  trace:\n",
+        skill.name,
+        skill.tier.label(),
+        skill.state.decision.label(),
+    );
+    for entry in &skill.state.trace {
+        s.push_str("    ");
+        s.push_str(&format_trace_line(entry));
+        s.push('\n');
     }
+    s
 }
 
-fn format_entry(e: &Entry) -> String {
-    let op = match e.op {
-        Op::SetBase => "base",
-        Op::Added => "added",
-        Op::Removed => "removed",
-        Op::ReAdded => "re-added",
-    };
-    let scope = match e.scope {
-        Scope::Implicit => "implicit",
-        Scope::User => "user",
-        Scope::Project => "project",
-        Scope::Local => "local",
-    };
-    let field = match e.field {
-        Field::Skills => "skills",
-        Field::IncludeSkills => "include_skills",
-        Field::ExcludeSkills => "exclude_skills",
-    };
-    format!("{op:>9}  {scope}: {field} \"{}\"", e.pattern)
+fn format_trace_line(e: &Entry) -> String {
+    format!(
+        "{:>9}  {}: {} \"{}\"",
+        e.op.label(),
+        e.scope.label(),
+        e.field.label(),
+        e.pattern,
+    )
 }
 
 /// Up to 5 names with at least 3-char overlap with the query. Cheap heuristic;
 /// good enough for "did you mean" prompts without pulling in a fuzzy crate.
-fn near_matches(query: &str, skills: &[ResolvedSkill]) -> Vec<String> {
+fn near_matches(query: &str, skills: &Skills<Resolved>) -> Vec<String> {
     let q = query.to_lowercase();
     let mut scored: Vec<(usize, &str)> = skills
         .iter()
@@ -127,7 +104,11 @@ fn overlap_score(q: &str, name: &str) -> usize {
 mod tests {
     use super::*;
     use crate::config::ace_toml::AceToml;
-    use crate::state::resolver::resolve;
+    use crate::config::tree::Tree;
+    use crate::state::discover::{DiscoveredSkill, Tier};
+    use crate::state::resolver::Decision;
+    use crate::state::skills::Discovered;
+    use std::path::PathBuf;
 
     fn ace(skills: &[&str], inc: &[&str], exc: &[&str]) -> AceToml {
         AceToml {
@@ -138,71 +119,89 @@ mod tests {
         }
     }
 
-    fn names() -> Vec<String> {
-        ["a", "b", "rust-coding", "rust-fmt", "issue-tracker"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect()
-    }
-
-    fn tiers() -> HashMap<String, Tier> {
-        let mut m = HashMap::new();
-        for n in names() {
-            m.insert(n, Tier::Curated);
+    fn tree(user: AceToml, project: AceToml, local: AceToml) -> Tree {
+        Tree {
+            ace_user: user,
+            ace_project: project,
+            ace_local: local,
+            school_backend: None,
+            school_toml: None,
+            school_paths: None,
         }
-        m
+    }
+
+    fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
+        DiscoveredSkill {
+            name: name.to_string(),
+            path: PathBuf::from(format!("/school/{name}")),
+            tier,
+        }
+    }
+
+    fn resolve(names: &[&str], t: &Tree) -> Skills<Resolved> {
+        let disc: Vec<DiscoveredSkill> = names.iter().map(|n| discovered(n, Tier::Curated)).collect();
+        Skills::<Discovered>::from_discovered(&disc).resolve(t)
     }
 
     #[test]
-    fn explains_active_skill_with_base_only() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let out = build(&r, &tiers(), "rust-coding").expect("known skill");
-        assert_eq!(out.name, "rust-coding");
-        assert_eq!(out.status, Status::Active);
-        assert_eq!(out.tier, Some(Tier::Curated));
-        assert_eq!(out.trace_lines.len(), 1);
-        assert!(out.trace_lines[0].contains("base"));
-        assert!(out.trace_lines[0].contains("implicit"));
-    }
-
-    #[test]
-    fn explains_excluded_skill() {
-        let r = resolve(
-            &names(),
-            &AceToml::default(),
-            &ace(&[], &[], &["rust-fmt"]),
-            &AceToml::default(),
+    fn finds_active_skill_with_base_only() {
+        let s = resolve(
+            &["a", "rust-coding"],
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
         );
-        let out = build(&r, &tiers(), "rust-fmt").expect("known skill");
-        assert_eq!(out.status, Status::Excluded);
-        assert_eq!(out.trace_lines.len(), 2);
-        assert!(out.trace_lines[0].contains("base"));
-        assert!(out.trace_lines[1].contains("removed"));
-        assert!(out.trace_lines[1].contains("project"));
-        assert!(out.trace_lines[1].contains("exclude_skills"));
-        assert!(out.trace_lines[1].contains("rust-fmt"));
+        let skill = find_or_suggest(&s, "rust-coding").expect("known");
+        assert_eq!(skill.name, "rust-coding");
+        assert_eq!(skill.state.decision, Decision::Included);
+        assert_eq!(skill.tier, Tier::Curated);
+        assert_eq!(skill.state.trace.len(), 1);
+
+        let out = render(skill);
+        assert!(out.contains("active"));
+        assert!(out.contains("base"));
+        assert!(out.contains("implicit"));
     }
 
     #[test]
-    fn explains_readded_skill_shows_full_chain() {
-        let r = resolve(
-            &names(),
-            &ace(&[], &["rust-fmt"], &[]),
-            &ace(&["rust-*"], &[], &["rust-fmt"]),
-            &AceToml::default(),
+    fn renders_excluded_skill() {
+        let s = resolve(
+            &["rust-fmt"],
+            &tree(AceToml::default(), ace(&[], &[], &["rust-fmt"]), AceToml::default()),
         );
-        let out = build(&r, &tiers(), "rust-fmt").expect("known skill");
-        assert_eq!(out.status, Status::Active);
-        assert_eq!(out.trace_lines.len(), 3);
-        assert!(out.trace_lines[0].contains("base"));
-        assert!(out.trace_lines[1].contains("removed"));
-        assert!(out.trace_lines[2].contains("re-added"));
+        let skill = find_or_suggest(&s, "rust-fmt").expect("known");
+        assert_eq!(skill.state.decision, Decision::Excluded);
+        let out = render(skill);
+        assert!(out.contains("excluded"));
+        assert!(out.contains("removed"));
+        assert!(out.contains("project"));
+        assert!(out.contains("exclude_skills"));
     }
 
     #[test]
-    fn unknown_skill_returns_not_found_with_near_matches() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let err = build(&r, &tiers(), "rust-cod").unwrap_err();
+    fn renders_readded_full_chain() {
+        let s = resolve(
+            &["rust-fmt", "rust-coding"],
+            &tree(
+                ace(&[], &["rust-fmt"], &[]),
+                ace(&["rust-*"], &[], &["rust-fmt"]),
+                AceToml::default(),
+            ),
+        );
+        let skill = find_or_suggest(&s, "rust-fmt").expect("known");
+        assert_eq!(skill.state.decision, Decision::Included);
+        assert_eq!(skill.state.trace.len(), 3);
+        let out = render(skill);
+        assert!(out.contains("base"));
+        assert!(out.contains("removed"));
+        assert!(out.contains("re-added"));
+    }
+
+    #[test]
+    fn unknown_skill_returns_not_found_with_near() {
+        let s = resolve(
+            &["a", "b", "rust-coding", "rust-fmt"],
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let err = find_or_suggest(&s, "rust-cod").unwrap_err();
         match err {
             ExplainError::NotFound { name, near } => {
                 assert_eq!(name, "rust-cod");
@@ -213,8 +212,11 @@ mod tests {
 
     #[test]
     fn unknown_skill_with_no_overlap_returns_empty_near() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let err = build(&r, &tiers(), "xz").unwrap_err();
+        let s = resolve(
+            &["rust-coding"],
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let err = find_or_suggest(&s, "xz").unwrap_err();
         match err {
             ExplainError::NotFound { near, .. } => assert!(near.is_empty(), "got: {near:?}"),
         }
@@ -223,32 +225,16 @@ mod tests {
     #[test]
     fn near_matches_capped_at_five() {
         let many: Vec<String> = (0..20).map(|i| format!("skill-{i:02}")).collect();
-        let r = resolve(&many, &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let mut t = HashMap::new();
-        for n in &many {
-            t.insert(n.clone(), Tier::Curated);
-        }
-        let err = build(&r, &t, "skill-").unwrap_err();
+        let many_refs: Vec<&str> = many.iter().map(|s| s.as_str()).collect();
+        let s = resolve(
+            &many_refs,
+            &tree(AceToml::default(), AceToml::default(), AceToml::default()),
+        );
+        let err = find_or_suggest(&s, "skill-").unwrap_err();
         match err {
             ExplainError::NotFound { near, .. } => {
                 assert_eq!(near.len(), 5, "should cap near matches; got {}", near.len());
             }
         }
-    }
-
-    #[test]
-    fn tier_passthrough_when_present() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let mut t = HashMap::new();
-        t.insert("rust-coding".to_string(), Tier::System);
-        let out = build(&r, &t, "rust-coding").expect("known skill");
-        assert_eq!(out.tier, Some(Tier::System));
-    }
-
-    #[test]
-    fn tier_none_when_absent_from_map() {
-        let r = resolve(&names(), &AceToml::default(), &AceToml::default(), &AceToml::default());
-        let out = build(&r, &HashMap::new(), "rust-coding").expect("known skill");
-        assert_eq!(out.tier, None);
     }
 }

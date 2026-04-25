@@ -1,14 +1,11 @@
-use std::collections::HashMap;
-
 use clap::Subcommand;
 
 use crate::ace::Ace;
 use crate::actions::project::edit_skills_config::{EditSkillsConfig, Op};
-use crate::actions::project::list_skills::{build_rows, render_names, render_table};
+use crate::actions::project::list_skills::{render_names, render_table};
 use crate::config::Scope;
 use crate::glob;
-use crate::state::discover::{Tier, discover_skills};
-use crate::state::resolver::resolve;
+use crate::state::skills::Skills;
 
 use super::CmdError;
 
@@ -60,32 +57,16 @@ fn run_inner(
 
 fn list(ace: &mut Ace, show_all: bool, names_only: bool) -> Result<(), CmdError> {
     ace.require_state()?;
-    let (resolution, tiers) = collect(ace)?;
-    let rows = build_rows(&resolution, &tiers, show_all);
+    let school_root = ace.require_school()?.root.clone();
+    let skills = Skills::discover(&school_root)?.resolve(&ace.state().config);
 
     let output = if names_only {
-        render_names(&rows)
+        render_names(&skills, show_all)
     } else {
-        render_table(&rows)
+        render_table(&skills, show_all)
     };
     ace.data(&output);
     Ok(())
-}
-
-fn collect(ace: &mut Ace) -> Result<(crate::state::resolver::Resolution, HashMap<String, Tier>), CmdError> {
-    let school_root = ace.require_school()?.root.clone();
-    let state = ace.state();
-    let tree = &state.config;
-
-    let discovered = discover_skills(&school_root)?;
-    let names: Vec<String> = discovered.iter().map(|d| d.name.clone()).collect();
-    let tiers: HashMap<String, Tier> = discovered
-        .iter()
-        .map(|d| (d.name.clone(), d.tier))
-        .collect();
-
-    let resolution = resolve(&names, &tree.ace_user, &tree.ace_project, &tree.ace_local);
-    Ok((resolution, tiers))
 }
 
 fn mutate<F>(ace: &mut Ace, patterns: Vec<String>, build_op: F) -> Result<(), CmdError>
