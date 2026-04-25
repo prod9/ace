@@ -164,6 +164,23 @@ Glob patterns use <span class="body-fg">*</span> as a wildcard (no <span class="
 Foreign entries in <span class="body-fg">&lt;backend&gt;/skills/</span> (real files or symlinks pointing outside the school clone) are left alone unless their name collides with a desired skill, in which case the link is skipped with a warning.
 </p>
 
+<h4>// CLI</h4>
+
+<div class="code-block"><pre><span class="key">ace skills</span> [--all] [--names]              <span class="comment"># list resolved skills</span>
+<span class="key">ace skills include</span> &lt;pattern&gt;...           <span class="comment"># append to include_skills</span>
+<span class="key">ace skills exclude</span> &lt;pattern&gt;...           <span class="comment"># append to exclude_skills</span>
+<span class="key">ace skills reset</span> [--include] [--exclude]  <span class="comment"># set list(s) back to empty</span>
+<span class="key">ace explain</span> &lt;name&gt;                        <span class="comment"># provenance + trace for one skill</span></pre></div>
+
+<p>
+Mutating verbs default to project scope; pass <span class="body-fg">--user</span>
+or <span class="body-fg">--local</span> to target another layer. There is no
+<span class="body-fg">ace skills set</span> verb &mdash; the
+<span class="body-fg">skills</span> whitelist is config-only; edit
+<span class="body-fg">ace.toml</span> directly. The CLI exposes the union-merge
+fields because those are what users typically tweak per session.
+</p>
+
 <h2>// user-global ace.toml</h2>
 
 <p>

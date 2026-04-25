@@ -59,6 +59,10 @@ with `Decision::Included` get linked into `<backend>/skills/`.
 When all three fields are unset across all scopes, every discovered skill is linked
 (implicit-all base). This is the default for fresh setups.
 
+`ace skills` lists the resolved set with provenance; `ace skills include/exclude/reset`
+edit the union-merge fields; `ace explain <name>` prints the per-step trace for a
+single skill. See [configuration.md → CLI](configuration.md#cli).
+
 ## Symlinks Over Copies
 
 Sync into projects using symlinks, not file copies. Multiple projects sharing the same school

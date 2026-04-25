@@ -101,8 +101,24 @@ Detected during resolution against the discovered skill set:
   local scope narrowed what the school would have shipped. Suppressed when
   project also contributes (the project author's curation is intentional).
 
-Use `ace skills list` for the resolved set with provenance, and
-`ace explain <name>` for a single-skill resolution trace.
+### CLI
+
+```
+ace skills [--all] [--names]              # list resolved skills (default: hide excluded)
+ace skills include <pattern>...           # append to include_skills
+ace skills exclude <pattern>...           # append to exclude_skills
+ace skills reset [--include] [--exclude]  # set list(s) back to empty; bare = both
+ace explain <name>                        # provenance + per-step trace for one skill
+```
+
+`include`/`exclude`/`reset` write to project scope by default; pass the global
+`--user` or `--local` flag to target another layer. Patterns are validated up
+front (`*` only — `**`, `?`, and `[...]` are rejected).
+
+There is intentionally no `ace skills set <pattern>...` verb. The `skills`
+field (the last-wins whitelist) is config-only — edit `ace.toml` directly.
+The CLI exposes the union-merge fields (`include_skills`, `exclude_skills`)
+because those are the ones a user typically tweaks per session.
 
 ## Scope Flags
 

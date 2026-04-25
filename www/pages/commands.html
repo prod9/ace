@@ -54,6 +54,26 @@
     <td>ace diff</td>
     <td>Show uncommitted changes in the school cache</td>
   </tr>
+  <tr>
+    <td>ace skills [--all] [--names]</td>
+    <td>List resolved skills with tier and status. <span class="muted">--all</span> includes excluded skills; <span class="muted">--names</span> prints bare names, one per line.</td>
+  </tr>
+  <tr>
+    <td>ace skills include &lt;pattern&gt;...</td>
+    <td>Append patterns to <span class="muted">include_skills</span>. Defaults to project scope; pass <span class="muted">--user</span> or <span class="muted">--local</span> to target another layer.</td>
+  </tr>
+  <tr>
+    <td>ace skills exclude &lt;pattern&gt;...</td>
+    <td>Append patterns to <span class="muted">exclude_skills</span>. Same scope flags as <span class="muted">include</span>.</td>
+  </tr>
+  <tr>
+    <td>ace skills reset [--include] [--exclude]</td>
+    <td>Reset <span class="muted">include_skills</span> and/or <span class="muted">exclude_skills</span> to empty. Bare <span class="muted">reset</span> clears both.</td>
+  </tr>
+  <tr>
+    <td>ace explain &lt;name&gt;</td>
+    <td>Show provenance and per-step trace for one skill (which scope/field decided its inclusion).</td>
+  </tr>
 </table>
 
 <h2>// school management</h2>
