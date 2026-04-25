@@ -26,12 +26,12 @@ pub enum Command {
         #[arg(required = true)]
         patterns: Vec<String>,
     },
-    /// Drop entries from include_skills and/or exclude_skills
-    Clear {
-        /// Drop only include_skills
+    /// Reset include_skills and/or exclude_skills back to empty
+    Reset {
+        /// Reset only include_skills
         #[arg(long)]
         include: bool,
-        /// Drop only exclude_skills
+        /// Reset only exclude_skills
         #[arg(long)]
         exclude: bool,
     },
@@ -52,8 +52,8 @@ fn run_inner(
         None => list(ace, show_all, names_only),
         Some(Command::Include { patterns }) => mutate(ace, validate_all(&patterns)?, Op::Include),
         Some(Command::Exclude { patterns }) => mutate(ace, validate_all(&patterns)?, Op::Exclude),
-        Some(Command::Clear { include, exclude }) => {
-            mutate_op(ace, Op::Clear { include, exclude })
+        Some(Command::Reset { include, exclude }) => {
+            mutate_op(ace, Op::Reset { include, exclude })
         }
     }
 }
@@ -114,9 +114,9 @@ fn describe(op: &Op) -> String {
     match op {
         Op::Include(p) => format!("included {}", p.join(", ")),
         Op::Exclude(p) => format!("excluded {}", p.join(", ")),
-        Op::Clear { include: true, exclude: false } => "cleared include_skills".to_string(),
-        Op::Clear { include: false, exclude: true } => "cleared exclude_skills".to_string(),
-        Op::Clear { .. } => "cleared include_skills and exclude_skills".to_string(),
+        Op::Reset { include: true, exclude: false } => "reset include_skills".to_string(),
+        Op::Reset { include: false, exclude: true } => "reset exclude_skills".to_string(),
+        Op::Reset { .. } => "reset include_skills and exclude_skills".to_string(),
     }
 }
 

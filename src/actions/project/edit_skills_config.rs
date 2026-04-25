@@ -16,8 +16,8 @@ pub enum Op {
     Include(Vec<String>),
     /// Append patterns to `exclude_skills`. Silent no-op on duplicates within scope.
     Exclude(Vec<String>),
-    /// Drop entries. If both flags false, treat as both true (clear all).
-    Clear { include: bool, exclude: bool },
+    /// Reset entries. If both flags false, treat as both true (reset all).
+    Reset { include: bool, exclude: bool },
 }
 
 pub struct EditSkillsConfig {
@@ -44,13 +44,13 @@ pub fn apply(toml: &mut AceToml, op: &Op) {
     match op {
         Op::Include(patterns) => append_dedup(&mut toml.include_skills, patterns),
         Op::Exclude(patterns) => append_dedup(&mut toml.exclude_skills, patterns),
-        Op::Clear { include, exclude } => {
-            // Bare `clear` (no flags) = clear both.
-            let clear_both = !include && !exclude;
-            if *include || clear_both {
+        Op::Reset { include, exclude } => {
+            // Bare `reset` (no flags) = reset both.
+            let reset_both = !include && !exclude;
+            if *include || reset_both {
                 toml.include_skills.clear();
             }
-            if *exclude || clear_both {
+            if *exclude || reset_both {
                 toml.exclude_skills.clear();
             }
         }
@@ -146,62 +146,62 @@ mod tests {
     }
 
     #[test]
-    fn clear_include_only_drops_include() {
+    fn reset_include_only_drops_include() {
         let mut t = AceToml {
             include_skills: vs(&["a", "b"]),
             exclude_skills: vs(&["c"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Clear { include: true, exclude: false });
+        apply(&mut t, &Op::Reset { include: true, exclude: false });
         assert!(t.include_skills.is_empty());
         assert_eq!(t.exclude_skills, vs(&["c"]));
     }
 
     #[test]
-    fn clear_exclude_only_drops_exclude() {
+    fn reset_exclude_only_drops_exclude() {
         let mut t = AceToml {
             include_skills: vs(&["a"]),
             exclude_skills: vs(&["b", "c"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Clear { include: false, exclude: true });
+        apply(&mut t, &Op::Reset { include: false, exclude: true });
         assert_eq!(t.include_skills, vs(&["a"]));
         assert!(t.exclude_skills.is_empty());
     }
 
     #[test]
-    fn clear_both_drops_both_when_flags_explicit() {
+    fn reset_both_drops_both_when_flags_explicit() {
         let mut t = AceToml {
             include_skills: vs(&["a"]),
             exclude_skills: vs(&["b"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Clear { include: true, exclude: true });
+        apply(&mut t, &Op::Reset { include: true, exclude: true });
         assert!(t.include_skills.is_empty());
         assert!(t.exclude_skills.is_empty());
     }
 
     #[test]
-    fn clear_no_flags_drops_both_lists() {
+    fn reset_no_flags_drops_both_lists() {
         let mut t = AceToml {
             include_skills: vs(&["a"]),
             exclude_skills: vs(&["b"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Clear { include: false, exclude: false });
+        apply(&mut t, &Op::Reset { include: false, exclude: false });
         assert!(t.include_skills.is_empty());
         assert!(t.exclude_skills.is_empty());
     }
 
     #[test]
-    fn clear_never_touches_skills_field() {
+    fn reset_never_touches_skills_field() {
         let mut t = AceToml {
             skills: vs(&["allowlist"]),
             include_skills: vs(&["a"]),
             exclude_skills: vs(&["b"]),
             ..AceToml::default()
         };
-        apply(&mut t, &Op::Clear { include: false, exclude: false });
+        apply(&mut t, &Op::Reset { include: false, exclude: false });
         assert_eq!(t.skills, vs(&["allowlist"]));
     }
 

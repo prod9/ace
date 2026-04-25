@@ -104,27 +104,27 @@ fn skills_include_dedups_within_scope() {
 }
 
 #[test]
-fn skills_clear_drops_both_lists() {
+fn skills_reset_drops_both_lists() {
     let env = TestEnv::new();
     setup_school_with_skills(&env, "ts8", &["alpha", "beta"]);
 
     env.ace().args(["skills", "include", "alpha"]).assert().success();
     env.ace().args(["skills", "exclude", "beta"]).assert().success();
-    env.ace().args(["skills", "clear"]).assert().success();
+    env.ace().args(["skills", "reset"]).assert().success();
 
     let toml = std::fs::read_to_string(env.path("ace.toml")).expect("read ace.toml");
-    assert!(!toml.contains("include_skills"), "include_skills should be cleared:\n{toml}");
-    assert!(!toml.contains("exclude_skills"), "exclude_skills should be cleared:\n{toml}");
+    assert!(!toml.contains("include_skills"), "include_skills should be reset:\n{toml}");
+    assert!(!toml.contains("exclude_skills"), "exclude_skills should be reset:\n{toml}");
 }
 
 #[test]
-fn skills_clear_include_only() {
+fn skills_reset_include_only() {
     let env = TestEnv::new();
     setup_school_with_skills(&env, "ts9", &["alpha", "beta"]);
 
     env.ace().args(["skills", "include", "alpha"]).assert().success();
     env.ace().args(["skills", "exclude", "beta"]).assert().success();
-    env.ace().args(["skills", "clear", "--include"]).assert().success();
+    env.ace().args(["skills", "reset", "--include"]).assert().success();
 
     let toml = std::fs::read_to_string(env.path("ace.toml")).expect("read ace.toml");
     assert!(!toml.contains("include_skills"));
