@@ -8,7 +8,7 @@
 //! ACE-managed predicate: a symlink whose target resolves textually inside
 //! the school clone's `skills/` subtree. No marker files.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -16,8 +16,7 @@ use std::path::{Path, PathBuf};
 use crate::ace::Ace;
 use crate::actions::project::link::LinkResult;
 use crate::config::tree::Tree;
-use crate::state::discover::discover_skills;
-use crate::state::resolver::{self, Decision, Resolution};
+use crate::state::skills::{Resolved, Skills};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesiredLink {
@@ -134,45 +133,27 @@ pub enum ClassifyInput {
     Other,
 }
 
-/// Discover + resolve + map back to `(name, path)` pairs ready for linking.
+/// Discover + resolve + map included skills to `(name, path)` pairs.
 ///
-/// Walks the school's `skills/` tree once for discovery, then runs the
-/// resolver against the three config layers, then joins included skills
-/// back to their on-disk paths.
+/// Walks the school's `skills/` tree, resolves against the three config
+/// layers, and emits one `DesiredLink` per included skill. Path comes
+/// straight from `Skill<Resolved>` — no separate name→path join.
 pub fn prepare(school_root: &Path, tree: &Tree) -> io::Result<PreparedSkills> {
-    let discovered = discover_skills(school_root)?;
-    let names: Vec<String> = discovered.iter().map(|d| d.name.clone()).collect();
-    let path_by_name: HashMap<String, PathBuf> = discovered
-        .into_iter()
-        .map(|d| (d.name, d.path))
-        .collect();
-
-    let resolution = resolver::resolve(
-        &names,
-        &tree.ace_user,
-        &tree.ace_project,
-        &tree.ace_local,
-    );
-
-    let desired: Vec<DesiredLink> = resolution
-        .skills
-        .iter()
-        .filter(|s| s.decision == Decision::Included)
-        .filter_map(|s| {
-            path_by_name.get(&s.name).map(|target| DesiredLink {
-                name: s.name.clone(),
-                target: target.clone(),
-            })
+    let skills = Skills::discover(school_root)?.resolve(tree);
+    let desired = skills
+        .included()
+        .map(|s| DesiredLink {
+            name: s.name.clone(),
+            target: s.path.clone(),
         })
         .collect();
-
-    Ok(PreparedSkills { desired, resolution })
+    Ok(PreparedSkills { desired, skills })
 }
 
 #[derive(Debug)]
 pub struct PreparedSkills {
     pub desired: Vec<DesiredLink>,
-    pub resolution: Resolution,
+    pub skills: Skills<Resolved>,
 }
 
 /// Reconcile per-skill symlinks under `project_skills_dir`.
@@ -225,13 +206,14 @@ pub fn emit_warnings(ace: &mut Ace, prepared: &PreparedSkills, link_result: &Lin
     for warning in &link_result.skill_warnings {
         ace.warn(warning);
     }
-    for unknown in &prepared.resolution.unknown_patterns {
+    let diagnostics = prepared.skills.diagnostics();
+    for unknown in &diagnostics.unknown_patterns {
         ace.warn(&format!(
             "skill pattern matched no skill: {} (in {:?} {:?})",
             unknown.pattern, unknown.scope, unknown.field
         ));
     }
-    for collision in &prepared.resolution.collisions {
+    for collision in &diagnostics.collisions {
         ace.warn(&format!(
             "skill {} appears in both include_skills and exclude_skills at {:?} scope",
             collision.skill, collision.scope
