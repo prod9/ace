@@ -1,5 +1,6 @@
 mod config;
 mod diff;
+mod explain;
 mod maverick;
 mod fmt;
 mod import;
@@ -9,6 +10,7 @@ mod paths;
 mod pull;
 mod school;
 mod setup;
+mod skills;
 mod upgrade;
 mod yolo;
 
@@ -125,6 +127,22 @@ enum Command {
         #[command(subcommand)]
         command: school::Command,
     },
+    /// List or curate the skills active in this repo
+    Skills {
+        #[command(subcommand)]
+        command: Option<skills::Command>,
+        /// Show excluded skills too (default: hide)
+        #[arg(long)]
+        all: bool,
+        /// Print bare skill names, one per line
+        #[arg(long)]
+        names: bool,
+    },
+    /// Explain how one skill is resolved (provenance + trace)
+    Explain {
+        /// Skill name to inspect
+        name: String,
+    },
     /// Fetch latest school changes (force, ignoring cooldown)
     Pull,
     /// Start a fresh session (skip auto-resume)
@@ -217,6 +235,8 @@ pub fn run(ace: &mut Ace, cli: Cli) {
         Command::Paths { key } => paths::run(ace, key.as_deref()),
         Command::Mcp { command } => mcp::run(ace, command),
         Command::School { command } => school::run(ace, command),
+        Command::Skills { command, all, names } => skills::run(ace, command, all, names),
+        Command::Explain { name } => explain::run(ace, &name),
         Command::Pull => pull::run(ace),
         Command::New => main::run(ace, cli.backend_args, false),
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),

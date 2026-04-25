@@ -15,6 +15,38 @@ pub fn is_glob(pattern: &str) -> bool {
     pattern.contains('*')
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum GlobError {
+    #[error("`**` is not supported; use a single `*`")]
+    DoubleStar,
+    #[error("`?` is not a supported wildcard")]
+    Question,
+    #[error("character classes (`[...]`) are not supported")]
+    CharClass,
+    #[error("pattern is empty")]
+    Empty,
+}
+
+/// Reject patterns whose syntax goes beyond what `glob_match` supports.
+///
+/// Accepts only literals and `*`. Rejects `**`, `?`, and `[...]` so CLI
+/// users see a clear error at entry instead of a silent zero-match later.
+pub fn validate(pattern: &str) -> Result<(), GlobError> {
+    if pattern.is_empty() {
+        return Err(GlobError::Empty);
+    }
+    if pattern.contains("**") {
+        return Err(GlobError::DoubleStar);
+    }
+    if pattern.contains('?') {
+        return Err(GlobError::Question);
+    }
+    if pattern.contains('[') || pattern.contains(']') {
+        return Err(GlobError::CharClass);
+    }
+    Ok(())
+}
+
 /// Match `name` against a glob `pattern`.
 ///
 /// Splits the pattern on `*` and checks that all literal parts appear
@@ -118,5 +150,39 @@ mod tests {
     fn no_match_empty_name_with_literal() {
         assert!(!glob_match("abc", ""));
         assert!(!glob_match("*-coding", ""));
+    }
+
+    #[test]
+    fn validate_accepts_literals_and_star() {
+        assert_eq!(validate("rust-coding"), Ok(()));
+        assert_eq!(validate("*"), Ok(()));
+        assert_eq!(validate("frontend-*"), Ok(()));
+        assert_eq!(validate("*-coding"), Ok(()));
+        assert_eq!(validate("*-design-*"), Ok(()));
+    }
+
+    #[test]
+    fn validate_rejects_double_star() {
+        assert_eq!(validate("**"), Err(GlobError::DoubleStar));
+        assert_eq!(validate("a**b"), Err(GlobError::DoubleStar));
+        assert_eq!(validate("**/foo"), Err(GlobError::DoubleStar));
+    }
+
+    #[test]
+    fn validate_rejects_question_mark() {
+        assert_eq!(validate("foo?"), Err(GlobError::Question));
+        assert_eq!(validate("?bar"), Err(GlobError::Question));
+    }
+
+    #[test]
+    fn validate_rejects_char_classes() {
+        assert_eq!(validate("[abc]"), Err(GlobError::CharClass));
+        assert_eq!(validate("foo[0-9]"), Err(GlobError::CharClass));
+        assert_eq!(validate("foo]"), Err(GlobError::CharClass));
+    }
+
+    #[test]
+    fn validate_rejects_empty() {
+        assert_eq!(validate(""), Err(GlobError::Empty));
     }
 }

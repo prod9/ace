@@ -1,6 +1,9 @@
 pub mod clone;
+pub mod edit_skills_config;
+pub mod explain_skill;
 pub mod link;
 pub mod link_skills;
+pub mod list_skills;
 pub mod prepare;
 pub mod pull;
 pub mod register_mcp;
