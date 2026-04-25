@@ -44,16 +44,14 @@ pub fn apply(toml: &mut AceToml, op: &Op) {
     match op {
         Op::Include(patterns) => append_dedup(&mut toml.include_skills, patterns),
         Op::Exclude(patterns) => append_dedup(&mut toml.exclude_skills, patterns),
-        Op::Reset { include, exclude } => {
-            // Bare `reset` (no flags) = reset both.
-            let reset_both = !include && !exclude;
-            if *include || reset_both {
-                toml.include_skills.clear();
-            }
-            if *exclude || reset_both {
-                toml.exclude_skills.clear();
-            }
+        // Bare `reset` (no flags) clears both, matching the `--include --exclude` case.
+        Op::Reset { include: false, exclude: false }
+        | Op::Reset { include: true, exclude: true } => {
+            toml.include_skills.clear();
+            toml.exclude_skills.clear();
         }
+        Op::Reset { include: true, exclude: false } => toml.include_skills.clear(),
+        Op::Reset { include: false, exclude: true } => toml.exclude_skills.clear(),
     }
 }
 
