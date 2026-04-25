@@ -1,7 +1,6 @@
 pub mod discover;
-pub mod resolver;
+mod resolver;
 pub mod school;
-pub mod skill_set;
 pub mod skills;
 
 pub use school::School;

@@ -4,15 +4,6 @@
 //! adds resolver verdict + provenance trace once `resolve()` runs.
 //! `Skills<S>` is the collection plus, when resolved, the resolution-wide
 //! diagnostics (unknown patterns + collisions).
-//!
-//! Wraps the existing `state::discover` + `state::resolver` pure logic
-//! during the migration. Old modules go away once all callers move here.
-
-// `from_discovered` / `filter_tiers` / `matching` / `copy_into` / `names`
-// land in step 4 (pull_imports + add_import migration). `included` /
-// `diagnostics` land in step 3 (link_skills migration). Module-level allow
-// keeps staged-integration warnings off the build until then.
-#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::io;
@@ -20,8 +11,22 @@ use std::path::{Path, PathBuf};
 
 use crate::config::tree::Tree;
 use crate::state::discover::{self, DiscoveredSkill, Tier};
-use crate::state::resolver::{self, Collision, Decision, Entry, UnknownPattern};
-use crate::state::skill_set::{ChangeKind, SkillChange};
+use crate::state::resolver;
+
+pub use crate::state::resolver::{Collision, Decision, Entry, Scope, UnknownPattern};
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum ChangeKind {
+    Added,
+    Modified,
+    Removed,
+}
+
+#[derive(Debug)]
+pub struct SkillChange {
+    pub name: String,
+    pub kind: ChangeKind,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Discovered;
@@ -274,6 +279,41 @@ mod tests {
         let filtered = s.filter_tiers(&[Tier::Curated]);
         let names: Vec<&str> = filtered.names().collect();
         assert_eq!(names, vec!["cur"]);
+    }
+
+    #[test]
+    fn copy_into_adds_and_modifies() {
+        use std::fs;
+        let src = tempfile::tempdir().expect("src");
+        let dest = tempfile::tempdir().expect("dest");
+
+        // Stage one source skill on disk so copy_dir_recursive has something
+        // to copy.
+        let skill_dir = src.path().join("my-skill");
+        fs::create_dir_all(&skill_dir).expect("mkdir");
+        fs::write(skill_dir.join("SKILL.md"), "# my-skill").expect("write");
+
+        let s = Skills::<Discovered>::from_discovered(&[DiscoveredSkill {
+            name: "my-skill".to_string(),
+            path: skill_dir,
+            tier: Tier::Curated,
+        }]);
+
+        let added = s.copy_into(dest.path(), &["my-skill"]).expect("copy");
+        assert_eq!(added.len(), 1);
+        assert_eq!(added[0].kind, ChangeKind::Added);
+        assert!(dest.path().join("my-skill/SKILL.md").exists());
+
+        let modified = s.copy_into(dest.path(), &["my-skill"]).expect("copy");
+        assert_eq!(modified[0].kind, ChangeKind::Modified);
+    }
+
+    #[test]
+    fn copy_into_skips_unknown() {
+        let dest = tempfile::tempdir().expect("dest");
+        let s = Skills::<Discovered>::from_discovered(&[]);
+        let changes = s.copy_into(dest.path(), &["nonexistent"]).expect("copy");
+        assert!(changes.is_empty());
     }
 
     #[test]

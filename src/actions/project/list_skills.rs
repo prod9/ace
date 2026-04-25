@@ -6,8 +6,7 @@
 
 use std::fmt::Write;
 
-use crate::state::resolver::{Entry, Scope};
-use crate::state::skills::{Resolved, Skill, Skills};
+use crate::state::skills::{Entry, Resolved, Scope, Skill, Skills};
 
 /// Tab-separated table with header. Matches `ace paths` style for machine parsing.
 pub fn render_table(skills: &Skills<Resolved>, show_excluded: bool) -> String {
@@ -41,7 +40,7 @@ fn visible(
 ) -> impl Iterator<Item = &Skill<Resolved>> {
     skills
         .iter()
-        .filter(move |s| show_excluded || s.state.decision == crate::state::resolver::Decision::Included)
+        .filter(move |s| show_excluded || s.state.decision == crate::state::skills::Decision::Included)
 }
 
 /// Human-readable summary of the last trace contribution. Used in the REASON

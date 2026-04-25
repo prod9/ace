@@ -4,8 +4,7 @@
 //! reference to the matching `Skill<Resolved>` (caller renders) or an
 //! `ExplainError::NotFound` carrying near-match suggestions.
 
-use crate::state::resolver::Entry;
-use crate::state::skills::{Resolved, Skill, Skills};
+use crate::state::skills::{Entry, Resolved, Skill, Skills};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ExplainError {
@@ -106,8 +105,7 @@ mod tests {
     use crate::config::ace_toml::AceToml;
     use crate::config::tree::Tree;
     use crate::state::discover::{DiscoveredSkill, Tier};
-    use crate::state::resolver::Decision;
-    use crate::state::skills::Discovered;
+    use crate::state::skills::{Decision, Discovered};
     use std::path::PathBuf;
 
     fn ace(skills: &[&str], inc: &[&str], exc: &[&str]) -> AceToml {

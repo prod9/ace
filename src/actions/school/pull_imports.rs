@@ -5,7 +5,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::glob;
 use crate::state::discover::{Tier, discover_skills};
-use crate::state::skill_set::{ChangeKind, SkillSet};
+use crate::state::skills::{ChangeKind, Discovered, Skills};
 
 pub struct PullImports<'a> {
     pub school_root: &'a Path,
@@ -54,7 +54,7 @@ impl PullImports<'_> {
             };
 
             let discovered = discover_skills(&cached)?;
-            let source_set = SkillSet::from_discovered(&discovered);
+            let source_set = Skills::<Discovered>::from_discovered(&discovered);
 
             for decl in decls {
                 let names = resolve_import_names(&source_set, decl);
@@ -89,7 +89,7 @@ impl PullImports<'_> {
 /// discovered set from the source repo. Explicit names are looked up
 /// across all tiers; glob patterns are tier-gated.
 fn resolve_import_names(
-    set: &SkillSet,
+    set: &Skills<Discovered>,
     decl: &config::school_toml::ImportDecl,
 ) -> Vec<String> {
     if glob::is_glob(&decl.skill) {
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn resolve_glob_matches_curated_by_default() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("alpha", Tier::Curated),
             discovered("beta",  Tier::Experimental),
             discovered("gamma", Tier::System),
@@ -160,7 +160,7 @@ mod tests {
 
     #[test]
     fn resolve_glob_with_experimental_flag_adds_that_tier() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("alpha", Tier::Curated),
             discovered("beta",  Tier::Experimental),
             discovered("gamma", Tier::System),
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn resolve_glob_with_both_flags_adds_all_tiers() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("alpha", Tier::Curated),
             discovered("beta",  Tier::Experimental),
             discovered("gamma", Tier::System),
@@ -184,7 +184,7 @@ mod tests {
 
     #[test]
     fn resolve_explicit_name_finds_skill_in_any_tier() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("shell", Tier::Experimental),
         ]);
         let names = resolve_import_names(&set, &import("shell", false, false));
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn resolve_explicit_name_finds_skill_in_system_tier() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("skill-creator", Tier::System),
         ]);
         let names = resolve_import_names(&set, &import("skill-creator", false, false));
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn resolve_explicit_name_missing_returns_empty() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("alpha", Tier::Curated),
         ]);
         let names = resolve_import_names(&set, &import("missing", false, false));
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn resolve_glob_no_matches_returns_empty() {
-        let set = SkillSet::from_discovered(&[
+        let set = Skills::<Discovered>::from_discovered(&[
             discovered("alpha", Tier::Experimental),
         ]);
         let names = resolve_import_names(&set, &import("*", false, false));
