@@ -4,11 +4,6 @@
 //! Pure logic. The trace drives `ace skills` (provenance listing) and
 //! `ace explain <name>` (full chain).
 
-// Public API is wired into production paths in step 3 (link rewrite) + step 4 (CLI).
-// Module-level allow keeps the staged-integration warnings off the build until then;
-// removed when callers land.
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 
 use crate::config::ace_toml::AceToml;
