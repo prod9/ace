@@ -1,5 +1,6 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
+use crate::config::ace_toml::Trust;
 use crate::config::backend::SessionOpts;
 use crate::actions::project::RegisterMcp;
 use crate::actions::project::{Prepare, PrepareResult};
@@ -42,14 +43,11 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
     let trust = ace.state().trust;
     if !trust.is_default() {
         match backend.supports_trust(trust) {
-            Ok(()) => {
-                let label = match trust {
-                    crate::config::ace_toml::Trust::Auto => "auto mode — AI decides approvals",
-                    crate::config::ace_toml::Trust::Yolo => "yolo mode — permission prompts disabled",
-                    _ => "trust mode active",
-                };
-                ace.warn(label);
-            }
+            Ok(()) => match trust {
+                Trust::Auto => ace.hint("auto mode — AI decides approvals"),
+                Trust::Yolo => ace.warn("yolo mode — permission prompts disabled"),
+                Trust::Default => {}
+            },
             Err(msg) => ace.warn(&format!("trust ignored: {msg}")),
         }
     }
