@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use super::backend::Backend;
+use crate::backend::Kind;
 use super::{is_empty_str, is_empty_map, is_empty_vec, is_false, ConfigError};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -10,7 +10,7 @@ use super::{is_empty_str, is_empty_map, is_empty_vec, is_false, ConfigError};
 pub struct SchoolToml {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub backend: Option<Backend>,
+    pub backend: Option<Kind>,
     #[serde(skip_serializing_if = "is_empty_str")]
     pub session_prompt: String,
     #[serde(skip_serializing_if = "is_empty_map")]

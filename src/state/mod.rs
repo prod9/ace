@@ -8,12 +8,12 @@ pub use school::School;
 use std::collections::HashMap;
 
 use crate::config::ace_toml::{AceToml, Trust};
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 use crate::config::tree::Tree;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct RuntimeOverrides {
-    pub backend: Option<Backend>,
+    pub backend: Option<Kind>,
 }
 
 /// Resolved effective state, computed from config::Tree.
@@ -22,7 +22,7 @@ pub struct State {
 
     // --- resolved fields ---
     pub school_specifier: Option<String>,
-    pub backend: Backend,
+    pub backend: Kind,
     pub session_prompt: String,
     pub env: HashMap<String, String>,
     pub school: Option<School>,
@@ -62,7 +62,7 @@ impl State {
                 school_paths: None,
             },
             school_specifier: None,
-            backend: Backend::default(),
+            backend: Kind::default(),
             session_prompt: String::new(),
             env: HashMap::new(),
             trust: Trust::Default,
@@ -80,7 +80,7 @@ impl State {
 
 struct Resolved {
     school_specifier: Option<String>,
-    backend: Backend,
+    backend: Kind,
     session_prompt: String,
     env: HashMap<String, String>,
     trust: Trust,
@@ -212,20 +212,20 @@ mod tests {
     #[test]
     fn resolve_backend_local_overrides_project() {
         let mut project = ace("", &[]);
-        project.backend = Some(Backend::Codex);
+        project.backend = Some(Kind::Codex);
         let mut local = ace("", &[]);
-        local.backend = Some(Backend::Claude);
+        local.backend = Some(Kind::Claude);
 
         let t = tree(project, local);
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Backend::Claude);
+        assert_eq!(r.backend, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_fallback_claude() {
         let t = tree(ace("", &[]), ace("", &[]));
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Backend::Claude);
+        assert_eq!(r.backend, Kind::Claude);
     }
 
     #[test]
@@ -263,54 +263,54 @@ mod tests {
     #[test]
     fn resolve_backend_school_toml_used() {
         let mut t = tree(ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Backend::Codex);
+        t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Backend::Codex);
+        assert_eq!(r.backend, Kind::Codex);
     }
 
     #[test]
     fn resolve_backend_project_overrides_school() {
         let mut project = ace("", &[]);
-        project.backend = Some(Backend::Claude);
+        project.backend = Some(Kind::Claude);
 
         let mut t = tree(project, ace("", &[]));
-        t.school_backend = Some(Backend::Codex);
+        t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Backend::Claude);
+        assert_eq!(r.backend, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_local_overrides_school() {
         let mut local = ace("", &[]);
-        local.backend = Some(Backend::Claude);
+        local.backend = Some(Kind::Claude);
 
         let mut t = tree(ace("", &[]), local);
-        t.school_backend = Some(Backend::Codex);
+        t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Backend::Claude);
+        assert_eq!(r.backend, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_override_beats_all_layers() {
         let mut project = ace("", &[]);
-        project.backend = Some(Backend::Flaude);
+        project.backend = Some(Kind::Flaude);
 
         let mut local = ace("", &[]);
-        local.backend = Some(Backend::Claude);
+        local.backend = Some(Kind::Claude);
 
         let mut t = tree(project, local);
-        t.school_backend = Some(Backend::Codex);
+        t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(
             &t,
             RuntimeOverrides {
-                backend: Some(Backend::Codex),
+                backend: Some(Kind::Codex),
             },
         );
-        assert_eq!(r.backend, Backend::Codex);
+        assert_eq!(r.backend, Kind::Codex);
     }
 
     #[test]

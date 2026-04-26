@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use clap::Subcommand;
 
 use crate::ace::Ace;
-use crate::config::backend::McpStatus;
+use crate::backend::McpStatus;
 use crate::config::school_toml::McpDecl;
 use crate::actions::project::{RegisterMcp, RemoveMcp, register_mcp};
 
@@ -216,7 +216,7 @@ fn report_statuses(ace: &mut Ace, statuses: &[McpStatus]) {
 }
 
 /// Load school MCP entries and backend from current state.
-fn load_school_mcp(ace: &Ace) -> Result<(crate::config::backend::Backend, Vec<McpDecl>), CmdError> {
+fn load_school_mcp(ace: &Ace) -> Result<(crate::backend::Kind, Vec<McpDecl>), CmdError> {
     let backend = ace.state().backend;
     let entries = ace.state().school.as_ref()
         .map(|s| s.mcp.clone())

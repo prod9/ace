@@ -18,7 +18,7 @@ use clap::{Parser, Subcommand};
 
 use crate::ace::{Ace, IoError};
 use crate::config::{ConfigError, Scope};
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 use crate::actions::school::{AddImportError, PullImportsError};
 use crate::actions::project::RegisterMcpError;
 use crate::actions::project::PrepareError;
@@ -38,7 +38,7 @@ pub struct Cli {
 
     /// Override the configured backend for this command invocation
     #[arg(short = 'b', long, global = true, value_enum)]
-    backend: Option<Backend>,
+    backend: Option<Kind>,
 
     /// Shortcut for `--backend claude`
     #[arg(long, global = true)]
@@ -270,20 +270,20 @@ fn resolve_scope_override(cli: &Cli) -> Result<Option<Scope>, CmdError> {
     }
 }
 
-fn resolve_backend_override(cli: &Cli) -> Result<Option<Backend>, CmdError> {
+fn resolve_backend_override(cli: &Cli) -> Result<Option<Kind>, CmdError> {
     let mut selected = Vec::new();
 
     if let Some(backend) = cli.backend {
         selected.push(backend);
     }
     if cli.claude {
-        selected.push(Backend::Claude);
+        selected.push(Kind::Claude);
     }
     if cli.codex {
-        selected.push(Backend::Codex);
+        selected.push(Kind::Codex);
     }
     if cli.flaude {
-        selected.push(Backend::Flaude);
+        selected.push(Kind::Flaude);
     }
 
     selected.dedup();

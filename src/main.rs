@@ -2,6 +2,7 @@
 
 mod ace;
 mod actions;
+mod backend;
 mod cmd;
 mod config;
 mod fsutil;

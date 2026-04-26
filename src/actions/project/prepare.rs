@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
@@ -23,7 +23,7 @@ pub struct Prepare<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
     pub backend_dir: &'a str,
-    pub backend: Backend,
+    pub backend: Kind,
 }
 
 #[derive(Debug, Default)]
@@ -35,10 +35,10 @@ pub struct PrepareResult {
 // Backend support matrix — which folders each backend natively supports.
 //   claude:   skills ✓  rules ✓  commands ✓  agents ✓
 //   codex:    skills ✓  rules ✗  commands ✗  agents ✗
-fn is_supported(backend: Backend, folder: &str) -> bool {
+fn is_supported(backend: Kind, folder: &str) -> bool {
     matches!(
         (backend, folder),
-        (_, "skills") | (Backend::Claude | Backend::Flaude, _)
+        (_, "skills") | (Kind::Claude | Kind::Flaude, _)
     )
 }
 

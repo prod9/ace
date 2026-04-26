@@ -2,8 +2,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use super::backend::Backend;
+use crate::backend::Kind;
 use super::{is_empty_str, is_empty_map, ConfigError};
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct BackendDecl {
+    pub name: String,
+    #[serde(skip_serializing_if = "is_empty_map")]
+    pub env: HashMap<String, String>,
+}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -26,7 +34,7 @@ pub struct AceToml {
     #[serde(skip_serializing_if = "is_empty_str")]
     pub school: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub backend: Option<Backend>,
+    pub backend: Option<Kind>,
     // TODO: add `role` and `description` fields so non-dev roles (e.g. PM) can
     // configure ace for requirements-only repos, spec/ workflows, Jira/Trello sync, etc.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -60,6 +68,10 @@ pub struct AceToml {
     /// Always-remove skill patterns. Union across all scopes.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub exclude_skills: Vec<String>,
+
+    /// Per-backend declarations: env overrides for built-ins, full custom backends later.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub backends: Vec<BackendDecl>,
 }
 
 pub fn load(path: &Path) -> Result<AceToml, ConfigError> {
@@ -132,6 +144,25 @@ mod tests {
 
         let config = load(&path).expect("reload");
         assert_eq!(config.school, "prod9/school");
+    }
+
+    #[test]
+    fn load_parses_backends_array() {
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("ace.toml");
+        std::fs::write(
+            &path,
+            "[[backends]]\nname = \"claude\"\n\n[backends.env]\nANTHROPIC_BASE_URL = \"https://example.com\"\n",
+        )
+        .expect("write");
+
+        let config = load(&path).expect("load");
+        assert_eq!(config.backends.len(), 1);
+        assert_eq!(config.backends[0].name, "claude");
+        assert_eq!(
+            config.backends[0].env.get("ANTHROPIC_BASE_URL").map(String::as_str),
+            Some("https://example.com"),
+        );
     }
 
     #[test]

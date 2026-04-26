@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::ace::Ace;
 use crate::actions::project::SCHOOL_FOLDERS;
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 
 const MARKER_START: &str = "# ACE-managed — do not edit this block.";
 const MARKER_END: &str = "# end ACE";
@@ -42,7 +42,7 @@ fn build_block() -> String {
         "# See: https://github.com/prod9/ace".to_string(),
     ];
 
-    let dirs: BTreeSet<&str> = Backend::ALL.iter().map(|b| b.backend_dir()).collect();
+    let dirs: BTreeSet<&str> = Kind::ALL.iter().map(|b| b.backend_dir()).collect();
     let folders: BTreeSet<&str> = SCHOOL_FOLDERS.iter().copied().collect();
     for dir in &dirs {
         for folder in &folders {

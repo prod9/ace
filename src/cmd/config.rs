@@ -2,7 +2,7 @@ use clap::Subcommand;
 
 use crate::ace::Ace;
 use crate::config::ace_toml::{self, AceToml, Trust};
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 use crate::config::{ConfigKey, Scope};
 
 use super::CmdError;
@@ -146,11 +146,11 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
     Ok(())
 }
 
-fn parse_backend(value: &str) -> Result<Backend, CmdError> {
+fn parse_backend(value: &str) -> Result<Kind, CmdError> {
     match value {
-        "claude" => Ok(Backend::Claude),
-        "codex" => Ok(Backend::Codex),
-        "flaude" => Ok(Backend::Flaude),
+        "claude" => Ok(Kind::Claude),
+        "codex" => Ok(Kind::Codex),
+        "flaude" => Ok(Kind::Flaude),
         _ => Err(CmdError::Other(format!(
             "unknown backend: {value} (expected claude, codex, flaude)"
         ))),

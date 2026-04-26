@@ -3,7 +3,7 @@ pub mod io;
 use std::path::{Path, PathBuf};
 
 use crate::config;
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 use crate::config::paths::AcePaths;
 use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
@@ -45,7 +45,7 @@ impl Ace {
         self.mode
     }
 
-    pub fn set_backend_override(&mut self, backend: Option<Backend>) {
+    pub fn set_backend_override(&mut self, backend: Option<Kind>) {
         self.runtime_overrides.backend = backend;
         self.state = None;
     }

@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-use super::ace_toml::Trust;
-use super::school_toml::McpDecl;
+use crate::config::ace_toml::Trust;
+use crate::config::school_toml::McpDecl;
 
 /// Everything a backend needs to launch a session.
 pub struct SessionOpts {
@@ -30,7 +30,7 @@ pub struct McpStatus {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
-pub enum Backend {
+pub enum Kind {
     #[default]
     Claude,
     Codex,
@@ -41,35 +41,35 @@ pub enum Backend {
 macro_rules! dispatch {
     ($self:expr, $method:ident $(, $arg:expr)*) => {
         match $self {
-            Backend::Claude => claude::$method($($arg),*),
-            Backend::Codex => codex::$method($($arg),*),
-            Backend::Flaude => flaude::$method($($arg),*),
+            Kind::Claude => claude::$method($($arg),*),
+            Kind::Codex => codex::$method($($arg),*),
+            Kind::Flaude => flaude::$method($($arg),*),
         }
     };
 }
 
-impl Backend {
-    pub const ALL: &'static [Backend] = &[Backend::Claude, Backend::Codex, Backend::Flaude];
+impl Kind {
+    pub const ALL: &'static [Kind] = &[Kind::Claude, Kind::Codex, Kind::Flaude];
 
     pub fn binary(&self) -> &'static str {
         match self {
-            Backend::Claude => "claude",
-            Backend::Codex => "codex",
-            Backend::Flaude => "flaude",
+            Kind::Claude => "claude",
+            Kind::Codex => "codex",
+            Kind::Flaude => "flaude",
         }
     }
 
     pub fn backend_dir(&self) -> &'static str {
         match self {
-            Backend::Claude | Backend::Flaude => ".claude",
-            Backend::Codex => ".agents",
+            Kind::Claude | Kind::Flaude => ".claude",
+            Kind::Codex => ".agents",
         }
     }
 
     pub fn instructions_file(&self) -> &'static str {
         match self {
-            Backend::Claude | Backend::Flaude => "CLAUDE.md",
-            Backend::Codex => "AGENTS.md",
+            Kind::Claude | Kind::Flaude => "CLAUDE.md",
+            Kind::Codex => "AGENTS.md",
         }
     }
 
@@ -107,6 +107,47 @@ impl Backend {
     }
 }
 
+/// A resolved backend instance: identity (`name`), behavior (`kind`), and runtime
+/// overrides (`cmd`, `env`). Built-ins are pre-built singletons; custom entries
+/// from `[[backends]]` populate the registry alongside built-ins.
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // cmd + env wired in subsequent slice
+pub struct Backend {
+    pub name: String,
+    pub kind: Kind,
+    pub cmd: Vec<String>,
+    pub env: HashMap<String, String>,
+}
+
+/// Name → Backend lookup. Built with `Registry::with_builtins()` then extended
+/// with parsed `[[backends]]` entries from each config layer.
+#[derive(Debug, Default, Clone)]
+#[allow(dead_code)] // wired into State in subsequent slice
+pub struct Registry {
+    entries: HashMap<String, Backend>,
+}
+
+#[allow(dead_code)] // wired into State in subsequent slice
+impl Registry {
+    pub fn with_builtins() -> Self {
+        let mut entries = HashMap::new();
+        for kind in Kind::ALL {
+            let name = kind.binary().to_string();
+            entries.insert(name.clone(), Backend {
+                name,
+                kind: *kind,
+                cmd: vec![kind.binary().to_string()],
+                env: HashMap::new(),
+            });
+        }
+        Self { entries }
+    }
+
+    pub fn lookup(&self, name: &str) -> Option<&Backend> {
+        self.entries.get(name)
+    }
+}
+
 /// Parse `[{"name":"...","ok":bool}]` JSON into McpStatus vec.
 /// Shared helper — each backend extracts the JSON string from its own output format,
 /// then calls this to parse the common shape.
@@ -129,12 +170,12 @@ pub(super) fn parse_status_array(json: &str) -> Vec<McpStatus> {
 
 #[cfg(test)]
 mod tests {
-    use super::Backend;
+    use super::{Kind, Registry};
     use crate::config::ace_toml::Trust;
 
     #[test]
     fn supports_trust_default_all() {
-        for backend in [Backend::Claude, Backend::Flaude, Backend::Codex] {
+        for backend in [Kind::Claude, Kind::Flaude, Kind::Codex] {
             backend.supports_trust(Trust::Default)
                 .unwrap_or_else(|_| panic!("{:?} should support Default", backend));
         }
@@ -142,32 +183,48 @@ mod tests {
 
     #[test]
     fn supports_trust_auto_claude() {
-        Backend::Claude.supports_trust(Trust::Auto).expect("Claude supports Auto");
+        Kind::Claude.supports_trust(Trust::Auto).expect("Claude supports Auto");
     }
 
     #[test]
     fn supports_trust_yolo_claude() {
-        Backend::Claude.supports_trust(Trust::Yolo).expect("Claude supports Yolo");
+        Kind::Claude.supports_trust(Trust::Yolo).expect("Claude supports Yolo");
     }
 
     #[test]
     fn supports_trust_auto_flaude() {
-        Backend::Flaude.supports_trust(Trust::Auto).expect("Flaude supports Auto");
+        Kind::Flaude.supports_trust(Trust::Auto).expect("Flaude supports Auto");
     }
 
     #[test]
     fn supports_trust_yolo_flaude() {
-        Backend::Flaude.supports_trust(Trust::Yolo).expect("Flaude supports Yolo");
+        Kind::Flaude.supports_trust(Trust::Yolo).expect("Flaude supports Yolo");
     }
 
     #[test]
     fn supports_trust_auto_codex() {
-        Backend::Codex.supports_trust(Trust::Auto).expect("Codex supports Auto");
+        Kind::Codex.supports_trust(Trust::Auto).expect("Codex supports Auto");
     }
 
     #[test]
     fn supports_trust_yolo_codex() {
-        Backend::Codex.supports_trust(Trust::Yolo).expect("Codex supports Yolo");
+        Kind::Codex.supports_trust(Trust::Yolo).expect("Codex supports Yolo");
     }
 
+    #[test]
+    fn registry_with_builtins_lookup() {
+        let registry = Registry::with_builtins();
+
+        let claude = registry.lookup("claude").expect("claude builtin");
+        assert_eq!(claude.kind, Kind::Claude);
+        assert_eq!(claude.name, "claude");
+
+        let codex = registry.lookup("codex").expect("codex builtin");
+        assert_eq!(codex.kind, Kind::Codex);
+
+        let flaude = registry.lookup("flaude").expect("flaude builtin");
+        assert_eq!(flaude.kind, Kind::Flaude);
+
+        assert!(registry.lookup("unknown").is_none());
+    }
 }

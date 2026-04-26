@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use super::ace_toml::{self, AceToml};
-use super::backend::Backend;
+use crate::backend::Kind;
 use super::paths::AcePaths;
 use super::school_paths::{self, SchoolPaths};
 use super::school_toml::{self, SchoolToml};
@@ -14,7 +14,7 @@ pub struct Tree {
     pub ace_project: AceToml,
     pub ace_local: AceToml,
     /// Backend from school.toml, applied after load when school is known.
-    pub school_backend: Option<Backend>,
+    pub school_backend: Option<Kind>,
     pub school_toml: Option<SchoolToml>,
     pub school_paths: Option<SchoolPaths>,
 }

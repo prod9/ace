@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ace::{Ace, IoError};
-use crate::config::backend::Backend;
+use crate::backend::Kind;
 use crate::config::school_toml::McpDecl;
 use crate::templates::Template;
 
@@ -14,7 +14,7 @@ pub enum RegisterMcpError {
 }
 
 pub struct RegisterMcp<'a> {
-    pub backend: Backend,
+    pub backend: Kind,
     pub entries: &'a [McpDecl],
 }
 
@@ -54,8 +54,8 @@ fn unregistered<'a>(entries: &'a [McpDecl], registered: &HashSet<String>) -> Vec
         .collect()
 }
 
-fn registration_message(backend: Backend, name: &str, no_headers: bool) -> String {
-    if backend == Backend::Codex {
+fn registration_message(backend: Kind, name: &str, no_headers: bool) -> String {
+    if backend == Kind::Codex {
         return format!("Registered MCP server '{name}' — use /mcp inside Codex to finish setup");
     }
 
@@ -178,20 +178,20 @@ mod tests {
 
     #[test]
     fn message_oauth_mentions_authorize() {
-        let msg = registration_message(Backend::Claude, "linear", true);
+        let msg = registration_message(Kind::Claude, "linear", true);
         assert!(msg.contains("authorize"), "OAuth message should mention authorize prompt");
     }
 
     #[test]
     fn message_with_headers_omits_authorize() {
-        let msg = registration_message(Backend::Claude, "sentry", false);
+        let msg = registration_message(Kind::Claude, "sentry", false);
         assert!(!msg.contains("authorize"), "PAT message should not mention authorize");
         assert!(msg.contains("sentry"));
     }
 
     #[test]
     fn message_codex_points_to_mcp() {
-        let msg = registration_message(Backend::Codex, "linear", true);
+        let msg = registration_message(Kind::Codex, "linear", true);
         assert!(msg.contains("/mcp"));
         assert!(msg.contains("Codex"));
     }

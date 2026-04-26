@@ -1,7 +1,7 @@
 use crate::ace::Ace;
 use crate::config::ConfigError;
 use crate::config::ace_toml::Trust;
-use crate::config::backend::SessionOpts;
+use crate::backend::SessionOpts;
 use crate::actions::project::RegisterMcp;
 use crate::actions::project::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
