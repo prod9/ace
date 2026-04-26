@@ -44,7 +44,7 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     }
 
     // Re-link in case new folders appeared.
-    let backend = ace.state().backend;
+    let backend_dir = ace.state().backend.backend_dir();
     let tree = ace.state().config.clone();
     let prepared = link_skills::prepare(&school_paths.root, &tree)
         .map_err(|e| CmdError::Other(format!("scan school skills: {e}")))?;
@@ -52,7 +52,7 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     let result = Link {
         school_root: &school_paths.root,
         project_dir: &project_dir,
-        backend_dir: backend.backend_dir(),
+        backend_dir,
         skills: &prepared.desired,
     }
     .run(ace)?;

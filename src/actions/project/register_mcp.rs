@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::ace::{Ace, IoError};
-use crate::backend::Kind;
+use crate::backend::{Backend, Kind};
 use crate::config::school_toml::McpDecl;
 use crate::templates::Template;
 
@@ -14,7 +14,7 @@ pub enum RegisterMcpError {
 }
 
 pub struct RegisterMcp<'a> {
-    pub backend: Kind,
+    pub backend: &'a Backend,
     pub entries: &'a [McpDecl],
 }
 
@@ -38,7 +38,7 @@ impl RegisterMcp<'_> {
             self.backend.mcp_add(target)
                 .map_err(|e| RegisterMcpError::Register(format!("{}: {e}", entry.name)))?;
 
-            let msg = registration_message(self.backend, &entry.name, entry.headers.is_empty());
+            let msg = registration_message(self.backend.kind, &entry.name, entry.headers.is_empty());
             ace.done(&msg);
         }
 

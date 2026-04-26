@@ -51,7 +51,7 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
     let has_missing = entries.iter().any(|e| !registered.contains(&e.name));
 
     if has_missing {
-        RegisterMcp{ backend, entries: &entries }.run(ace)?;
+        RegisterMcp{ backend: &backend, entries: &entries }.run(ace)?;
     }
 
     // -- health check registered servers --
@@ -199,7 +199,7 @@ fn run_reset(ace: &mut Ace, name: Option<String>) -> Result<(), CmdError> {
         }
     };
 
-    RemoveMcp{ backend, names: &names }.run(ace)
+    RemoveMcp{ backend: &backend, names: &names }.run(ace)
         .map_err(CmdError::Other)?;
 
     Ok(())
@@ -216,8 +216,8 @@ fn report_statuses(ace: &mut Ace, statuses: &[McpStatus]) {
 }
 
 /// Load school MCP entries and backend from current state.
-fn load_school_mcp(ace: &Ace) -> Result<(crate::backend::Kind, Vec<McpDecl>), CmdError> {
-    let backend = ace.state().backend;
+fn load_school_mcp(ace: &Ace) -> Result<(crate::backend::Backend, Vec<McpDecl>), CmdError> {
+    let backend = ace.state().backend.clone();
     let entries = ace.state().school.as_ref()
         .map(|s| s.mcp.clone())
         .unwrap_or_default();

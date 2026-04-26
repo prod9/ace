@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::ace::Ace;
-use crate::backend::Kind;
+use crate::backend::{Backend, Kind};
 use crate::config::school_paths;
 use crate::config::ConfigError;
 
@@ -22,8 +22,7 @@ pub enum PrepareError {
 pub struct Prepare<'a> {
     pub specifier: &'a str,
     pub project_dir: &'a Path,
-    pub backend_dir: &'a str,
-    pub backend: Kind,
+    pub backend: &'a Backend,
 }
 
 #[derive(Debug, Default)]
@@ -35,9 +34,9 @@ pub struct PrepareResult {
 // Backend support matrix — which folders each backend natively supports.
 //   claude:   skills ✓  rules ✓  commands ✓  agents ✓
 //   codex:    skills ✓  rules ✗  commands ✗  agents ✗
-fn is_supported(backend: Kind, folder: &str) -> bool {
+fn is_supported(kind: Kind, folder: &str) -> bool {
     matches!(
-        (backend, folder),
+        (kind, folder),
         (_, "skills") | (Kind::Claude | Kind::Flaude, _)
     )
 }
@@ -86,7 +85,7 @@ impl Prepare<'_> {
         let result = Link {
             school_root: &school_paths.root,
             project_dir: self.project_dir,
-            backend_dir: self.backend_dir,
+            backend_dir: self.backend.backend_dir(),
             skills: &prepared.desired,
         }
         .run(ace)?;
@@ -95,13 +94,13 @@ impl Prepare<'_> {
                 ace.done(&format!("Moved previous {0} to previous-{0}/", folder.name));
             }
             if folder.linked {
-                if is_supported(self.backend, folder.name) {
+                if is_supported(self.backend.kind, folder.name) {
                     ace.done(&format!("Linked {}", folder.name));
                 } else {
                     ace.warn(&format!(
                         "Linked {0}/ — not natively supported by {1} (linked for future compatibility)",
                         folder.name,
-                        self.backend.binary(),
+                        self.backend.name,
                     ));
                 }
             }

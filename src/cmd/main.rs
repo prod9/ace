@@ -39,10 +39,9 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         prepare_result.school_is_dirty,
     );
 
-    let backend = ace.state().backend;
     let trust = ace.state().trust;
     if !trust.is_default() {
-        match backend.supports_trust(trust) {
+        match ace.state().backend.supports_trust(trust) {
             Ok(()) => match trust {
                 Trust::Auto => ace.hint("auto mode — AI decides approvals"),
                 Trust::Yolo => ace.warn("yolo mode — permission prompts disabled"),
@@ -59,7 +58,7 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
 
     ace.separator();
 
-    backend.exec_session(SessionOpts {
+    ace.state().backend.exec_session(SessionOpts {
         trust,
         session_prompt,
         project_dir,
@@ -79,14 +78,13 @@ pub(super) fn prepare_school(
     ace: &mut Ace,
     specifier: &str,
 ) -> Result<PrepareResult, CmdError> {
-    let preliminary_backend = ace.state().backend;
     let project_dir = ace.project_dir().to_path_buf();
+    let preliminary_backend = ace.state().backend.clone();
 
     let prepare_result = (Prepare {
         specifier,
         project_dir: &project_dir,
-        backend_dir: preliminary_backend.backend_dir(),
-        backend: preliminary_backend,
+        backend: &preliminary_backend,
     })
     .run(ace)?;
 
@@ -102,8 +100,7 @@ pub(super) fn prepare_school(
         return Ok(prepare_result);
     }
 
-    let backend = ace.state().backend;
-    let registered = backend.mcp_list();
+    let registered = ace.state().backend.mcp_list();
     let pending: Vec<&str> = mcp_entries.iter()
         .filter(|e| !registered.contains(&e.name))
         .map(|e| e.name.as_str())
@@ -118,7 +115,8 @@ pub(super) fn prepare_school(
         return Ok(prepare_result);
     }
 
-    if let Err(e) = (RegisterMcp { backend, entries: &mcp_entries }).run(ace) {
+    let backend = ace.state().backend.clone();
+    if let Err(e) = (RegisterMcp { backend: &backend, entries: &mcp_entries }).run(ace) {
         ace.warn(&format!("MCP registration failed: {e}"));
     }
 

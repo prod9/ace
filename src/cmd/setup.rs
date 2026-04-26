@@ -30,7 +30,7 @@ fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdError> {
     super::main::prepare_school(ace, &resolved)?;
 
     // Post-prepare setup: gitignore and instructions file.
-    let backend = ace.state().backend;
+    let backend = ace.state().backend.clone();
 
     UpdateGitignore {
         project_dir: &project_dir,

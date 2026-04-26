@@ -8,7 +8,7 @@ pub use school::School;
 use std::collections::HashMap;
 
 use crate::config::ace_toml::{AceToml, Trust};
-use crate::backend::Kind;
+use crate::backend::{Backend, Kind, Registry};
 use crate::config::tree::Tree;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -22,7 +22,7 @@ pub struct State {
 
     // --- resolved fields ---
     pub school_specifier: Option<String>,
-    pub backend: Kind,
+    pub backend: Backend,
     pub session_prompt: String,
     pub env: HashMap<String, String>,
     pub school: Option<School>,
@@ -62,7 +62,7 @@ impl State {
                 school_paths: None,
             },
             school_specifier: None,
-            backend: Kind::default(),
+            backend: Kind::default().default_backend(),
             session_prompt: String::new(),
             env: HashMap::new(),
             trust: Trust::Default,
@@ -80,7 +80,7 @@ impl State {
 
 struct Resolved {
     school_specifier: Option<String>,
-    backend: Kind,
+    backend: Backend,
     session_prompt: String,
     env: HashMap<String, String>,
     trust: Trust,
@@ -99,13 +99,30 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         .find(|l| !l.school.is_empty())
         .map(|l| l.school.clone());
 
-    // backend: local > project > user > school > fallback Claude
-    let backend = overrides.backend
+    // backend kind: local > project > user > school > fallback Claude
+    let backend_kind = overrides.backend
         .or(tree.ace_local.backend)
         .or(tree.ace_project.backend)
         .or(tree.ace_user.backend)
         .or(tree.school_backend)
         .unwrap_or_default();
+
+    // Build registry: built-ins seed it, then per-layer [[backends]] decls
+    // merge into matching entries (env: per-key last-wins; matches global env
+    // semantics). Custom-name decls (no built-in match) ignored until 129.
+    let mut registry = Registry::with_builtins();
+    for layer in &layers {
+        for decl in &layer.backends {
+            if let Some(entry) = registry.get_mut(&decl.name) {
+                for (k, v) in &decl.env {
+                    entry.env.insert(k.clone(), v.clone());
+                }
+            }
+        }
+    }
+    let backend = registry.lookup(backend_kind.name())
+        .cloned()
+        .unwrap_or_else(|| backend_kind.default_backend());
 
     // session_prompt: last Some wins (Some("") is a valid override to empty)
     let session_prompt = layers
@@ -218,14 +235,14 @@ mod tests {
 
         let t = tree(project, local);
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Kind::Claude);
+        assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_fallback_claude() {
         let t = tree(ace("", &[]), ace("", &[]));
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Kind::Claude);
+        assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
@@ -266,7 +283,7 @@ mod tests {
         t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Kind::Codex);
+        assert_eq!(r.backend.kind, Kind::Codex);
     }
 
     #[test]
@@ -278,7 +295,7 @@ mod tests {
         t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Kind::Claude);
+        assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
@@ -290,7 +307,7 @@ mod tests {
         t.school_backend = Some(Kind::Codex);
 
         let r = resolve_layers(&t, RuntimeOverrides::default());
-        assert_eq!(r.backend, Kind::Claude);
+        assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
@@ -310,7 +327,55 @@ mod tests {
                 backend: Some(Kind::Codex),
             },
         );
-        assert_eq!(r.backend, Kind::Codex);
+        assert_eq!(r.backend.kind, Kind::Codex);
+    }
+
+    #[test]
+    fn resolve_per_backend_env_merges_into_backend() {
+        use crate::config::ace_toml::BackendDecl;
+
+        let mut project = ace("s", &[]);
+        project.backend = Some(Kind::Claude);
+        project.backends = vec![BackendDecl {
+            name: "claude".into(),
+            env: [("API_BASE".to_string(), "https://example.com".to_string())]
+                .into_iter()
+                .collect(),
+        }];
+
+        let t = tree(project, ace("s", &[]));
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+
+        assert_eq!(r.backend.kind, Kind::Claude);
+        assert_eq!(r.backend.name, "claude");
+        assert_eq!(r.backend.env.get("API_BASE").map(String::as_str), Some("https://example.com"));
+    }
+
+    #[test]
+    fn resolve_per_backend_env_layer_collision_local_wins() {
+        use crate::config::ace_toml::BackendDecl;
+
+        let mut project = ace("s", &[]);
+        project.backend = Some(Kind::Claude);
+        project.backends = vec![BackendDecl {
+            name: "claude".into(),
+            env: [
+                ("KEEP".to_string(), "yes".to_string()),
+                ("KEY".to_string(), "old".to_string()),
+            ].into_iter().collect(),
+        }];
+
+        let mut local = ace("s", &[]);
+        local.backends = vec![BackendDecl {
+            name: "claude".into(),
+            env: [("KEY".to_string(), "new".to_string())].into_iter().collect(),
+        }];
+
+        let t = tree(project, local);
+        let r = resolve_layers(&t, RuntimeOverrides::default());
+
+        assert_eq!(r.backend.env.get("KEY").map(String::as_str), Some("new"));
+        assert_eq!(r.backend.env.get("KEEP").map(String::as_str), Some("yes"));
     }
 
     #[test]

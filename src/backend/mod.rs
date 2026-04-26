@@ -51,11 +51,24 @@ macro_rules! dispatch {
 impl Kind {
     pub const ALL: &'static [Kind] = &[Kind::Claude, Kind::Codex, Kind::Flaude];
 
-    pub fn binary(&self) -> &'static str {
+    /// Canonical name. Doubles as registry key for built-in entries and as the
+    /// default `cmd[0]` (the binary name) when no override is provided.
+    pub fn name(&self) -> &'static str {
         match self {
             Kind::Claude => "claude",
             Kind::Codex => "codex",
             Kind::Flaude => "flaude",
+        }
+    }
+
+    /// Default Backend instance for this kind: name = canonical name, cmd =
+    /// [name], empty env.
+    pub fn default_backend(&self) -> Backend {
+        Backend {
+            name: self.name().to_string(),
+            kind: *self,
+            cmd: vec![self.name().to_string()],
+            env: HashMap::new(),
         }
     }
 
@@ -111,40 +124,75 @@ impl Kind {
 /// overrides (`cmd`, `env`). Built-ins are pre-built singletons; custom entries
 /// from `[[backends]]` populate the registry alongside built-ins.
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // cmd + env wired in subsequent slice
 pub struct Backend {
     pub name: String,
     pub kind: Kind,
+    /// Argv for launching the binary. Built-ins seed `[kind.name()]`; custom
+    /// backends from `[[backends]]` (PROD9-129) override.
+    #[allow(dead_code)] // consumed by SessionOpts in PROD9-129 slice
     pub cmd: Vec<String>,
     pub env: HashMap<String, String>,
 }
 
-/// Name → Backend lookup. Built with `Registry::with_builtins()` then extended
-/// with parsed `[[backends]]` entries from each config layer.
+impl Backend {
+    pub fn backend_dir(&self) -> &'static str {
+        self.kind.backend_dir()
+    }
+
+    pub fn instructions_file(&self) -> &'static str {
+        self.kind.instructions_file()
+    }
+
+    pub fn supports_trust(&self, trust: Trust) -> Result<(), String> {
+        self.kind.supports_trust(trust)
+    }
+
+    pub fn exec_session(&self, mut opts: SessionOpts) -> Result<(), std::io::Error> {
+        // per-backend env merges over global env (later wins on collision).
+        for (k, v) in &self.env {
+            opts.env.insert(k.clone(), v.clone());
+        }
+        self.kind.exec_session(opts)
+    }
+
+    pub fn mcp_list(&self) -> HashSet<String> {
+        self.kind.mcp_list()
+    }
+
+    pub fn mcp_remove(&self, name: &str) -> Result<(), String> {
+        self.kind.mcp_remove(name)
+    }
+
+    pub fn mcp_check(&self, names: &[String]) -> Result<Vec<McpStatus>, String> {
+        self.kind.mcp_check(names)
+    }
+
+    pub fn mcp_add(&self, entry: &McpDecl) -> Result<(), String> {
+        self.kind.mcp_add(entry)
+    }
+}
+
+/// Name → Backend lookup. Built with `Registry::with_builtins()`; layer-merge
+/// from `[[backends]]` happens in `state::resolve_layers`.
 #[derive(Debug, Default, Clone)]
-#[allow(dead_code)] // wired into State in subsequent slice
 pub struct Registry {
     entries: HashMap<String, Backend>,
 }
 
-#[allow(dead_code)] // wired into State in subsequent slice
 impl Registry {
     pub fn with_builtins() -> Self {
-        let mut entries = HashMap::new();
-        for kind in Kind::ALL {
-            let name = kind.binary().to_string();
-            entries.insert(name.clone(), Backend {
-                name,
-                kind: *kind,
-                cmd: vec![kind.binary().to_string()],
-                env: HashMap::new(),
-            });
-        }
+        let entries = Kind::ALL.iter()
+            .map(|k| (k.name().to_string(), k.default_backend()))
+            .collect();
         Self { entries }
     }
 
     pub fn lookup(&self, name: &str) -> Option<&Backend> {
         self.entries.get(name)
+    }
+
+    pub fn get_mut(&mut self, name: &str) -> Option<&mut Backend> {
+        self.entries.get_mut(name)
     }
 }
 

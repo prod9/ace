@@ -1,8 +1,8 @@
 use crate::ace::Ace;
-use crate::backend::Kind;
+use crate::backend::Backend;
 
 pub struct RemoveMcp<'a> {
-    pub backend: Kind,
+    pub backend: &'a Backend,
     pub names: &'a [String],
 }
 

@@ -43,7 +43,7 @@ fn show(ace: &mut Ace) -> Result<(), CmdError> {
 
     let effective = AceToml {
         school: state.school_specifier.clone().unwrap_or_default(),
-        backend: Some(state.backend),
+        backend: Some(state.backend.kind),
         session_prompt: if state.session_prompt.is_empty() {
             None
         } else {
@@ -80,7 +80,7 @@ fn get(ace: &mut Ace, key: &str) -> Result<(), CmdError> {
 
     let value = match config_key {
         ConfigKey::School => state.school_specifier.clone().unwrap_or_default(),
-        ConfigKey::Backend => state.backend.binary().to_string(),
+        ConfigKey::Backend => state.backend.name.clone(),
         ConfigKey::Trust => match state.trust {
             Trust::Default => "default".to_string(),
             Trust::Auto => "auto".to_string(),
