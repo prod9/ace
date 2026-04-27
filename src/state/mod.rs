@@ -7,10 +7,11 @@ pub use school::School;
 
 use std::collections::HashMap;
 
+use crate::backend::Backend;
 use crate::config::ace_toml::{AceToml, Trust};
-use crate::backend::{Backend, Kind};
 use crate::config::tree::Tree;
 use crate::config::ConfigError;
+use crate::resolver;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct RuntimeOverrides {
@@ -90,95 +91,48 @@ struct Resolved {
     skip_update: bool,
 }
 
-/// Resolve effective values from layers.
+/// Resolve effective values from layers via the unified `resolver::merge`.
 ///
-/// Backend resolution: build registry from built-ins → school → user → project → local.
-/// Each `[[backends]]` decl merges via `backend_resolve::merge_decl`. The selected
-/// backend name is picked by precedence (override → local → project → user → school
-/// → `"claude"`) and looked up in the registry; unknown name → `UnknownBackend`.
+/// Pure scalar merging happens in `resolver/`. This function adds the
+/// fallible binding step: build the backend registry from the merged decls
+/// and look up the selected name. Unknown name → `UnknownBackend`.
 fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Result<Resolved, ConfigError> {
-    let layers = [&tree.ace_user, &tree.ace_project, &tree.ace_local];
+    let overrides_layer = AceToml {
+        backend: overrides.backend,
+        ..AceToml::default()
+    };
+    let merged = resolver::merge(tree, &overrides_layer);
 
-    // school: last non-empty wins
-    let school_specifier = layers
-        .iter()
-        .rev()
-        .find(|l| !l.school.is_empty())
-        .map(|l| l.school.clone());
-
-    // Build registry: built-ins → school decls → user/project/local decls.
-    let school_decls = tree.school_toml.iter().flat_map(|st| st.backends.iter());
-    let layer_decls = layers.iter().flat_map(|l| l.backends.iter());
-    let registry = backend_resolve::build_registry(school_decls.chain(layer_decls))?;
-
-    // Selected backend name: override → local → project → user → school → "claude"
-    let backend_name = overrides.backend
-        .or_else(|| tree.ace_local.backend.clone())
-        .or_else(|| tree.ace_project.backend.clone())
-        .or_else(|| tree.ace_user.backend.clone())
-        .or_else(|| tree.school_backend.clone())
-        .unwrap_or_else(|| Kind::default().into());
-
+    let registry = backend_resolve::build_registry(
+        merged.backend_decls.iter().map(|s| &s.value),
+    )?;
+    let backend_name = merged.backend_name.value;
     let backend = registry
         .lookup(&backend_name)
         .cloned()
         .ok_or(ConfigError::UnknownBackend(backend_name))?;
 
-    // session_prompt: last Some wins (Some("") is a valid override to empty)
-    let session_prompt = layers
-        .iter()
-        .rev()
-        .find_map(|l| l.session_prompt.clone())
-        .unwrap_or_default();
-
-    // env: additive merge, later keys override
-    let mut env = HashMap::new();
-    for layer in &layers {
-        for (k, v) in &layer.env {
-            env.insert(k.clone(), v.clone());
-        }
-    }
-
-    // trust: user + local only — never from project or school (personal preference).
-    // Local wins over user. Backcompat: yolo = true treated as trust = "yolo".
-    let trust = if !tree.ace_local.trust.is_default() {
-        tree.ace_local.trust
-    } else if tree.ace_local.yolo {
-        Trust::Yolo
-    } else if !tree.ace_user.trust.is_default() {
-        tree.ace_user.trust
-    } else if tree.ace_user.yolo {
-        Trust::Yolo
-    } else {
-        Trust::Default
-    };
-
-    // resume: user + local only (personal preference). Local wins over user. Default true.
-    let resume = tree.ace_local.resume
-        .or(tree.ace_user.resume)
-        .unwrap_or(true);
-
-    // skip_update: standard three-layer, last Some wins. Default false.
-    let skip_update = layers
-        .iter()
-        .rev()
-        .find_map(|l| l.skip_update)
-        .unwrap_or(false);
+    let env = merged
+        .env
+        .into_iter()
+        .map(|(k, v)| (k, v.value))
+        .collect();
 
     Ok(Resolved {
-        school_specifier,
+        school_specifier: merged.school_specifier.value,
         backend,
-        session_prompt,
+        session_prompt: merged.session_prompt.value,
         env,
-        trust,
-        resume,
-        skip_update,
+        trust: merged.trust.value,
+        resume: merged.resume.value,
+        skip_update: merged.skip_update.value,
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::backend::Kind;
 
     fn ace(school: &str, env: &[(&str, &str)]) -> AceToml {
         AceToml {
