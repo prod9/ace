@@ -15,6 +15,7 @@ use io::Io;
 
 pub struct Ace {
     project_dir: PathBuf,
+    tree: Option<Tree>,
     state: Option<State>,
     school: Option<SchoolPaths>,
     runtime_overrides: RuntimeOverrides,
@@ -27,6 +28,7 @@ impl Ace {
     pub fn new(project_dir: PathBuf, mode: OutputMode) -> Self {
         Self {
             project_dir,
+            tree: None,
             state: None,
             school: None,
             runtime_overrides: RuntimeOverrides::default(),
@@ -49,6 +51,19 @@ impl Ace {
         self.state = None;
     }
 
+    /// Lazy-load the raw config tree (parse-only; no merge, no binding).
+    /// Survives `State::resolve` failures, so recovery code paths can still
+    /// inspect declared `[[backends]]` after an unknown-backend error.
+    pub fn require_tree(&mut self) -> Result<&Tree, ConfigError> {
+        if self.tree.is_none() {
+            let paths = config::paths::resolve(&self.project_dir)?;
+            let mut tree = Tree::load(&paths)?;
+            tree.load_school(&self.project_dir)?;
+            self.tree = Some(tree);
+        }
+        Ok(self.tree.as_ref().expect("tree was just set"))
+    }
+
     pub fn set_scope_override(&mut self, scope: Option<Scope>) {
         self.scope_override = scope;
     }
@@ -65,9 +80,8 @@ impl Ace {
     /// Lazy-load tree + school.toml + resolve. No-op if already loaded.
     pub fn require_state(&mut self) -> Result<&State, ConfigError> {
         if self.state.is_none() {
-            let paths = config::paths::resolve(&self.project_dir)?;
-            let mut tree = Tree::load(&paths)?;
-            tree.load_school(&self.project_dir)?;
+            self.require_tree()?;
+            let mut tree = self.tree.clone().expect("tree just loaded");
             self.school = tree.school_paths.take();
             self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         }

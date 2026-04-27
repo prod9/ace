@@ -1,7 +1,7 @@
-use crate::ace::Ace;
+use crate::ace::{Ace, OutputMode};
+use crate::backend::{Kind, SessionOpts};
 use crate::config::ConfigError;
 use crate::config::ace_toml::Trust;
-use crate::backend::SessionOpts;
 use crate::actions::project::RegisterMcp;
 use crate::actions::project::{Prepare, PrepareResult};
 use crate::templates::session::build_session_prompt;
@@ -14,7 +14,7 @@ pub fn run(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) {
 }
 
 fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> Result<(), CmdError> {
-    ace.require_state()?;
+    require_state_or_recover(ace)?;
 
     let specifier = ace.state().school_specifier.clone()
         .ok_or(ConfigError::NoSchool)?;
@@ -121,4 +121,51 @@ pub(super) fn prepare_school(
     }
 
     Ok(prepare_result)
+}
+
+/// Try `require_state`. On unknown backend in TTY mode, prompt the user to
+/// pick a known backend, set it as a runtime override, and retry. Closes
+/// PROD9-146: a stale `backend = "..."` selector can no longer brick the
+/// session — the user gets a recovery prompt instead.
+fn require_state_or_recover(ace: &mut Ace) -> Result<(), CmdError> {
+    match ace.require_state() {
+        Ok(_) => Ok(()),
+        Err(ConfigError::UnknownBackend(name)) => recover_backend(ace, &name),
+        Err(e) => Err(e.into()),
+    }
+}
+
+fn recover_backend(ace: &mut Ace, attempted: &str) -> Result<(), CmdError> {
+    if ace.mode() != OutputMode::Human {
+        ace.hint(&format!(
+            "to fix: ace config set backend <name> (registry has no `{attempted}`)"
+        ));
+        return Err(ConfigError::UnknownBackend(attempted.to_string()).into());
+    }
+
+    let names = list_known_backend_names(ace)?;
+    ace.warn(&format!("backend `{attempted}` is not in the registry"));
+    let pick = ace.prompt_select("Pick a backend for this session:", names)?;
+    ace.set_backend_override(Some(pick.clone()));
+    ace.require_state()?;
+    ace.hint(&format!("to make permanent: ace config set backend {pick}"));
+    Ok(())
+}
+
+fn list_known_backend_names(ace: &mut Ace) -> Result<Vec<String>, CmdError> {
+    let tree = ace.require_tree()?;
+    let mut names: Vec<String> = Kind::ALL
+        .iter()
+        .filter(|k| **k != Kind::Flaude)
+        .map(|k| k.name().to_string())
+        .collect();
+    if let Some(st) = &tree.school_toml {
+        names.extend(st.backends.iter().map(|d| d.name.clone()));
+    }
+    for layer in [&tree.ace_user, &tree.ace_project, &tree.ace_local] {
+        names.extend(layer.backends.iter().map(|d| d.name.clone()));
+    }
+    names.sort();
+    names.dedup();
+    Ok(names)
 }
