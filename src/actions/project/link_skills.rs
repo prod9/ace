@@ -210,13 +210,13 @@ pub fn emit_warnings(ace: &mut Ace, prepared: &PreparedSkills, link_result: &Lin
     for unknown in &diagnostics.unknown_patterns {
         ace.warn(&format!(
             "skill pattern matched no skill: {} (in {:?} {:?})",
-            unknown.pattern, unknown.scope, unknown.field
+            unknown.pattern, unknown.source, unknown.field
         ));
     }
     for collision in &diagnostics.collisions {
         ace.warn(&format!(
             "skill {} appears in both include_skills and exclude_skills at {:?} scope",
-            collision.skill, collision.scope
+            collision.skill, collision.source
         ));
     }
 }

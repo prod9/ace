@@ -10,10 +10,10 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::config::tree::Tree;
+use crate::resolver;
 use crate::state::discover::{self, DiscoveredSkill, Tier};
-use crate::state::resolver;
 
-pub use crate::state::resolver::{Collision, Decision, Entry, Scope, UnknownPattern};
+pub use crate::resolver::{Collision, Decision, Entry, Source, UnknownPattern};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChangeKind {
@@ -83,7 +83,7 @@ impl Skills<Discovered> {
     /// Consumes `self` — the typestate transition is one-way.
     pub fn resolve(self, tree: &Tree) -> Skills<Resolved> {
         let names: Vec<String> = self.items.iter().map(|s| s.name.clone()).collect();
-        let resolution = resolver::resolve(
+        let resolution = resolver::resolve_skills(
             &names,
             &tree.ace_user,
             &tree.ace_project,

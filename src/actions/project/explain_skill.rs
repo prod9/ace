@@ -4,7 +4,7 @@
 //! reference to the matching `Skill<Resolved>` (caller renders) or an
 //! `ExplainError::NotFound` carrying near-match suggestions.
 
-use crate::state::skills::{Entry, Resolved, Skill, Skills};
+use crate::state::skills::{Entry, Resolved, Skill, Skills, Source};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ExplainError {
@@ -50,10 +50,16 @@ pub fn render(skill: &Skill<Resolved>) -> String {
 }
 
 fn format_trace_line(e: &Entry) -> String {
+    // The synthetic "no-filter" base is reported as `Source::Default`; render
+    // it as "implicit" for user-facing continuity with the prior label.
+    let source_label = match e.source {
+        Source::Default => "implicit",
+        s => s.label(),
+    };
     format!(
         "{:>9}  {}: {} \"{}\"",
         e.op.label(),
-        e.scope.label(),
+        source_label,
         e.field.label(),
         e.pattern,
     )

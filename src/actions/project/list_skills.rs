@@ -6,7 +6,7 @@
 
 use std::fmt::Write;
 
-use crate::state::skills::{Entry, Resolved, Scope, Skill, Skills};
+use crate::state::skills::{Entry, Resolved, Skill, Skills, Source};
 
 /// Tab-separated table with header. Matches `ace paths` style for machine parsing.
 pub fn render_table(skills: &Skills<Resolved>, show_excluded: bool) -> String {
@@ -54,9 +54,9 @@ fn reason_for(skill: &Skill<Resolved>) -> String {
 }
 
 fn format_reason(e: &Entry) -> String {
-    match e.scope {
-        Scope::Implicit => "implicit base (no skills filter)".to_string(),
-        _ => format!("{}: {} \"{}\"", e.scope.label(), e.field.label(), e.pattern),
+    match e.source {
+        Source::Default => "implicit base (no skills filter)".to_string(),
+        _ => format!("{}: {} \"{}\"", e.source.label(), e.field.label(), e.pattern),
     }
 }
 

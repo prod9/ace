@@ -1,6 +1,5 @@
 mod backend_resolve;
 pub mod discover;
-mod resolver;
 pub mod school;
 pub mod skills;
 
