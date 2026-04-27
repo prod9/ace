@@ -80,12 +80,10 @@ mod tests {
 
     fn tree(user: AceToml, project: AceToml, local: AceToml) -> Tree {
         Tree {
-            ace_user: user,
-            ace_project: project,
-            ace_local: local,
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: Some(user),
+            project: Some(project),
+            local: Some(local),
+            school: None,
         }
     }
 

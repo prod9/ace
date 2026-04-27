@@ -163,12 +163,12 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
 /// set backend` for early validation; resolve-time errors still apply.
 fn known_backend_names(tree: &Tree) -> HashSet<String> {
     let mut names: HashSet<String> = Kind::ALL.iter().map(|k| k.name().to_string()).collect();
-    if let Some(st) = &tree.school_toml {
+    if let Some(st) = &tree.school {
         for d in &st.backends {
             names.insert(d.name.clone());
         }
     }
-    for layer in [&tree.ace_user, &tree.ace_project, &tree.ace_local] {
+    for layer in [&tree.user, &tree.project, &tree.local].iter().filter_map(|o| o.as_ref()) {
         for d in &layer.backends {
             names.insert(d.name.clone());
         }

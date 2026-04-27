@@ -13,21 +13,26 @@ use super::resolved::Resolved;
 use super::source::{Source, Sourced};
 
 pub fn merge(tree: &Tree, overrides: &AceToml) -> Resolved {
+    let default = AceToml::default();
+    let user = tree.user.as_ref().unwrap_or(&default);
+    let project = tree.project.as_ref().unwrap_or(&default);
+    let local = tree.local.as_ref().unwrap_or(&default);
+
     let layers: [(Source, &AceToml); 4] = [
-        (Source::User, &tree.ace_user),
-        (Source::Project, &tree.ace_project),
-        (Source::Local, &tree.ace_local),
+        (Source::User, user),
+        (Source::Project, project),
+        (Source::Local, local),
         (Source::Override, overrides),
     ];
 
     Resolved {
         school_specifier: school_specifier(&layers),
-        backend_name: backend_name(&layers, tree.school_backend.as_deref()),
+        backend_name: backend_name(&layers, tree.school_backend()),
         backend_decls: backend_decls(tree, &layers),
         session_prompt: session_prompt(&layers),
         env: env(&layers),
-        trust: trust(tree),
-        resume: resume(tree),
+        trust: trust(user, local),
+        resume: resume(user, local),
         skip_update: skip_update(&layers),
     }
 }
@@ -60,7 +65,7 @@ fn backend_name(
 
 fn backend_decls(tree: &Tree, layers: &[(Source, &AceToml); 4]) -> Vec<Sourced<BackendDecl>> {
     let mut out = Vec::new();
-    if let Some(st) = &tree.school_toml {
+    if let Some(st) = &tree.school {
         for d in &st.backends {
             out.push(Sourced::new(d.clone(), Source::School));
         }
@@ -94,29 +99,29 @@ fn env(layers: &[(Source, &AceToml); 4]) -> HashMap<String, Sourced<String>> {
     out
 }
 
-fn trust(tree: &Tree) -> Sourced<Trust> {
+fn trust(user: &AceToml, local: &AceToml) -> Sourced<Trust> {
     // Personal-only: user + local. Local wins. Backcompat: yolo = true → Yolo.
-    if !tree.ace_local.trust.is_default() {
-        return Sourced::new(tree.ace_local.trust, Source::Local);
+    if !local.trust.is_default() {
+        return Sourced::new(local.trust, Source::Local);
     }
-    if tree.ace_local.yolo {
+    if local.yolo {
         return Sourced::new(Trust::Yolo, Source::Local);
     }
-    if !tree.ace_user.trust.is_default() {
-        return Sourced::new(tree.ace_user.trust, Source::User);
+    if !user.trust.is_default() {
+        return Sourced::new(user.trust, Source::User);
     }
-    if tree.ace_user.yolo {
+    if user.yolo {
         return Sourced::new(Trust::Yolo, Source::User);
     }
     Sourced::default(Trust::Default)
 }
 
-fn resume(tree: &Tree) -> Sourced<bool> {
+fn resume(user: &AceToml, local: &AceToml) -> Sourced<bool> {
     // Personal-only: user + local. Local wins. Default true.
-    if let Some(v) = tree.ace_local.resume {
+    if let Some(v) = local.resume {
         return Sourced::new(v, Source::Local);
     }
-    if let Some(v) = tree.ace_user.resume {
+    if let Some(v) = user.resume {
         return Sourced::new(v, Source::User);
     }
     Sourced::default(true)
@@ -148,12 +153,27 @@ mod tests {
 
     fn tree(project: AceToml, local: AceToml) -> Tree {
         Tree {
-            ace_user: AceToml::default(),
-            ace_project: project,
-            ace_local: local,
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: None,
+            project: Some(project),
+            local: Some(local),
+            school: None,
+        }
+    }
+
+    fn tree_with_school_backend(
+        project: AceToml,
+        local: AceToml,
+        backend: &str,
+    ) -> Tree {
+        use crate::config::school_toml::SchoolToml;
+        Tree {
+            user: None,
+            project: Some(project),
+            local: Some(local),
+            school: Some(SchoolToml {
+                backend: Some(backend.to_string()),
+                ..SchoolToml::default()
+            }),
         }
     }
 
@@ -208,9 +228,7 @@ mod tests {
 
     #[test]
     fn backend_school_used() {
-        let mut t = tree(ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Kind::Codex.into());
-
+        let t = tree_with_school_backend(ace("", &[]), ace("", &[]), Kind::Codex.name());
         let r = merge(&t, &empty_overrides());
         assert_eq!(r.backend_name.value, "codex");
         assert_eq!(r.backend_name.from, Source::School);
@@ -220,8 +238,7 @@ mod tests {
     fn backend_project_overrides_school() {
         let mut project = ace("", &[]);
         project.backend = Some(Kind::Claude.into());
-        let mut t = tree(project, ace("", &[]));
-        t.school_backend = Some(Kind::Codex.into());
+        let t = tree_with_school_backend(project, ace("", &[]), Kind::Codex.name());
 
         let r = merge(&t, &empty_overrides());
         assert_eq!(r.backend_name.value, "claude");
@@ -234,8 +251,7 @@ mod tests {
         project.backend = Some(Kind::Flaude.into());
         let mut local = ace("", &[]);
         local.backend = Some(Kind::Claude.into());
-        let mut t = tree(project, local);
-        t.school_backend = Some(Kind::Codex.into());
+        let t = tree_with_school_backend(project, local, Kind::Codex.name());
 
         let overrides = AceToml { backend: Some(Kind::Codex.into()), ..AceToml::default() };
         let r = merge(&t, &overrides);
@@ -290,12 +306,10 @@ mod tests {
         let local = AceToml { trust: Trust::Yolo, ..AceToml::default() };
 
         let t = Tree {
-            ace_user: user,
-            ace_project: AceToml::default(),
-            ace_local: local,
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: Some(user),
+            project: Some(AceToml::default()),
+            local: Some(local),
+            school: None,
         };
         let r = merge(&t, &empty_overrides());
         assert_eq!(r.trust.value, Trust::Yolo);
@@ -306,12 +320,10 @@ mod tests {
     fn trust_yolo_legacy_local() {
         let local = AceToml { yolo: true, ..AceToml::default() };
         let t = Tree {
-            ace_user: AceToml::default(),
-            ace_project: AceToml::default(),
-            ace_local: local,
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: None,
+            project: None,
+            local: Some(local),
+            school: None,
         };
         let r = merge(&t, &empty_overrides());
         assert_eq!(r.trust.value, Trust::Yolo);
@@ -378,12 +390,10 @@ mod tests {
     #[test]
     fn skip_update_user_propagates_when_others_unset() {
         let t = Tree {
-            ace_user: AceToml { skip_update: Some(true), ..AceToml::default() },
-            ace_project: AceToml::default(),
-            ace_local: AceToml::default(),
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: Some(AceToml { skip_update: Some(true), ..AceToml::default() }),
+            project: None,
+            local: None,
+            school: None,
         };
         let r = merge(&t, &empty_overrides());
         assert!(r.skip_update.value);

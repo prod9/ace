@@ -38,7 +38,7 @@ impl State {
     /// Tree must have `load_school()` called first if school.toml is needed.
     pub fn resolve(tree: Tree, overrides: RuntimeOverrides) -> Result<Self, ConfigError> {
         let resolved = resolve_layers(&tree, overrides)?;
-        let school = tree.school_toml.as_ref().map(|st| School::from(st.clone()));
+        let school = tree.school.as_ref().map(|st| School::from(st.clone()));
         Ok(Self {
             school_specifier: resolved.school_specifier,
             backend: resolved.backend,
@@ -55,14 +55,7 @@ impl State {
     #[allow(dead_code)] // used in tests + future use
     pub fn empty() -> Self {
         Self {
-            config: Tree {
-                ace_user: AceToml::default(),
-                ace_project: AceToml::default(),
-                ace_local: AceToml::default(),
-                school_backend: None,
-                school_toml: None,
-                school_paths: None,
-            },
+            config: Tree::default(),
             school_specifier: None,
             backend: Backend::default(),
             session_prompt: String::new(),
@@ -142,14 +135,29 @@ mod tests {
         }
     }
 
-    fn tree(ace_project: AceToml, ace_local: AceToml) -> Tree {
+    fn tree(project: AceToml, local: AceToml) -> Tree {
         Tree {
-            ace_user: AceToml::default(),
-            ace_project,
-            ace_local,
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: None,
+            project: Some(project),
+            local: Some(local),
+            school: None,
+        }
+    }
+
+    fn tree_with_school_backend(
+        project: AceToml,
+        local: AceToml,
+        backend: &str,
+    ) -> Tree {
+        use crate::config::school_toml::SchoolToml;
+        Tree {
+            user: None,
+            project: Some(project),
+            local: Some(local),
+            school: Some(SchoolToml {
+                backend: Some(backend.to_string()),
+                ..SchoolToml::default()
+            }),
         }
     }
 
@@ -233,8 +241,7 @@ mod tests {
 
     #[test]
     fn resolve_backend_school_toml_used() {
-        let mut t = tree(ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Kind::Codex.into());
+        let t = tree_with_school_backend(ace("", &[]), ace("", &[]), Kind::Codex.name());
 
         let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Codex);
@@ -245,8 +252,7 @@ mod tests {
         let mut project = ace("", &[]);
         project.backend = Some(Kind::Claude.into());
 
-        let mut t = tree(project, ace("", &[]));
-        t.school_backend = Some(Kind::Codex.into());
+        let t = tree_with_school_backend(project, ace("", &[]), Kind::Codex.name());
 
         let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Claude);
@@ -257,8 +263,7 @@ mod tests {
         let mut local = ace("", &[]);
         local.backend = Some(Kind::Claude.into());
 
-        let mut t = tree(ace("", &[]), local);
-        t.school_backend = Some(Kind::Codex.into());
+        let t = tree_with_school_backend(ace("", &[]), local, Kind::Codex.name());
 
         let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Claude);
@@ -272,8 +277,7 @@ mod tests {
         let mut local = ace("", &[]);
         local.backend = Some(Kind::Claude.into());
 
-        let mut t = tree(project, local);
-        t.school_backend = Some(Kind::Codex.into());
+        let t = tree_with_school_backend(project, local, Kind::Codex.name());
 
         let r = resolve_layers(
             &t,
@@ -420,12 +424,10 @@ mod tests {
     #[test]
     fn skip_update_user_true_used_when_others_unset() {
         let t = Tree {
-            ace_user: AceToml { skip_update: Some(true), ..AceToml::default() },
-            ace_project: AceToml::default(),
-            ace_local: AceToml::default(),
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: Some(AceToml { skip_update: Some(true), ..AceToml::default() }),
+            project: None,
+            local: None,
+            school: None,
         };
         let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(r.skip_update);
@@ -436,12 +438,10 @@ mod tests {
         let mut project = ace("s", &[]);
         project.skip_update = Some(false);
         let t = Tree {
-            ace_user: AceToml { skip_update: Some(true), ..AceToml::default() },
-            ace_project: project,
-            ace_local: AceToml::default(),
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: Some(AceToml { skip_update: Some(true), ..AceToml::default() }),
+            project: Some(project),
+            local: None,
+            school: None,
         };
         let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(!r.skip_update, "project false should override user true");

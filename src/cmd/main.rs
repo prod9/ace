@@ -159,10 +159,10 @@ fn list_known_backend_names(ace: &mut Ace) -> Result<Vec<String>, CmdError> {
         .filter(|k| **k != Kind::Flaude)
         .map(|k| k.name().to_string())
         .collect();
-    if let Some(st) = &tree.school_toml {
+    if let Some(st) = &tree.school {
         names.extend(st.backends.iter().map(|d| d.name.clone()));
     }
-    for layer in [&tree.ace_user, &tree.ace_project, &tree.ace_local] {
+    for layer in [&tree.user, &tree.project, &tree.local].iter().filter_map(|o| o.as_ref()) {
         names.extend(layer.backends.iter().map(|d| d.name.clone()));
     }
     names.sort();

@@ -81,8 +81,7 @@ impl Ace {
     pub fn require_state(&mut self) -> Result<&State, ConfigError> {
         if self.state.is_none() {
             self.require_tree()?;
-            let mut tree = self.tree.clone().expect("tree just loaded");
-            self.school = tree.school_paths.take();
+            let tree = self.tree.clone().expect("tree just loaded");
             self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         }
         Ok(self.state.as_ref().expect("state was just set"))
@@ -95,10 +94,9 @@ impl Ace {
 
     /// Resolve school paths. Dual context:
     /// - If school.toml exists in project_dir → school repo context
-    /// - Otherwise require_state → specifier → school_paths
+    /// - Otherwise require_tree → specifier → school_paths
     pub fn require_school(&mut self) -> Result<&SchoolPaths, ConfigError> {
         if self.school.is_none() {
-            // Direct school repo context
             if self.project_dir.join("school.toml").exists() {
                 self.school = Some(SchoolPaths {
                     source: ".".to_string(),
@@ -106,23 +104,25 @@ impl Ace {
                     root: self.project_dir.clone(),
                 });
             } else {
-                // Load state to get specifier
-                self.require_state()?;
-                if self.school.is_none() {
+                let tree = self.require_tree()?;
+                let Some(spec) = tree.specifier() else {
                     return Err(ConfigError::NoSchool);
-                }
+                };
+                let sp = config::school_paths::resolve(&self.project_dir, &spec)?;
+                self.school = Some(sp);
             }
         }
         Ok(self.school.as_ref().expect("school was just confirmed present"))
     }
 
-    /// Re-read school.toml, feed school_backend, re-resolve from stored tree.
-    /// Does NOT re-read ace.toml. Also refreshes cached school paths.
+    /// Re-read school.toml from disk and re-resolve state. Does NOT re-read
+    /// ace.toml layers. Also drops the cached school path so the next
+    /// `require_school` call re-resolves it.
     pub fn reload_state(&mut self) -> Result<&State, ConfigError> {
         let prev = self.state.as_ref().ok_or(ConfigError::NoConfig)?;
         let mut tree = prev.config.clone();
         tree.load_school(&self.project_dir)?;
-        self.school = tree.school_paths.take();
+        self.school = None;
         self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         Ok(self.state.as_ref().expect("state was just set"))
     }

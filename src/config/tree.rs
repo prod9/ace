@@ -2,55 +2,47 @@ use std::path::Path;
 
 use super::ace_toml::{self, AceToml};
 use super::paths::AcePaths;
-use super::school_paths::{self, SchoolPaths};
+use super::school_paths;
 use super::school_toml::{self, SchoolToml};
 use super::ConfigError;
 
-/// Raw config layers, preserved for write-back and inspection.
-#[derive(Clone)]
+/// Raw config layers parsed from disk. `None` means "no file present" — distinct
+/// from "present but empty" so diagnostics can tell the two apart. Derived
+/// fields (school paths, the school's contributed backend name) are computed
+/// downstream by the resolver and binding layers.
+#[derive(Clone, Default)]
 pub struct Tree {
-    pub ace_user: AceToml,
-    pub ace_project: AceToml,
-    pub ace_local: AceToml,
-    /// Backend name from school.toml, applied after load when school is known.
-    pub school_backend: Option<String>,
-    pub school_toml: Option<SchoolToml>,
-    pub school_paths: Option<SchoolPaths>,
+    pub user: Option<AceToml>,
+    pub project: Option<AceToml>,
+    pub local: Option<AceToml>,
+    pub school: Option<SchoolToml>,
 }
 
 impl Tree {
     pub fn load(paths: &AcePaths) -> Result<Self, ConfigError> {
-        let ace_user = load_or_default(&paths.user)?;
-        let ace_project = load_or_default(&paths.project)?;
-        let ace_local = load_or_default(&paths.local)?;
+        let user = load_optional(&paths.user)?;
+        let project = load_optional(&paths.project)?;
+        let local = load_optional(&paths.local)?;
 
         // User layer alone doesn't mean a project is set up.
-        let any_found = [&paths.project, &paths.local]
-            .iter()
-            .any(|p| p.exists());
-        if !any_found {
+        if project.is_none() && local.is_none() {
             return Err(ConfigError::NoConfig);
         }
 
-        Ok(Tree {
-            ace_user,
-            ace_project,
-            ace_local,
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
-        })
+        Ok(Tree { user, project, local, school: None })
     }
 
     /// Resolve school specifier from ace.toml layers (last non-empty wins).
     pub fn specifier(&self) -> Option<String> {
-        [&self.ace_local, &self.ace_project, &self.ace_user]
+        [&self.local, &self.project, &self.user]
             .iter()
+            .filter_map(|opt| opt.as_ref())
             .find(|l| !l.school.is_empty())
             .map(|l| l.school.clone())
     }
 
-    /// Second pass: load school.toml + school_paths from the resolved specifier.
+    /// Second pass: read school.toml from the resolved specifier's clone path.
+    /// No-op when no specifier is set or school.toml is missing/unreadable.
     pub fn load_school(&mut self, project_dir: &Path) -> Result<(), ConfigError> {
         let Some(spec) = self.specifier() else {
             return Ok(());
@@ -61,20 +53,21 @@ impl Tree {
         if school_toml_path.exists()
             && let Ok(st) = school_toml::load(&school_toml_path)
         {
-            self.school_backend = st.backend.clone();
-            self.school_toml = Some(st);
+            self.school = Some(st);
         }
-        self.school_paths = Some(sp);
         Ok(())
+    }
+
+    /// Backend name contributed by the school layer, if any.
+    pub fn school_backend(&self) -> Option<&str> {
+        self.school.as_ref().and_then(|s| s.backend.as_deref())
     }
 }
 
-fn load_or_default(path: &Path) -> Result<AceToml, ConfigError> {
+fn load_optional(path: &Path) -> Result<Option<AceToml>, ConfigError> {
     match ace_toml::load(path) {
-        Ok(config) => Ok(config),
-        Err(ConfigError::Io(ref e)) if e.kind() == std::io::ErrorKind::NotFound => {
-            Ok(AceToml::default())
-        }
+        Ok(config) => Ok(Some(config)),
+        Err(ConfigError::Io(ref e)) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e),
     }
 }

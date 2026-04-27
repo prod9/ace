@@ -83,12 +83,11 @@ impl Skills<Discovered> {
     /// Consumes `self` — the typestate transition is one-way.
     pub fn resolve(self, tree: &Tree) -> Skills<Resolved> {
         let names: Vec<String> = self.items.iter().map(|s| s.name.clone()).collect();
-        let resolution = resolver::resolve_skills(
-            &names,
-            &tree.ace_user,
-            &tree.ace_project,
-            &tree.ace_local,
-        );
+        let default = crate::config::ace_toml::AceToml::default();
+        let user = tree.user.as_ref().unwrap_or(&default);
+        let project = tree.project.as_ref().unwrap_or(&default);
+        let local = tree.local.as_ref().unwrap_or(&default);
+        let resolution = resolver::resolve_skills(&names, user, project, local);
 
         let mut by_name: HashMap<String, (PathBuf, Tier)> = self
             .items
@@ -209,12 +208,10 @@ mod tests {
 
     fn tree(project: AceToml) -> Tree {
         Tree {
-            ace_user: AceToml::default(),
-            ace_project: project,
-            ace_local: AceToml::default(),
-            school_backend: None,
-            school_toml: None,
-            school_paths: None,
+            user: None,
+            project: Some(project),
+            local: None,
+            school: None,
         }
     }
 
