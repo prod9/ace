@@ -10,8 +10,9 @@ mod git;
 mod glob;
 mod paths;
 mod platform;
-mod templates;
+mod resolver;
 mod state;
+mod templates;
 mod upgrade;
 
 use clap::Parser;
