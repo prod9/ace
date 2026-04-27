@@ -11,8 +11,8 @@ pub(super) fn is_ready() -> bool {
     home.join(".claude.json").exists()
 }
 
-pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
-    let (program, prefix) = opts.cmd.split_first()
+pub(super) fn exec_session(launch: &[String], opts: SessionOpts) -> Result<(), std::io::Error> {
+    let (program, prefix) = launch.split_first()
         .map(|(p, rest)| (p.as_str(), rest))
         .unwrap_or(("claude", &[][..]));
     let mut cmd = Command::new(program);

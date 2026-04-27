@@ -11,6 +11,11 @@ use crate::config::ace_toml::Trust;
 use crate::config::school_toml::McpDecl;
 
 /// Everything a backend needs to launch a session.
+///
+/// `cmd` (the launch argv) is *not* in here — it's a property of the
+/// backend instance, not session input. Per-backend `exec_session` takes
+/// it as a separate parameter, populated by `Backend::exec_session` from
+/// `self.cmd`.
 pub struct SessionOpts {
     pub trust: Trust,
     pub session_prompt: String,
@@ -18,9 +23,6 @@ pub struct SessionOpts {
     pub env: HashMap<String, String>,
     pub extra_args: Vec<String>,
     pub resume: bool,
-    /// Argv for launching the binary. `cmd[0]` is the program; `cmd[1..]` are
-    /// prepended to `extra_args`. Sourced from `Backend.cmd`.
-    pub cmd: Vec<String>,
 }
 
 /// Health check result for a single MCP server.
@@ -87,8 +89,8 @@ impl Kind {
         Ok(())
     }
 
-    pub fn exec_session(&self, opts: SessionOpts) -> Result<(), std::io::Error> {
-        dispatch!(self, exec_session, opts)
+    pub fn exec_session(&self, cmd: &[String], opts: SessionOpts) -> Result<(), std::io::Error> {
+        dispatch!(self, exec_session, cmd, opts)
     }
 
     #[allow(dead_code)]
@@ -175,8 +177,7 @@ impl Backend {
         for (k, v) in &self.env {
             opts.env.insert(k.clone(), v.clone());
         }
-        opts.cmd = self.cmd.clone();
-        self.kind.exec_session(opts)
+        self.kind.exec_session(&self.cmd, opts)
     }
 
     pub fn mcp_list(&self) -> HashSet<String> {

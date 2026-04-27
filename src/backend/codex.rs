@@ -13,8 +13,8 @@ pub(super) fn is_ready() -> bool {
             .unwrap_or(false)
 }
 
-pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
-    let (program, prefix) = opts.cmd.split_first()
+pub(super) fn exec_session(launch: &[String], opts: SessionOpts) -> Result<(), std::io::Error> {
+    let (program, prefix) = launch.split_first()
         .map(|(p, rest)| (p.as_str(), rest))
         .unwrap_or(("codex", &[][..]));
     let mut cmd = Command::new(program);

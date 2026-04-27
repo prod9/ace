@@ -5,7 +5,7 @@ use super::{McpDecl, McpStatus, SessionOpts};
 
 pub(super) fn is_ready() -> bool { true }
 
-pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
+pub(super) fn exec_session(launch: &[String], opts: SessionOpts) -> Result<(), std::io::Error> {
     let Some(path) = exec_record_path() else {
         return Ok(());
     };
@@ -19,7 +19,7 @@ pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
         "session_prompt": opts.session_prompt,
         "project_dir": opts.project_dir.to_string_lossy(),
         "extra_args": opts.extra_args,
-        "cmd": opts.cmd,
+        "cmd": launch,
     });
 
     let mut file = std::fs::OpenOptions::new()
