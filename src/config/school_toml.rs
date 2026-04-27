@@ -2,15 +2,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::backend::Kind;
+use crate::config::ace_toml::BackendDecl;
 use super::{is_empty_str, is_empty_map, is_empty_vec, is_false, ConfigError};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SchoolToml {
     pub name: String,
+    /// Default backend name (built-in or one declared in `backends` below).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub backend: Option<Kind>,
+    pub backend: Option<String>,
     #[serde(skip_serializing_if = "is_empty_str")]
     pub session_prompt: String,
     #[serde(skip_serializing_if = "is_empty_map")]
@@ -21,6 +22,10 @@ pub struct SchoolToml {
     pub projects: Vec<Project>,
     #[serde(skip_serializing_if = "is_empty_vec")]
     pub imports: Vec<ImportDecl>,
+    /// Custom backend declarations seeded by the school. Layered upstream of
+    /// user/project/local `[[backends]]` decls.
+    #[serde(skip_serializing_if = "is_empty_vec")]
+    pub backends: Vec<BackendDecl>,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]

@@ -18,7 +18,6 @@ use clap::{Parser, Subcommand};
 
 use crate::ace::{Ace, IoError};
 use crate::config::{ConfigError, Scope};
-use crate::backend::Kind;
 use crate::actions::school::{AddImportError, PullImportsError};
 use crate::actions::project::RegisterMcpError;
 use crate::actions::project::PrepareError;
@@ -36,9 +35,11 @@ pub struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
-    /// Override the configured backend for this command invocation
-    #[arg(short = 'b', long, global = true, value_enum)]
-    backend: Option<Kind>,
+    /// Override the configured backend for this command invocation.
+    /// Built-ins: claude, codex, flaude. Custom names from `[[backends]]`
+    /// declarations are also accepted; resolved against the registry.
+    #[arg(short = 'b', long, global = true)]
+    backend: Option<String>,
 
     /// Shortcut for `--backend claude`
     #[arg(long, global = true)]
@@ -270,27 +271,27 @@ fn resolve_scope_override(cli: &Cli) -> Result<Option<Scope>, CmdError> {
     }
 }
 
-fn resolve_backend_override(cli: &Cli) -> Result<Option<Kind>, CmdError> {
+fn resolve_backend_override(cli: &Cli) -> Result<Option<String>, CmdError> {
     let mut selected = Vec::new();
 
-    if let Some(backend) = cli.backend {
-        selected.push(backend);
+    if let Some(backend) = &cli.backend {
+        selected.push(backend.clone());
     }
     if cli.claude {
-        selected.push(Kind::Claude);
+        selected.push(crate::backend::Kind::Claude.into());
     }
     if cli.codex {
-        selected.push(Kind::Codex);
+        selected.push(crate::backend::Kind::Codex.into());
     }
     if cli.flaude {
-        selected.push(Kind::Flaude);
+        selected.push(crate::backend::Kind::Flaude.into());
     }
 
     selected.dedup();
 
     match selected.as_slice() {
         [] => Ok(None),
-        [backend] => Ok(Some(*backend)),
+        [backend] => Ok(Some(backend.clone())),
         _ => Err(CmdError::Other(
             "cannot combine multiple backend override flags".to_string(),
         )),

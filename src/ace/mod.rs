@@ -3,7 +3,6 @@ pub mod io;
 use std::path::{Path, PathBuf};
 
 use crate::config;
-use crate::backend::Kind;
 use crate::config::paths::AcePaths;
 use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
@@ -45,7 +44,7 @@ impl Ace {
         self.mode
     }
 
-    pub fn set_backend_override(&mut self, backend: Option<Kind>) {
+    pub fn set_backend_override(&mut self, backend: Option<String>) {
         self.runtime_overrides.backend = backend;
         self.state = None;
     }
@@ -70,7 +69,7 @@ impl Ace {
             let mut tree = Tree::load(&paths)?;
             tree.load_school(&self.project_dir)?;
             self.school = tree.school_paths.take();
-            self.state = Some(State::resolve(tree, self.runtime_overrides));
+            self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         }
         Ok(self.state.as_ref().expect("state was just set"))
     }
@@ -110,7 +109,7 @@ impl Ace {
         let mut tree = prev.config.clone();
         tree.load_school(&self.project_dir)?;
         self.school = tree.school_paths.take();
-        self.state = Some(State::resolve(tree, self.runtime_overrides));
+        self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         Ok(self.state.as_ref().expect("state was just set"))
     }
 

@@ -17,7 +17,10 @@ Resolved by merging (later overrides earlier):
 Each layer can set:
 
 - `school` — school specifier (last non-empty wins)
-- `backend` — `"claude"` or `"codex"` (highest-priority `Some` wins: local → project → user; fallback `claude`). See [backend.md](backend.md).
+- `backend` — backend name (highest-priority `Some` wins: local → project → user
+  → school's `school.toml` → fallback `claude`). Built-ins: `"claude"`,
+  `"codex"`, `"flaude"`. Custom names are valid when declared in `[[backends]]`
+  (see [Custom backends](#custom-backends)). See [backend.md](backend.md).
 - `role` — selected role name (last non-empty wins). Must match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md).
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
@@ -42,6 +45,81 @@ project-committed `ace.toml` or `school.toml`. They are personal workflow prefer
   Backends that don't support resume start fresh silently.
 
 Resolution for personal-only fields: local wins over user. Project layer is skipped entirely.
+
+## Custom backends
+
+`[[backends]]` declarations seed or augment the backend registry. Built-ins
+(`claude`, `codex`, `flaude`) are pre-registered; declarations override their
+`env`/`cmd` or introduce new names that reuse an existing built-in's behavior
+(its *kind*).
+
+### Fields
+
+- `name` — registry key. Required. May match a built-in (override) or be new.
+- `kind` — built-in name whose behavior to reuse (`"claude"`, `"codex"`,
+  `"flaude"`). Optional.
+- `cmd` — argv for launching the binary. `cmd[0]` is the program; `cmd[1..]`
+  are prepended to runtime args. Optional.
+- `env` — environment variables merged into the launched process. Optional.
+
+### Layer order
+
+`[[backends]]` may appear in `school.toml` and in any `ace.toml` /
+`ace.local.toml` layer. Resolution walks **built-ins → school → user → project
+→ local**, applying each declaration in order.
+
+### Resolution rules
+
+For each declaration:
+
+- **Name already registered** (built-in or earlier-layer custom) — partial
+  override:
+  - `env` per-key last-wins.
+  - `cmd` last-wins-non-empty (empty `cmd` does not clobber a prior value).
+  - `kind`, if specified, must match the existing entry's kind. Mismatch
+    errors with `BackendKindMismatch`.
+- **New name** — kind is resolved by trying:
+  1. Explicit `kind` field.
+  2. `name` matching a built-in name.
+  3. `cmd[0]` basename matching a built-in name.
+  4. Otherwise: error `UnresolvableBackendKind`.
+
+  Then `cmd` defaults to `[kind.name()]` if not given.
+
+### Selecting a custom backend
+
+Once registered, a custom name is selectable like a built-in:
+
+- `backend = "bailer"` in any `ace.toml` layer.
+- `--backend bailer` on the CLI (or `ace config set backend bailer`).
+
+Unknown names error with `UnknownBackend` at resolve time.
+
+### Examples
+
+```toml
+# Tweak built-in claude's env
+[[backends]]
+name = "claude"
+env = { ANTHROPIC_LOG = "debug" }
+
+# Custom backend reusing claude's binary
+[[backends]]
+name = "bailer"
+kind = "claude"
+env = { ANTHROPIC_BASE_URL = "..." }
+
+# Custom backend with a forked binary; kind inferred from cmd[0] basename
+[[backends]]
+name = "bedrock-claude"
+cmd = ["claude-bedrock"]
+env = { AWS_REGION = "..." }
+
+# Local layer adds an env var to a school-declared custom backend
+[[backends]]
+name = "bailer"
+env = { API_TOKEN = "..." }
+```
 
 ## Skills Selection
 

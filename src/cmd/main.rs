@@ -65,6 +65,7 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         env: ace.state().env.clone(),
         extra_args: backend_args,
         resume,
+        cmd: Vec::new(), // populated by Backend::exec_session from self.cmd
     })?;
 
     Ok(())

@@ -1,8 +1,11 @@
+use std::collections::HashSet;
+
 use clap::Subcommand;
 
 use crate::ace::Ace;
-use crate::config::ace_toml::{self, AceToml, Trust};
 use crate::backend::Kind;
+use crate::config::ace_toml::{self, AceToml, Trust};
+use crate::config::tree::Tree;
 use crate::config::{ConfigKey, Scope};
 
 use super::CmdError;
@@ -43,7 +46,7 @@ fn show(ace: &mut Ace) -> Result<(), CmdError> {
 
     let effective = AceToml {
         school: state.school_specifier.clone().unwrap_or_default(),
-        backend: Some(state.backend.kind),
+        backend: Some(state.backend.name.clone()),
         session_prompt: if state.session_prompt.is_empty() {
             None
         } else {
@@ -118,8 +121,17 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
     match config_key {
         ConfigKey::School => config.school = value.to_string(),
         ConfigKey::Backend => {
-            let backend = parse_backend(value)?;
-            config.backend = Some(backend);
+            ace.require_state()?;
+            let known = known_backend_names(&ace.state().config);
+            if !known.contains(value) {
+                let mut listed: Vec<&str> = known.iter().map(String::as_str).collect();
+                listed.sort();
+                return Err(CmdError::Other(format!(
+                    "unknown backend: {value} (known: {})",
+                    listed.join(", "),
+                )));
+            }
+            config.backend = Some(value.to_string());
         }
         ConfigKey::Trust => {
             let trust = parse_trust(value)?;
@@ -146,15 +158,22 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
     Ok(())
 }
 
-fn parse_backend(value: &str) -> Result<Kind, CmdError> {
-    match value {
-        "claude" => Ok(Kind::Claude),
-        "codex" => Ok(Kind::Codex),
-        "flaude" => Ok(Kind::Flaude),
-        _ => Err(CmdError::Other(format!(
-            "unknown backend: {value} (expected claude, codex, flaude)"
-        ))),
+/// Names that resolve as a backend selector: built-ins + any `[[backends]]`
+/// declarations across school/user/project/local layers. Used by `ace config
+/// set backend` for early validation; resolve-time errors still apply.
+fn known_backend_names(tree: &Tree) -> HashSet<String> {
+    let mut names: HashSet<String> = Kind::ALL.iter().map(|k| k.name().to_string()).collect();
+    if let Some(st) = &tree.school_toml {
+        for d in &st.backends {
+            names.insert(d.name.clone());
+        }
     }
+    for layer in [&tree.ace_user, &tree.ace_project, &tree.ace_local] {
+        for d in &layer.backends {
+            names.insert(d.name.clone());
+        }
+    }
+    names
 }
 
 fn parse_trust(value: &str) -> Result<Trust, CmdError> {

@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use super::ace_toml::{self, AceToml};
-use crate::backend::Kind;
 use super::paths::AcePaths;
 use super::school_paths::{self, SchoolPaths};
 use super::school_toml::{self, SchoolToml};
@@ -13,8 +12,8 @@ pub struct Tree {
     pub ace_user: AceToml,
     pub ace_project: AceToml,
     pub ace_local: AceToml,
-    /// Backend from school.toml, applied after load when school is known.
-    pub school_backend: Option<Kind>,
+    /// Backend name from school.toml, applied after load when school is known.
+    pub school_backend: Option<String>,
     pub school_toml: Option<SchoolToml>,
     pub school_paths: Option<SchoolPaths>,
 }
@@ -62,7 +61,7 @@ impl Tree {
         if school_toml_path.exists()
             && let Ok(st) = school_toml::load(&school_toml_path)
         {
-            self.school_backend = st.backend;
+            self.school_backend = st.backend.clone();
             self.school_toml = Some(st);
         }
         self.school_paths = Some(sp);

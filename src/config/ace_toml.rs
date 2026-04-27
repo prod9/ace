@@ -2,13 +2,21 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::backend::Kind;
 use super::{is_empty_str, is_empty_map, ConfigError};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct BackendDecl {
     pub name: String,
+    /// Explicit kind (built-in name: claude/codex/flaude). When omitted,
+    /// kind is inferred from `name` matching a built-in, then from `cmd[0]`
+    /// basename. See `state::backend_resolve`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    /// Argv for launching the binary. Empty = default to `[kind.name()]`
+    /// after resolution.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub cmd: Vec<String>,
     #[serde(skip_serializing_if = "is_empty_map")]
     pub env: HashMap<String, String>,
 }
@@ -33,8 +41,10 @@ impl Trust {
 pub struct AceToml {
     #[serde(skip_serializing_if = "is_empty_str")]
     pub school: String,
+    /// Backend name (resolved against the registry — built-ins or `[[backends]]`
+    /// declarations). Stored as a string; validation happens at lookup time.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub backend: Option<Kind>,
+    pub backend: Option<String>,
     // TODO: add `role` and `description` fields so non-dev roles (e.g. PM) can
     // configure ace for requirements-only repos, spec/ workflows, Jira/Trello sync, etc.
     #[serde(skip_serializing_if = "Option::is_none")]

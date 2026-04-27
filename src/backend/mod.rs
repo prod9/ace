@@ -5,7 +5,6 @@ mod flaude;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use crate::config::ace_toml::Trust;
@@ -19,6 +18,9 @@ pub struct SessionOpts {
     pub env: HashMap<String, String>,
     pub extra_args: Vec<String>,
     pub resume: bool,
+    /// Argv for launching the binary. `cmd[0]` is the program; `cmd[1..]` are
+    /// prepended to `extra_args`. Sourced from `Backend.cmd`.
+    pub cmd: Vec<String>,
 }
 
 /// Health check result for a single MCP server.
@@ -28,7 +30,7 @@ pub struct McpStatus {
     pub ok: bool,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ValueEnum)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {
     #[default]
@@ -59,6 +61,11 @@ impl Kind {
             Kind::Codex => "codex",
             Kind::Flaude => "flaude",
         }
+    }
+
+    /// Lookup a built-in kind by canonical name.
+    pub fn from_name(name: &str) -> Option<Kind> {
+        Kind::ALL.iter().copied().find(|k| k.name() == name)
     }
 
     /// Default Backend instance for this kind: name = canonical name, cmd =
@@ -120,6 +127,12 @@ impl Kind {
     }
 }
 
+impl From<Kind> for String {
+    fn from(k: Kind) -> String {
+        k.name().to_string()
+    }
+}
+
 /// A resolved backend instance: identity (`name`), behavior (`kind`), and runtime
 /// overrides (`cmd`, `env`). Built-ins are pre-built singletons; custom entries
 /// from `[[backends]]` populate the registry alongside built-ins.
@@ -128,8 +141,7 @@ pub struct Backend {
     pub name: String,
     pub kind: Kind,
     /// Argv for launching the binary. Built-ins seed `[kind.name()]`; custom
-    /// backends from `[[backends]]` (PROD9-129) override.
-    #[allow(dead_code)] // consumed by SessionOpts in PROD9-129 slice
+    /// backends from `[[backends]]` override.
     pub cmd: Vec<String>,
     pub env: HashMap<String, String>,
 }
@@ -152,6 +164,7 @@ impl Backend {
         for (k, v) in &self.env {
             opts.env.insert(k.clone(), v.clone());
         }
+        opts.cmd = self.cmd.clone();
         self.kind.exec_session(opts)
     }
 
@@ -193,6 +206,10 @@ impl Registry {
 
     pub fn get_mut(&mut self, name: &str) -> Option<&mut Backend> {
         self.entries.get_mut(name)
+    }
+
+    pub fn insert(&mut self, backend: Backend) {
+        self.entries.insert(backend.name.clone(), backend);
     }
 }
 

@@ -1,3 +1,4 @@
+mod backend_resolve;
 pub mod discover;
 mod resolver;
 pub mod school;
@@ -10,10 +11,11 @@ use std::collections::HashMap;
 use crate::config::ace_toml::{AceToml, Trust};
 use crate::backend::{Backend, Kind, Registry};
 use crate::config::tree::Tree;
+use crate::config::ConfigError;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct RuntimeOverrides {
-    pub backend: Option<Kind>,
+    pub backend: Option<String>,
 }
 
 /// Resolved effective state, computed from config::Tree.
@@ -34,10 +36,10 @@ pub struct State {
 impl State {
     /// Full resolution: resolve all effective values from config layers.
     /// Tree must have `load_school()` called first if school.toml is needed.
-    pub fn resolve(tree: Tree, overrides: RuntimeOverrides) -> Self {
-        let resolved = resolve_layers(&tree, overrides);
+    pub fn resolve(tree: Tree, overrides: RuntimeOverrides) -> Result<Self, ConfigError> {
+        let resolved = resolve_layers(&tree, overrides)?;
         let school = tree.school_toml.as_ref().map(|st| School::from(st.clone()));
-        Self {
+        Ok(Self {
             school_specifier: resolved.school_specifier,
             backend: resolved.backend,
             session_prompt: resolved.session_prompt,
@@ -47,7 +49,7 @@ impl State {
             skip_update: resolved.skip_update,
             school,
             config: tree,
-        }
+        })
     }
 
     #[allow(dead_code)] // used in tests + future use
@@ -78,6 +80,7 @@ impl State {
     }
 }
 
+#[derive(Debug)]
 struct Resolved {
     school_specifier: Option<String>,
     backend: Backend,
@@ -88,8 +91,13 @@ struct Resolved {
     skip_update: bool,
 }
 
-/// Resolve effective values from layers. Order: user → project → local (last wins).
-fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
+/// Resolve effective values from layers.
+///
+/// Backend resolution: build registry from built-ins → school → user → project → local.
+/// Each `[[backends]]` decl merges via `backend_resolve::merge_decl`. The selected
+/// backend name is picked by precedence (override → local → project → user → school
+/// → `"claude"`) and looked up in the registry; unknown name → `UnknownBackend`.
+fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Result<Resolved, ConfigError> {
     let layers = [&tree.ace_user, &tree.ace_project, &tree.ace_local];
 
     // school: last non-empty wins
@@ -99,30 +107,31 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         .find(|l| !l.school.is_empty())
         .map(|l| l.school.clone());
 
-    // backend kind: local > project > user > school > fallback Claude
-    let backend_kind = overrides.backend
-        .or(tree.ace_local.backend)
-        .or(tree.ace_project.backend)
-        .or(tree.ace_user.backend)
-        .or(tree.school_backend)
-        .unwrap_or_default();
-
-    // Build registry: built-ins seed it, then per-layer [[backends]] decls
-    // merge into matching entries (env: per-key last-wins; matches global env
-    // semantics). Custom-name decls (no built-in match) ignored until 129.
+    // Build registry: built-ins → school decls → user/project/local decls.
     let mut registry = Registry::with_builtins();
-    for layer in &layers {
-        for decl in &layer.backends {
-            if let Some(entry) = registry.get_mut(&decl.name) {
-                for (k, v) in &decl.env {
-                    entry.env.insert(k.clone(), v.clone());
-                }
-            }
+    if let Some(school_toml) = &tree.school_toml {
+        for decl in &school_toml.backends {
+            backend_resolve::merge_decl(&mut registry, decl)?;
         }
     }
-    let backend = registry.lookup(backend_kind.name())
+    for layer in &layers {
+        for decl in &layer.backends {
+            backend_resolve::merge_decl(&mut registry, decl)?;
+        }
+    }
+
+    // Selected backend name: override → local → project → user → school → "claude"
+    let backend_name = overrides.backend
+        .or_else(|| tree.ace_local.backend.clone())
+        .or_else(|| tree.ace_project.backend.clone())
+        .or_else(|| tree.ace_user.backend.clone())
+        .or_else(|| tree.school_backend.clone())
+        .unwrap_or_else(|| Kind::default().into());
+
+    let backend = registry
+        .lookup(&backend_name)
         .cloned()
-        .unwrap_or_else(|| backend_kind.default_backend());
+        .ok_or(ConfigError::UnknownBackend(backend_name))?;
 
     // session_prompt: last Some wins (Some("") is a valid override to empty)
     let session_prompt = layers
@@ -165,7 +174,7 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         .find_map(|l| l.skip_update)
         .unwrap_or(false);
 
-    Resolved {
+    Ok(Resolved {
         school_specifier,
         backend,
         session_prompt,
@@ -173,7 +182,7 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Resolved {
         trust,
         resume,
         skip_update,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -205,7 +214,7 @@ mod tests {
             ace("project-school", &[]),
             ace("", &[]),
         );
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.school_specifier.as_deref(), Some("project-school"));
     }
 
@@ -215,33 +224,33 @@ mod tests {
             ace("project-school", &[]),
             ace("local-school", &[]),
         );
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.school_specifier.as_deref(), Some("local-school"));
     }
 
     #[test]
     fn resolve_school_none_when_all_empty() {
         let t = tree(ace("", &[]), ace("", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(r.school_specifier.is_none());
     }
 
     #[test]
     fn resolve_backend_local_overrides_project() {
         let mut project = ace("", &[]);
-        project.backend = Some(Kind::Codex);
+        project.backend = Some(Kind::Codex.into());
         let mut local = ace("", &[]);
-        local.backend = Some(Kind::Claude);
+        local.backend = Some(Kind::Claude.into());
 
         let t = tree(project, local);
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_fallback_claude() {
         let t = tree(ace("", &[]), ace("", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Claude);
     }
 
@@ -251,7 +260,7 @@ mod tests {
             ace("s", &[("A", "1")]),
             ace("s", &[("B", "2")]),
         );
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.env["A"], "1");
         assert_eq!(r.env["B"], "2");
     }
@@ -262,7 +271,7 @@ mod tests {
             ace("s", &[("KEY", "old"), ("KEEP", "yes")]),
             ace("s", &[("KEY", "new")]),
         );
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.env["KEY"], "new");
         assert_eq!(r.env["KEEP"], "yes");
     }
@@ -273,60 +282,60 @@ mod tests {
         project.session_prompt = Some("project prompt".to_string());
 
         let t = tree(project, ace("", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.session_prompt, "project prompt");
     }
 
     #[test]
     fn resolve_backend_school_toml_used() {
         let mut t = tree(ace("", &[]), ace("", &[]));
-        t.school_backend = Some(Kind::Codex);
+        t.school_backend = Some(Kind::Codex.into());
 
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Codex);
     }
 
     #[test]
     fn resolve_backend_project_overrides_school() {
         let mut project = ace("", &[]);
-        project.backend = Some(Kind::Claude);
+        project.backend = Some(Kind::Claude.into());
 
         let mut t = tree(project, ace("", &[]));
-        t.school_backend = Some(Kind::Codex);
+        t.school_backend = Some(Kind::Codex.into());
 
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_local_overrides_school() {
         let mut local = ace("", &[]);
-        local.backend = Some(Kind::Claude);
+        local.backend = Some(Kind::Claude.into());
 
         let mut t = tree(ace("", &[]), local);
-        t.school_backend = Some(Kind::Codex);
+        t.school_backend = Some(Kind::Codex.into());
 
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Claude);
     }
 
     #[test]
     fn resolve_backend_override_beats_all_layers() {
         let mut project = ace("", &[]);
-        project.backend = Some(Kind::Flaude);
+        project.backend = Some(Kind::Flaude.into());
 
         let mut local = ace("", &[]);
-        local.backend = Some(Kind::Claude);
+        local.backend = Some(Kind::Claude.into());
 
         let mut t = tree(project, local);
-        t.school_backend = Some(Kind::Codex);
+        t.school_backend = Some(Kind::Codex.into());
 
         let r = resolve_layers(
             &t,
             RuntimeOverrides {
-                backend: Some(Kind::Codex),
+                backend: Some(Kind::Codex.into()),
             },
-        );
+        ).expect("resolve");
         assert_eq!(r.backend.kind, Kind::Codex);
     }
 
@@ -335,16 +344,18 @@ mod tests {
         use crate::config::ace_toml::BackendDecl;
 
         let mut project = ace("s", &[]);
-        project.backend = Some(Kind::Claude);
+        project.backend = Some(Kind::Claude.into());
         project.backends = vec![BackendDecl {
             name: "claude".into(),
+            kind: None,
+            cmd: Vec::new(),
             env: [("API_BASE".to_string(), "https://example.com".to_string())]
                 .into_iter()
                 .collect(),
         }];
 
         let t = tree(project, ace("s", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
 
         assert_eq!(r.backend.kind, Kind::Claude);
         assert_eq!(r.backend.name, "claude");
@@ -352,13 +363,47 @@ mod tests {
     }
 
     #[test]
+    fn resolve_custom_backend_selectable_by_name() {
+        use crate::config::ace_toml::BackendDecl;
+
+        let mut project = ace("s", &[]);
+        project.backend = Some("bailer".into());
+        project.backends = vec![BackendDecl {
+            name: "bailer".into(),
+            kind: Some(Kind::Claude.into()),
+            cmd: Vec::new(),
+            env: [("ANTHROPIC_BASE_URL".to_string(), "https://x".to_string())]
+                .into_iter().collect(),
+        }];
+
+        let t = tree(project, ace("s", &[]));
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
+
+        assert_eq!(r.backend.name, "bailer");
+        assert_eq!(r.backend.kind, Kind::Claude);
+        assert_eq!(r.backend.cmd, vec!["claude"]);
+        assert_eq!(r.backend.env.get("ANTHROPIC_BASE_URL").map(String::as_str), Some("https://x"));
+    }
+
+    #[test]
+    fn resolve_unknown_backend_name_errors() {
+        let mut project = ace("s", &[]);
+        project.backend = Some("nonsense".into());
+        let t = tree(project, ace("s", &[]));
+        let err = resolve_layers(&t, RuntimeOverrides::default()).expect_err("should error");
+        assert!(matches!(err, ConfigError::UnknownBackend(name) if name == "nonsense"));
+    }
+
+    #[test]
     fn resolve_per_backend_env_layer_collision_local_wins() {
         use crate::config::ace_toml::BackendDecl;
 
         let mut project = ace("s", &[]);
-        project.backend = Some(Kind::Claude);
+        project.backend = Some(Kind::Claude.into());
         project.backends = vec![BackendDecl {
             name: "claude".into(),
+            kind: None,
+            cmd: Vec::new(),
             env: [
                 ("KEEP".to_string(), "yes".to_string()),
                 ("KEY".to_string(), "old".to_string()),
@@ -368,11 +413,13 @@ mod tests {
         let mut local = ace("s", &[]);
         local.backends = vec![BackendDecl {
             name: "claude".into(),
+            kind: None,
+            cmd: Vec::new(),
             env: [("KEY".to_string(), "new".to_string())].into_iter().collect(),
         }];
 
         let t = tree(project, local);
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
 
         assert_eq!(r.backend.env.get("KEY").map(String::as_str), Some("new"));
         assert_eq!(r.backend.env.get("KEEP").map(String::as_str), Some("yes"));
@@ -401,7 +448,7 @@ mod tests {
     #[test]
     fn skip_update_defaults_false() {
         let t = tree(ace("s", &[]), ace("s", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(!r.skip_update);
     }
 
@@ -410,7 +457,7 @@ mod tests {
         let mut project = ace("s", &[]);
         project.skip_update = Some(true);
         let t = tree(project, ace("s", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(r.skip_update);
     }
 
@@ -421,7 +468,7 @@ mod tests {
         let mut local = ace("s", &[]);
         local.skip_update = Some(false);
         let t = tree(project, local);
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(!r.skip_update, "local false should override project true");
     }
 
@@ -435,7 +482,7 @@ mod tests {
             school_toml: None,
             school_paths: None,
         };
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(r.skip_update);
     }
 
@@ -451,14 +498,14 @@ mod tests {
             school_toml: None,
             school_paths: None,
         };
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(!r.skip_update, "project false should override user true");
     }
 
     #[test]
     fn resume_defaults_true() {
         let t = tree(ace("s", &[]), ace("s", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(r.resume);
     }
 
@@ -467,7 +514,7 @@ mod tests {
         let mut local = ace("s", &[]);
         local.resume = Some(false);
         let t = tree(ace("s", &[]), local);
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(!r.resume);
     }
 
@@ -476,7 +523,7 @@ mod tests {
         let mut project = ace("s", &[]);
         project.resume = Some(false);
         let t = tree(project, ace("s", &[]));
-        let r = resolve_layers(&t, RuntimeOverrides::default());
+        let r = resolve_layers(&t, RuntimeOverrides::default()).expect("resolve");
         assert!(r.resume, "project-level resume=false should be ignored");
     }
 }

@@ -12,7 +12,11 @@ pub(super) fn is_ready() -> bool {
 }
 
 pub(super) fn exec_session(opts: SessionOpts) -> Result<(), std::io::Error> {
-    let mut cmd = Command::new("claude");
+    let (program, prefix) = opts.cmd.split_first()
+        .map(|(p, rest)| (p.as_str(), rest))
+        .unwrap_or(("claude", &[][..]));
+    let mut cmd = Command::new(program);
+    cmd.args(prefix);
     cmd.current_dir(&opts.project_dir);
 
     for (key, val) in &opts.env {
