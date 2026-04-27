@@ -5,7 +5,6 @@ use crate::actions::project::edit_skills_config::{EditSkillsConfig, Op, ResetTar
 use crate::actions::project::list_skills::{render_names, render_table};
 use crate::config::Scope;
 use crate::glob;
-use crate::state::skills::Skills;
 
 use super::CmdError;
 
@@ -57,13 +56,12 @@ fn run_inner(
 
 fn list(ace: &mut Ace, show_all: bool, names_only: bool) -> Result<(), CmdError> {
     ace.require_state()?;
-    let school_root = ace.require_school()?.root.clone();
-    let skills = Skills::discover(&school_root)?.resolve(&ace.state().config);
+    let skills = ace.skills()?;
 
     let output = if names_only {
-        render_names(&skills, show_all)
+        render_names(skills, show_all)
     } else {
-        render_table(&skills, show_all)
+        render_table(skills, show_all)
     };
     ace.data(&output);
     Ok(())

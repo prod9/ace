@@ -8,6 +8,7 @@ use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
 use crate::config::{ConfigError, Scope};
 use crate::git::Git;
+use crate::state::skills::{Resolved as SkillsResolved, Skills};
 use crate::state::{RuntimeOverrides, School, State};
 
 pub use io::{logo, IoError, OutputMode};
@@ -20,6 +21,7 @@ pub struct Ace {
     school: Option<SchoolPaths>,
     school_obj: Option<School>,
     school_obj_loaded: bool,
+    skills_obj: Option<Skills<SkillsResolved>>,
     runtime_overrides: RuntimeOverrides,
     scope_override: Option<Scope>,
     io: Io,
@@ -35,6 +37,7 @@ impl Ace {
             school: None,
             school_obj: None,
             school_obj_loaded: false,
+            skills_obj: None,
             runtime_overrides: RuntimeOverrides::default(),
             scope_override: None,
             io: Io::new(mode),
@@ -130,6 +133,7 @@ impl Ace {
         self.school = None;
         self.school_obj = None;
         self.school_obj_loaded = false;
+        self.skills_obj = None;
         self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         Ok(self.state.as_ref().expect("state was just set"))
     }
@@ -145,6 +149,21 @@ impl Ace {
             self.school_obj_loaded = true;
         }
         Ok(self.school_obj.as_ref())
+    }
+
+    /// Lazy-load the resolved SkillSet — discover the school's `skills/` tree
+    /// and resolve against the layered config. Errors when no school is
+    /// configured (skills require a school root) or discovery I/O fails.
+    pub fn skills(&mut self) -> Result<&Skills<SkillsResolved>, ConfigError> {
+        if self.skills_obj.is_none() {
+            let school_root = self.require_school()?.root.clone();
+            let tree = self.require_tree()?.clone();
+            let resolved = Skills::discover(&school_root)
+                .map_err(ConfigError::Io)?
+                .resolve(&tree);
+            self.skills_obj = Some(resolved);
+        }
+        Ok(self.skills_obj.as_ref().expect("skills was just set"))
     }
 
     pub fn git<'a>(&self, repo: &'a Path) -> Git<'a> {
