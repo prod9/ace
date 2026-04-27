@@ -9,6 +9,20 @@ use crate::backend::{Backend, Kind, Registry};
 use crate::config::ace_toml::BackendDecl;
 use crate::config::ConfigError;
 
+/// Build a `Registry` seeded with built-ins, then fold each declaration in
+/// order. Caller controls layer order (typically school → user → project →
+/// local). Per-decl rule documented on `merge_decl`.
+pub fn build_registry<'a, I>(decls: I) -> Result<Registry, ConfigError>
+where
+    I: IntoIterator<Item = &'a BackendDecl>,
+{
+    let mut registry = Registry::with_builtins();
+    for decl in decls {
+        merge_decl(&mut registry, decl)?;
+    }
+    Ok(registry)
+}
+
 /// Merge a single `BackendDecl` into the registry.
 ///
 /// Rule:
@@ -18,7 +32,7 @@ use crate::config::ConfigError;
 /// - Else (new name): resolve kind via explicit field → name match →
 ///   `cmd[0]` basename match → error. Resolve cmd via explicit `cmd` else
 ///   `[kind.name()]`. Insert.
-pub fn merge_decl(registry: &mut Registry, decl: &BackendDecl) -> Result<(), ConfigError> {
+fn merge_decl(registry: &mut Registry, decl: &BackendDecl) -> Result<(), ConfigError> {
     if let Some(existing) = registry.get_mut(&decl.name) {
         if let Some(declared) = &decl.kind
             && Kind::from_name(declared) != Some(existing.kind)

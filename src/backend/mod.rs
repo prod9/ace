@@ -68,17 +68,6 @@ impl Kind {
         Kind::ALL.iter().copied().find(|k| k.name() == name)
     }
 
-    /// Default Backend instance for this kind: name = canonical name, cmd =
-    /// [name], empty env.
-    pub fn default_backend(&self) -> Backend {
-        Backend {
-            name: self.name().to_string(),
-            kind: *self,
-            cmd: vec![self.name().to_string()],
-            env: HashMap::new(),
-        }
-    }
-
     pub fn backend_dir(&self) -> &'static str {
         match self {
             Kind::Claude | Kind::Flaude => ".claude",
@@ -127,9 +116,31 @@ impl Kind {
     }
 }
 
+/// Convert a `Kind` to its canonical name. Equivalent to
+/// `k.name().to_string()`; provided so callsites can use `.into()` when
+/// pushing a kind into a `String` field.
 impl From<Kind> for String {
     fn from(k: Kind) -> String {
         k.name().to_string()
+    }
+}
+
+/// Construct a `Backend` instance defaulted from a `Kind`: `name`/`cmd[0]`
+/// = canonical name, empty env.
+impl From<Kind> for Backend {
+    fn from(kind: Kind) -> Backend {
+        Backend {
+            name: kind.name().to_string(),
+            kind,
+            cmd: vec![kind.name().to_string()],
+            env: HashMap::new(),
+        }
+    }
+}
+
+impl Default for Backend {
+    fn default() -> Backend {
+        Kind::default().into()
     }
 }
 
@@ -195,7 +206,7 @@ pub struct Registry {
 impl Registry {
     pub fn with_builtins() -> Self {
         let entries = Kind::ALL.iter()
-            .map(|k| (k.name().to_string(), k.default_backend()))
+            .map(|k| (k.name().to_string(), Backend::from(*k)))
             .collect();
         Self { entries }
     }
@@ -204,11 +215,11 @@ impl Registry {
         self.entries.get(name)
     }
 
-    pub fn get_mut(&mut self, name: &str) -> Option<&mut Backend> {
+    pub(crate) fn get_mut(&mut self, name: &str) -> Option<&mut Backend> {
         self.entries.get_mut(name)
     }
 
-    pub fn insert(&mut self, backend: Backend) {
+    pub(crate) fn insert(&mut self, backend: Backend) {
         self.entries.insert(backend.name.clone(), backend);
     }
 }

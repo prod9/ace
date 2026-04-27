@@ -9,7 +9,7 @@ pub use school::School;
 use std::collections::HashMap;
 
 use crate::config::ace_toml::{AceToml, Trust};
-use crate::backend::{Backend, Kind, Registry};
+use crate::backend::{Backend, Kind};
 use crate::config::tree::Tree;
 use crate::config::ConfigError;
 
@@ -64,7 +64,7 @@ impl State {
                 school_paths: None,
             },
             school_specifier: None,
-            backend: Kind::default().default_backend(),
+            backend: Backend::default(),
             session_prompt: String::new(),
             env: HashMap::new(),
             trust: Trust::Default,
@@ -108,17 +108,9 @@ fn resolve_layers(tree: &Tree, overrides: RuntimeOverrides) -> Result<Resolved, 
         .map(|l| l.school.clone());
 
     // Build registry: built-ins → school decls → user/project/local decls.
-    let mut registry = Registry::with_builtins();
-    if let Some(school_toml) = &tree.school_toml {
-        for decl in &school_toml.backends {
-            backend_resolve::merge_decl(&mut registry, decl)?;
-        }
-    }
-    for layer in &layers {
-        for decl in &layer.backends {
-            backend_resolve::merge_decl(&mut registry, decl)?;
-        }
-    }
+    let school_decls = tree.school_toml.iter().flat_map(|st| st.backends.iter());
+    let layer_decls = layers.iter().flat_map(|l| l.backends.iter());
+    let registry = backend_resolve::build_registry(school_decls.chain(layer_decls))?;
 
     // Selected backend name: override → local → project → user → school → "claude"
     let backend_name = overrides.backend
