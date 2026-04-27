@@ -12,11 +12,25 @@ use std::path::{Path, PathBuf};
 pub mod discover;
 
 use crate::config::tree::Tree;
+use crate::config::ConfigError;
 use crate::resolver;
+use crate::school::SchoolError;
 
 use discover::{DiscoveredSkill, Tier};
 
 pub use crate::resolver::{Collision, Decision, Entry, Source, UnknownPattern};
+
+/// Errors that can occur while building the resolved SkillSet. Wraps
+/// upstream binding errors plus skill-specific I/O failures.
+#[derive(Debug, thiserror::Error)]
+pub enum SkillError {
+    #[error(transparent)]
+    Config(#[from] ConfigError),
+    #[error(transparent)]
+    School(#[from] SchoolError),
+    #[error("skill discovery failed: {0}")]
+    Discovery(#[from] std::io::Error),
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChangeKind {

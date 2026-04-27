@@ -2,7 +2,6 @@ use crate::ace::Ace;
 use crate::actions::project::link_skills;
 use crate::actions::project::{clone, Link, Pull};
 use crate::config::school_paths;
-use crate::config::ConfigError;
 
 use super::CmdError;
 
@@ -15,7 +14,7 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     ace.require_resolved()?;
 
     let specifier = ace.resolved().school_specifier.value.clone()
-        .ok_or(ConfigError::NoSchool)?;
+        .ok_or(crate::school::SchoolError::Missing)?;
 
     let project_dir = ace.project_dir().to_path_buf();
     let school_paths = school_paths::resolve(&project_dir, &specifier)?;

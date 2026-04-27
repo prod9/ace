@@ -3,6 +3,27 @@ mod codex;
 mod flaude;
 pub mod registry;
 
+use crate::config::ConfigError;
+
+/// Errors that can occur while binding a `Resolved` view to a concrete
+/// `Backend` — including pre-binding tree/merge failures bubbled through
+/// `ConfigError`.
+#[derive(Debug, thiserror::Error)]
+pub enum BackendError {
+    #[error(transparent)]
+    Config(#[from] ConfigError),
+    #[error("unknown backend: {0}")]
+    Unknown(String),
+    #[error("cannot resolve kind for custom backend `{0}`: set `kind = \"...\"` or use a `cmd` whose binary matches a built-in")]
+    Unresolvable(String),
+    #[error("backend `{name}` declared kind `{declared}` but is already registered as `{actual}`")]
+    KindMismatch {
+        name: String,
+        declared: String,
+        actual: String,
+    },
+}
+
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 

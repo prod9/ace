@@ -146,25 +146,9 @@ pub enum ConfigError {
     #[error("no config found, ace setup?")]
     NoConfig,
 
-    // school
-    #[error("no school configured, run `ace setup`")]
-    NoSchool,
-
     // school_paths
     #[error("traversal in source: {0}")]
     TraversalInSource(String),
     #[error("traversal in path: {0}")]
     TraversalInPath(String),
-
-    // backends
-    #[error("unknown backend: {0}")]
-    UnknownBackend(String),
-    #[error("cannot resolve kind for custom backend `{0}`: set `kind = \"...\"` or use a `cmd` whose binary matches a built-in")]
-    UnresolvableBackendKind(String),
-    #[error("backend `{name}` declared kind `{declared}` but is already registered as `{actual}`")]
-    BackendKindMismatch {
-        name: String,
-        declared: String,
-        actual: String,
-    },
 }

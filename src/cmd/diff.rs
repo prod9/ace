@@ -1,5 +1,4 @@
 use crate::ace::Ace;
-use crate::config::ConfigError;
 
 use super::CmdError;
 
@@ -9,7 +8,7 @@ pub fn run(ace: &mut Ace) {
 }
 
 fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
-    let clone_path = ace.require_school()?.clone_path.clone().ok_or(ConfigError::NoSchool)?;
+    let clone_path = ace.require_school()?.clone_path.clone().ok_or(crate::school::SchoolError::Missing)?;
 
     ace.data(&format!("# school-clone\t{}", clone_path.display()));
 

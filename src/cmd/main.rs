@@ -1,6 +1,5 @@
 use crate::ace::{Ace, OutputMode};
 use crate::backend::{Kind, SessionOpts};
-use crate::config::ConfigError;
 use crate::config::ace_toml::Trust;
 use crate::actions::project::RegisterMcp;
 use crate::actions::project::{Prepare, PrepareResult};
@@ -17,7 +16,7 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
     require_resolved_or_recover(ace)?;
 
     let specifier = ace.resolved().school_specifier.value.clone()
-        .ok_or(ConfigError::NoSchool)?;
+        .ok_or(crate::school::SchoolError::Missing)?;
 
     let prepare_result = prepare_school(ace, &specifier)?;
 
@@ -25,7 +24,7 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
     let school_clone = ace.require_school()?.clone_path.clone();
 
     let (school_name, school_session_prompt) = {
-        let school = ace.school()?.ok_or(ConfigError::NoSchool)?;
+        let school = ace.school()?.ok_or(crate::school::SchoolError::Missing)?;
         (school.name.clone(), school.session_prompt.clone())
     };
 
@@ -139,7 +138,7 @@ fn require_resolved_or_recover(ace: &mut Ace) -> Result<(), CmdError> {
     ace.require_resolved()?;
     match ace.backend() {
         Ok(_) => Ok(()),
-        Err(ConfigError::UnknownBackend(name)) => recover_backend(ace, &name),
+        Err(crate::backend::BackendError::Unknown(name)) => recover_backend(ace, &name),
         Err(e) => Err(e.into()),
     }
 }
@@ -149,7 +148,7 @@ fn recover_backend(ace: &mut Ace, attempted: &str) -> Result<(), CmdError> {
         ace.hint(&format!(
             "to fix: ace config set backend <name> (registry has no `{attempted}`)"
         ));
-        return Err(ConfigError::UnknownBackend(attempted.to_string()).into());
+        return Err(crate::backend::BackendError::Unknown(attempted.to_string()).into());
     }
 
     let names = list_known_backend_names(ace)?;

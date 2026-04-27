@@ -6,27 +6,26 @@
 
 use std::path::Path;
 
-use super::{Backend, Kind, Registry};
+use super::{Backend, BackendError, Kind, Registry};
 use crate::config::ace_toml::BackendDecl;
-use crate::config::ConfigError;
 use crate::resolver::{Resolved, Sourced};
 
 /// Build the registry from declarations carried on a merged `Resolved` view
 /// and look up the selected backend name. Unknown name →
-/// `ConfigError::UnknownBackend`.
-pub fn bind(resolved: &Resolved) -> Result<Backend, ConfigError> {
+/// `BackendError::Unknown`.
+pub fn bind(resolved: &Resolved) -> Result<Backend, BackendError> {
     let registry = build_registry(resolved.backend_decls.iter().map(|s: &Sourced<BackendDecl>| &s.value))?;
     let name = &resolved.backend_name.value;
     registry
         .lookup(name)
         .cloned()
-        .ok_or_else(|| ConfigError::UnknownBackend(name.clone()))
+        .ok_or_else(|| BackendError::Unknown(name.clone()))
 }
 
 /// Build a `Registry` seeded with built-ins, then fold each declaration in
 /// order. Caller controls layer order (typically school → user → project →
 /// local). Per-decl rule documented on `merge_decl`.
-pub fn build_registry<'a, I>(decls: I) -> Result<Registry, ConfigError>
+pub fn build_registry<'a, I>(decls: I) -> Result<Registry, BackendError>
 where
     I: IntoIterator<Item = &'a BackendDecl>,
 {
@@ -46,12 +45,12 @@ where
 /// - Else (new name): resolve kind via explicit field → name match →
 ///   `cmd[0]` basename match → error. Resolve cmd via explicit `cmd` else
 ///   `[kind.name()]`. Insert.
-fn merge_decl(registry: &mut Registry, decl: &BackendDecl) -> Result<(), ConfigError> {
+fn merge_decl(registry: &mut Registry, decl: &BackendDecl) -> Result<(), BackendError> {
     if let Some(existing) = registry.get_mut(&decl.name) {
         if let Some(declared) = &decl.kind
             && Kind::from_name(declared) != Some(existing.kind)
         {
-            return Err(ConfigError::BackendKindMismatch {
+            return Err(BackendError::KindMismatch {
                 name: decl.name.clone(),
                 declared: declared.clone(),
                 actual: existing.kind.name().to_string(),
@@ -81,10 +80,10 @@ fn merge_decl(registry: &mut Registry, decl: &BackendDecl) -> Result<(), ConfigE
     Ok(())
 }
 
-fn resolve_kind(decl: &BackendDecl) -> Result<Kind, ConfigError> {
+fn resolve_kind(decl: &BackendDecl) -> Result<Kind, BackendError> {
     if let Some(declared) = &decl.kind {
         return Kind::from_name(declared)
-            .ok_or_else(|| ConfigError::UnresolvableBackendKind(decl.name.clone()));
+            .ok_or_else(|| BackendError::Unresolvable(decl.name.clone()));
     }
     if let Some(k) = Kind::from_name(&decl.name) {
         return Ok(k);
@@ -95,7 +94,7 @@ fn resolve_kind(decl: &BackendDecl) -> Result<Kind, ConfigError> {
     {
         return Ok(k);
     }
-    Err(ConfigError::UnresolvableBackendKind(decl.name.clone()))
+    Err(BackendError::Unresolvable(decl.name.clone()))
 }
 
 #[cfg(test)]
@@ -152,7 +151,7 @@ mod tests {
         d.kind = Some("codex".into());
         let err = merge_decl(&mut reg, &d).expect_err("should reject");
         match err {
-            ConfigError::BackendKindMismatch { name, declared, actual } => {
+            BackendError::KindMismatch { name, declared, actual } => {
                 assert_eq!(name, "claude");
                 assert_eq!(declared, "codex");
                 assert_eq!(actual, "claude");
@@ -192,7 +191,7 @@ mod tests {
         let mut reg = Registry::with_builtins();
         let d = decl("mystery"); // no kind, no cmd, name doesn't match built-in
         let err = merge_decl(&mut reg, &d).expect_err("should error");
-        assert!(matches!(err, ConfigError::UnresolvableBackendKind(name) if name == "mystery"));
+        assert!(matches!(err, BackendError::Unresolvable(name) if name == "mystery"));
     }
 
     #[test]
@@ -201,7 +200,7 @@ mod tests {
         let mut d = decl("bailer");
         d.kind = Some("nonsense".into());
         let err = merge_decl(&mut reg, &d).expect_err("should error");
-        assert!(matches!(err, ConfigError::UnresolvableBackendKind(name) if name == "bailer"));
+        assert!(matches!(err, BackendError::Unresolvable(name) if name == "bailer"));
     }
 
     // -- bind() integration tests: covers merge → registry → name lookup as a
@@ -229,7 +228,7 @@ mod tests {
         }
     }
 
-    fn bind_default(t: &Tree) -> Result<Backend, ConfigError> {
+    fn bind_default(t: &Tree) -> Result<Backend, BackendError> {
         bind(&resolver::merge(t, &AceToml::default()))
     }
 
@@ -239,7 +238,7 @@ mod tests {
         project.backend = Some("nonsense".into());
         let t = tree(project, ace_with("s", &[]));
         let err = bind_default(&t).expect_err("should error");
-        assert!(matches!(err, ConfigError::UnknownBackend(name) if name == "nonsense"));
+        assert!(matches!(err, BackendError::Unknown(name) if name == "nonsense"));
     }
 
     #[test]

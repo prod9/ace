@@ -2,7 +2,7 @@ pub mod io;
 
 use std::path::{Path, PathBuf};
 
-use crate::backend::{registry, Backend};
+use crate::backend::{registry, Backend, BackendError};
 use crate::config;
 use crate::config::ace_toml::AceToml;
 use crate::config::paths::AcePaths;
@@ -12,8 +12,8 @@ use crate::config::{ConfigError, Scope};
 use crate::git::Git;
 use crate::resolver;
 use crate::resolver::Resolved;
-use crate::school::School;
-use crate::skills::{Resolved as SkillsResolved, Skills};
+use crate::school::{School, SchoolError};
+use crate::skills::{Resolved as SkillsResolved, SkillError, Skills};
 
 pub use io::{logo, IoError, OutputMode};
 use io::Io;
@@ -113,9 +113,9 @@ impl Ace {
     }
 
     /// Lazy-load the resolved Backend binding (registry build + name lookup).
-    /// `Err(ConfigError::UnknownBackend(_))` when the selector points at a
-    /// name that isn't a built-in or declared `[[backends]]`.
-    pub fn backend(&mut self) -> Result<&Backend, ConfigError> {
+    /// `Err(BackendError::Unknown(_))` when the selector points at a name
+    /// that isn't a built-in or declared `[[backends]]`.
+    pub fn backend(&mut self) -> Result<&Backend, BackendError> {
         if self.backend.is_none() {
             self.require_resolved()?;
             let resolved = self.resolved.as_ref().expect("resolved just loaded");
@@ -127,7 +127,7 @@ impl Ace {
     /// Resolve school paths. Dual context:
     /// - If school.toml exists in project_dir → school repo context
     /// - Otherwise require_tree → specifier → school_paths
-    pub fn require_school(&mut self) -> Result<&SchoolPaths, ConfigError> {
+    pub fn require_school(&mut self) -> Result<&SchoolPaths, SchoolError> {
         if self.school.is_none() {
             if self.project_dir.join("school.toml").exists() {
                 self.school = Some(SchoolPaths {
@@ -138,7 +138,7 @@ impl Ace {
             } else {
                 let tree = self.require_tree()?;
                 let Some(spec) = tree.specifier() else {
-                    return Err(ConfigError::NoSchool);
+                    return Err(SchoolError::Missing);
                 };
                 let sp = config::school_paths::resolve(&self.project_dir, &spec)?;
                 self.school = Some(sp);
@@ -166,7 +166,7 @@ impl Ace {
     /// configured or school.toml is missing/unreadable. Does NOT require the
     /// backend to resolve, so read-only inspection paths still work when the
     /// selector points at an unknown backend.
-    pub fn school(&mut self) -> Result<Option<&School>, ConfigError> {
+    pub fn school(&mut self) -> Result<Option<&School>, SchoolError> {
         if !self.school_obj_loaded {
             let tree = self.require_tree()?;
             self.school_obj = tree.school.as_ref().map(|st| School::from(st.clone()));
@@ -178,13 +178,11 @@ impl Ace {
     /// Lazy-load the resolved SkillSet — discover the school's `skills/` tree
     /// and resolve against the layered config. Errors when no school is
     /// configured (skills require a school root) or discovery I/O fails.
-    pub fn skills(&mut self) -> Result<&Skills<SkillsResolved>, ConfigError> {
+    pub fn skills(&mut self) -> Result<&Skills<SkillsResolved>, SkillError> {
         if self.skills_obj.is_none() {
             let school_root = self.require_school()?.root.clone();
             let tree = self.require_tree()?.clone();
-            let resolved = Skills::discover(&school_root)
-                .map_err(ConfigError::Io)?
-                .resolve(&tree);
+            let resolved = Skills::discover(&school_root)?.resolve(&tree);
             self.skills_obj = Some(resolved);
         }
         Ok(self.skills_obj.as_ref().expect("skills was just set"))

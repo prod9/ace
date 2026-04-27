@@ -175,6 +175,12 @@ pub(crate) enum CmdError {
     #[error("{0}")]
     Config(#[from] ConfigError),
     #[error("{0}")]
+    Backend(#[from] crate::backend::BackendError),
+    #[error("{0}")]
+    School(#[from] crate::school::SchoolError),
+    #[error("{0}")]
+    Skill(#[from] crate::skills::SkillError),
+    #[error("{0}")]
     Setup(#[from] SetupError),
     #[error("{0}")]
     Prepare(#[from] PrepareError),
