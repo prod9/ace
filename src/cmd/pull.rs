@@ -12,9 +12,9 @@ pub fn run(ace: &mut Ace) {
 }
 
 fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
-    ace.require_state()?;
+    ace.require_resolved()?;
 
-    let specifier = ace.state().school_specifier.clone()
+    let specifier = ace.resolved().school_specifier.value.clone()
         .ok_or(ConfigError::NoSchool)?;
 
     let project_dir = ace.project_dir().to_path_buf();
@@ -44,8 +44,8 @@ fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
     }
 
     // Re-link in case new folders appeared.
-    let backend_dir = ace.state().backend.backend_dir();
-    let tree = ace.state().config.clone();
+    let backend_dir = ace.backend()?.backend_dir();
+    let tree = ace.require_tree()?.clone();
     let prepared = link_skills::prepare(&school_paths.root, &tree)
         .map_err(|e| CmdError::Other(format!("scan school skills: {e}")))?;
 

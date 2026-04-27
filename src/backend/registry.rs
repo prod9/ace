@@ -1,13 +1,27 @@
-//! Merge `[[backends]]` declarations into a `Backend` registry.
+//! Merge `[[backends]]` declarations into a `Backend` registry, then bind a
+//! resolved name to a concrete `Backend`.
 //!
-//! Layer-walk logic lives here so `Registry` (in `src/backend/`) stays
-//! independent of config-layer types.
+//! Layer-walk logic lives here so `Registry` (in `super`) stays independent
+//! of config-layer types.
 
 use std::path::Path;
 
-use crate::backend::{Backend, Kind, Registry};
+use super::{Backend, Kind, Registry};
 use crate::config::ace_toml::BackendDecl;
 use crate::config::ConfigError;
+use crate::resolver::{Resolved, Sourced};
+
+/// Build the registry from declarations carried on a merged `Resolved` view
+/// and look up the selected backend name. Unknown name →
+/// `ConfigError::UnknownBackend`.
+pub fn bind(resolved: &Resolved) -> Result<Backend, ConfigError> {
+    let registry = build_registry(resolved.backend_decls.iter().map(|s: &Sourced<BackendDecl>| &s.value))?;
+    let name = &resolved.backend_name.value;
+    registry
+        .lookup(name)
+        .cloned()
+        .ok_or_else(|| ConfigError::UnknownBackend(name.clone()))
+}
 
 /// Build a `Registry` seeded with built-ins, then fold each declaration in
 /// order. Caller controls layer order (typically school → user → project →
@@ -188,5 +202,118 @@ mod tests {
         d.kind = Some("nonsense".into());
         let err = merge_decl(&mut reg, &d).expect_err("should error");
         assert!(matches!(err, ConfigError::UnresolvableBackendKind(name) if name == "bailer"));
+    }
+
+    // -- bind() integration tests: covers merge → registry → name lookup as a
+    // single pipeline. Mirrors the integration tests that lived in the
+    // now-retired state/mod.rs.
+
+    use crate::config::ace_toml::AceToml;
+    use crate::config::tree::Tree;
+    use crate::resolver;
+
+    fn ace_with(school: &str, env: &[(&str, &str)]) -> AceToml {
+        AceToml {
+            school: school.to_string(),
+            env: env.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(),
+            ..AceToml::default()
+        }
+    }
+
+    fn tree(project: AceToml, local: AceToml) -> Tree {
+        Tree {
+            user: None,
+            project: Some(project),
+            local: Some(local),
+            school: None,
+        }
+    }
+
+    fn bind_default(t: &Tree) -> Result<Backend, ConfigError> {
+        bind(&resolver::merge(t, &AceToml::default()))
+    }
+
+    #[test]
+    fn bind_unknown_backend_name_errors() {
+        let mut project = ace_with("s", &[]);
+        project.backend = Some("nonsense".into());
+        let t = tree(project, ace_with("s", &[]));
+        let err = bind_default(&t).expect_err("should error");
+        assert!(matches!(err, ConfigError::UnknownBackend(name) if name == "nonsense"));
+    }
+
+    #[test]
+    fn bind_per_backend_env_merges_into_backend() {
+        let mut project = ace_with("s", &[]);
+        project.backend = Some(Kind::Claude.into());
+        project.backends = vec![BackendDecl {
+            name: "claude".into(),
+            kind: None,
+            cmd: Vec::new(),
+            env: [("API_BASE".to_string(), "https://example.com".to_string())]
+                .into_iter()
+                .collect(),
+        }];
+
+        let t = tree(project, ace_with("s", &[]));
+        let backend = bind_default(&t).expect("bind");
+
+        assert_eq!(backend.kind, Kind::Claude);
+        assert_eq!(backend.name, "claude");
+        assert_eq!(backend.env.get("API_BASE").map(String::as_str), Some("https://example.com"));
+    }
+
+    #[test]
+    fn bind_custom_backend_selectable_by_name() {
+        let mut project = ace_with("s", &[]);
+        project.backend = Some("bailer".into());
+        project.backends = vec![BackendDecl {
+            name: "bailer".into(),
+            kind: Some(Kind::Claude.into()),
+            cmd: Vec::new(),
+            env: [("ANTHROPIC_BASE_URL".to_string(), "https://x".to_string())]
+                .into_iter()
+                .collect(),
+        }];
+
+        let t = tree(project, ace_with("s", &[]));
+        let backend = bind_default(&t).expect("bind");
+
+        assert_eq!(backend.name, "bailer");
+        assert_eq!(backend.kind, Kind::Claude);
+        assert_eq!(backend.cmd, vec!["claude"]);
+        assert_eq!(backend.env.get("ANTHROPIC_BASE_URL").map(String::as_str), Some("https://x"));
+    }
+
+    #[test]
+    fn bind_per_backend_env_layer_collision_local_wins() {
+        let mut project = ace_with("s", &[]);
+        project.backend = Some(Kind::Claude.into());
+        project.backends = vec![BackendDecl {
+            name: "claude".into(),
+            kind: None,
+            cmd: Vec::new(),
+            env: [
+                ("KEEP".to_string(), "yes".to_string()),
+                ("KEY".to_string(), "old".to_string()),
+            ]
+            .into_iter()
+            .collect(),
+        }];
+
+        let mut local = ace_with("s", &[]);
+        local.backends = vec![BackendDecl {
+            name: "claude".into(),
+            kind: None,
+            cmd: Vec::new(),
+            env: [("KEY".to_string(), "new".to_string())]
+                .into_iter()
+                .collect(),
+        }];
+
+        let t = tree(project, local);
+        let backend = bind_default(&t).expect("bind");
+        assert_eq!(backend.env.get("KEY").map(String::as_str), Some("new"));
+        assert_eq!(backend.env.get("KEEP").map(String::as_str), Some("yes"));
     }
 }

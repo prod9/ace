@@ -4,8 +4,8 @@ use std::path::Path;
 use crate::ace::Ace;
 use crate::config;
 use crate::glob;
-use crate::state::discover::{Tier, discover_skills};
-use crate::state::skills::{ChangeKind, Discovered, Skills};
+use crate::skills::discover::{Tier, discover_skills};
+use crate::skills::{ChangeKind, Discovered, Skills};
 
 pub struct PullImports<'a> {
     pub school_root: &'a Path,
@@ -128,7 +128,7 @@ fn group_by_source(
 mod tests {
     use super::*;
     use crate::config::school_toml::ImportDecl;
-    use crate::state::discover::DiscoveredSkill;
+    use crate::skills::discover::DiscoveredSkill;
 
     fn discovered(name: &str, tier: Tier) -> DiscoveredSkill {
         DiscoveredSkill {

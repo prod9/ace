@@ -14,36 +14,36 @@ pub fn run(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) {
 }
 
 fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> Result<(), CmdError> {
-    require_state_or_recover(ace)?;
+    require_resolved_or_recover(ace)?;
 
-    let specifier = ace.state().school_specifier.clone()
+    let specifier = ace.resolved().school_specifier.value.clone()
         .ok_or(ConfigError::NoSchool)?;
 
     let prepare_result = prepare_school(ace, &specifier)?;
 
     let project_dir = ace.project_dir().to_path_buf();
-    let school_paths = ace.require_school()?;
-    let school_clone = school_paths.clone_path.clone();
+    let school_clone = ace.require_school()?.clone_path.clone();
 
     let (school_name, school_session_prompt) = {
         let school = ace.school()?.ok_or(ConfigError::NoSchool)?;
         (school.name.clone(), school.session_prompt.clone())
     };
 
-    let backend_dir = project_dir.join(ace.state().backend.backend_dir());
+    let backend_dir = project_dir.join(ace.backend()?.backend_dir());
+    let resolved_session_prompt = ace.resolved().session_prompt.value.clone();
     let session_prompt = build_session_prompt(
         &school_name,
         &school_session_prompt,
-        &ace.state().session_prompt,
+        &resolved_session_prompt,
         &backend_dir,
         &prepare_result.changes,
         school_clone.as_deref(),
         prepare_result.school_is_dirty,
     );
 
-    let trust = ace.state().trust;
+    let trust = ace.resolved().trust.value;
     if !trust.is_default() {
-        match ace.state().backend.supports_trust(trust) {
+        match ace.backend()?.supports_trust(trust) {
             Ok(()) => match trust {
                 Trust::Auto => ace.hint("auto mode — AI decides approvals"),
                 Trust::Yolo => ace.warn("yolo mode — permission prompts disabled"),
@@ -53,18 +53,24 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         }
     }
 
-    let resume = should_resume && ace.state().resume;
+    let resume = should_resume && ace.resolved().resume.value;
     if resume {
         ace.hint("Resuming previous session. If this fails, run: ace new");
     }
 
     ace.separator();
 
-    ace.state().backend.exec_session(SessionOpts {
+    let env: std::collections::HashMap<String, String> = ace
+        .resolved()
+        .env
+        .iter()
+        .map(|(k, v)| (k.clone(), v.value.clone()))
+        .collect();
+    ace.backend()?.exec_session(SessionOpts {
         trust,
         session_prompt,
         project_dir,
-        env: ace.state().env.clone(),
+        env,
         extra_args: backend_args,
         resume,
     })?;
@@ -81,7 +87,7 @@ pub(super) fn prepare_school(
     specifier: &str,
 ) -> Result<PrepareResult, CmdError> {
     let project_dir = ace.project_dir().to_path_buf();
-    let preliminary_backend = ace.state().backend.clone();
+    let preliminary_backend = ace.backend()?.clone();
 
     let prepare_result = (Prepare {
         specifier,
@@ -102,7 +108,7 @@ pub(super) fn prepare_school(
         return Ok(prepare_result);
     }
 
-    let registered = ace.state().backend.mcp_list();
+    let registered = ace.backend()?.mcp_list();
     let pending: Vec<&str> = mcp_entries.iter()
         .filter(|e| !registered.contains(&e.name))
         .map(|e| e.name.as_str())
@@ -117,7 +123,7 @@ pub(super) fn prepare_school(
         return Ok(prepare_result);
     }
 
-    let backend = ace.state().backend.clone();
+    let backend = ace.backend()?.clone();
     if let Err(e) = (RegisterMcp { backend: &backend, entries: &mcp_entries }).run(ace) {
         ace.warn(&format!("MCP registration failed: {e}"));
     }
@@ -125,12 +131,13 @@ pub(super) fn prepare_school(
     Ok(prepare_result)
 }
 
-/// Try `require_state`. On unknown backend in TTY mode, prompt the user to
-/// pick a known backend, set it as a runtime override, and retry. Closes
-/// PROD9-146: a stale `backend = "..."` selector can no longer brick the
-/// session — the user gets a recovery prompt instead.
-fn require_state_or_recover(ace: &mut Ace) -> Result<(), CmdError> {
-    match ace.require_state() {
+/// Try resolving the backend binding. On unknown backend in TTY mode, prompt
+/// the user to pick a known backend, set it as a runtime override, and retry.
+/// Closes PROD9-146: a stale `backend = "..."` selector can no longer brick
+/// the session — the user gets a recovery prompt instead.
+fn require_resolved_or_recover(ace: &mut Ace) -> Result<(), CmdError> {
+    ace.require_resolved()?;
+    match ace.backend() {
         Ok(_) => Ok(()),
         Err(ConfigError::UnknownBackend(name)) => recover_backend(ace, &name),
         Err(e) => Err(e.into()),
@@ -149,7 +156,7 @@ fn recover_backend(ace: &mut Ace, attempted: &str) -> Result<(), CmdError> {
     ace.warn(&format!("backend `{attempted}` is not in the registry"));
     let pick = ace.prompt_select("Pick a backend for this session:", names)?;
     ace.set_backend_override(Some(pick.clone()));
-    ace.require_state()?;
+    ace.backend()?;
     ace.hint(&format!("to make permanent: ace config set backend {pick}"));
     Ok(())
 }

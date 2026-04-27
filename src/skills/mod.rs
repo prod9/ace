@@ -9,9 +9,12 @@ use std::collections::HashMap;
 use std::io;
 use std::path::{Path, PathBuf};
 
+pub mod discover;
+
 use crate::config::tree::Tree;
 use crate::resolver;
-use crate::state::discover::{self, DiscoveredSkill, Tier};
+
+use discover::{DiscoveredSkill, Tier};
 
 pub use crate::resolver::{Collision, Decision, Entry, Source, UnknownPattern};
 

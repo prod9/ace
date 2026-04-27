@@ -4,7 +4,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::config::school_toml::ImportDecl;
 
-use crate::state::discover::{DiscoveredSkill, discover_skills};
+use crate::skills::discover::{DiscoveredSkill, discover_skills};
 
 pub struct AddImport<'a> {
     pub source: &'a str,

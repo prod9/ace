@@ -37,7 +37,7 @@ pub fn run(ace: &mut Ace, command: Option<Command>) {
 
 /// `ace mcp` — add missing, check health, prompt to re-register broken.
 fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
-    ace.require_state()?;
+    ace.require_resolved()?;
 
     let (backend, entries) = load_school_mcp(ace)?;
     if entries.is_empty() {
@@ -120,7 +120,7 @@ fn run_default(ace: &mut Ace) -> Result<(), CmdError> {
 
 /// `ace mcp check` — health check only, no mutations.
 fn run_check(ace: &mut Ace) -> Result<(), CmdError> {
-    ace.require_state()?;
+    ace.require_resolved()?;
 
     let (backend, entries) = load_school_mcp(ace)?;
     if entries.is_empty() {
@@ -172,7 +172,7 @@ fn run_check(ace: &mut Ace) -> Result<(), CmdError> {
 
 /// `ace mcp reset [name]` / `ace mcp clear [name]` — remove servers.
 fn run_reset(ace: &mut Ace, name: Option<String>) -> Result<(), CmdError> {
-    ace.require_state()?;
+    ace.require_resolved()?;
 
     let (backend, entries) = load_school_mcp(ace)?;
     let registered = backend.mcp_list();
@@ -217,7 +217,7 @@ fn report_statuses(ace: &mut Ace, statuses: &[McpStatus]) {
 
 /// Load school MCP entries and backend from current state.
 fn load_school_mcp(ace: &mut Ace) -> Result<(crate::backend::Backend, Vec<McpDecl>), CmdError> {
-    let backend = ace.state().backend.clone();
+    let backend = ace.backend()?.clone();
     let entries = ace.school()?
         .map(|s| s.mcp.clone())
         .unwrap_or_default();

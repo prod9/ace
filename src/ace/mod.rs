@@ -2,14 +2,18 @@ pub mod io;
 
 use std::path::{Path, PathBuf};
 
+use crate::backend::{registry, Backend};
 use crate::config;
+use crate::config::ace_toml::AceToml;
 use crate::config::paths::AcePaths;
 use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
 use crate::config::{ConfigError, Scope};
 use crate::git::Git;
-use crate::state::skills::{Resolved as SkillsResolved, Skills};
-use crate::state::{RuntimeOverrides, School, State};
+use crate::resolver;
+use crate::resolver::Resolved;
+use crate::school::School;
+use crate::skills::{Resolved as SkillsResolved, Skills};
 
 pub use io::{logo, IoError, OutputMode};
 use io::Io;
@@ -17,12 +21,13 @@ use io::Io;
 pub struct Ace {
     project_dir: PathBuf,
     tree: Option<Tree>,
-    state: Option<State>,
+    resolved: Option<Resolved>,
+    backend: Option<Backend>,
     school: Option<SchoolPaths>,
     school_obj: Option<School>,
     school_obj_loaded: bool,
     skills_obj: Option<Skills<SkillsResolved>>,
-    runtime_overrides: RuntimeOverrides,
+    overrides: AceToml,
     scope_override: Option<Scope>,
     io: Io,
     mode: OutputMode,
@@ -33,12 +38,13 @@ impl Ace {
         Self {
             project_dir,
             tree: None,
-            state: None,
+            resolved: None,
+            backend: None,
             school: None,
             school_obj: None,
             school_obj_loaded: false,
             skills_obj: None,
-            runtime_overrides: RuntimeOverrides::default(),
+            overrides: AceToml::default(),
             scope_override: None,
             io: Io::new(mode),
             mode,
@@ -54,8 +60,13 @@ impl Ace {
     }
 
     pub fn set_backend_override(&mut self, backend: Option<String>) {
-        self.runtime_overrides.backend = backend;
-        self.state = None;
+        self.overrides.backend = backend;
+        self.invalidate_resolved();
+    }
+
+    fn invalidate_resolved(&mut self) {
+        self.resolved = None;
+        self.backend = None;
     }
 
     /// Lazy-load the raw config tree (parse-only; no merge, no binding).
@@ -84,19 +95,33 @@ impl Ace {
         config::paths::resolve(&self.project_dir)
     }
 
-    /// Lazy-load tree + school.toml + resolve. No-op if already loaded.
-    pub fn require_state(&mut self) -> Result<&State, ConfigError> {
-        if self.state.is_none() {
+    /// Lazy-load tree + school.toml + run the merge. Idempotent. The backend
+    /// binding is *not* eagerly resolved here — `backend()` does that on
+    /// demand so read-only commands survive a stale selector.
+    pub fn require_resolved(&mut self) -> Result<&Resolved, ConfigError> {
+        if self.resolved.is_none() {
             self.require_tree()?;
-            let tree = self.tree.clone().expect("tree just loaded");
-            self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
+            let tree = self.tree.as_ref().expect("tree just loaded");
+            self.resolved = Some(resolver::merge(tree, &self.overrides));
         }
-        Ok(self.state.as_ref().expect("state was just set"))
+        Ok(self.resolved.as_ref().expect("resolved was just set"))
     }
 
-    /// Panicking accessor — only after require_state succeeds.
-    pub fn state(&self) -> &State {
-        self.state.as_ref().expect("state not loaded, call require_state first")
+    /// Panicking accessor — only after `require_resolved` succeeds.
+    pub fn resolved(&self) -> &Resolved {
+        self.resolved.as_ref().expect("resolved not loaded, call require_resolved first")
+    }
+
+    /// Lazy-load the resolved Backend binding (registry build + name lookup).
+    /// `Err(ConfigError::UnknownBackend(_))` when the selector points at a
+    /// name that isn't a built-in or declared `[[backends]]`.
+    pub fn backend(&mut self) -> Result<&Backend, ConfigError> {
+        if self.backend.is_none() {
+            self.require_resolved()?;
+            let resolved = self.resolved.as_ref().expect("resolved just loaded");
+            self.backend = Some(registry::bind(resolved)?);
+        }
+        Ok(self.backend.as_ref().expect("backend was just set"))
     }
 
     /// Resolve school paths. Dual context:
@@ -122,20 +147,19 @@ impl Ace {
         Ok(self.school.as_ref().expect("school was just confirmed present"))
     }
 
-    /// Re-read school.toml from disk and re-resolve state. Does NOT re-read
-    /// ace.toml layers. Also drops cached school bindings so the next
-    /// `require_school` / `school()` call re-derives them from the fresh tree.
-    pub fn reload_state(&mut self) -> Result<&State, ConfigError> {
-        let prev = self.state.as_ref().ok_or(ConfigError::NoConfig)?;
-        let mut tree = prev.config.clone();
+    /// Re-read school.toml from disk and invalidate downstream caches so the
+    /// next accessors derive from the freshly loaded tree. Used after
+    /// clone-on-first-run.
+    pub fn reload_state(&mut self) -> Result<&Resolved, ConfigError> {
+        let mut tree = self.tree.clone().ok_or(ConfigError::NoConfig)?;
         tree.load_school(&self.project_dir)?;
-        self.tree = Some(tree.clone());
+        self.tree = Some(tree);
+        self.invalidate_resolved();
         self.school = None;
         self.school_obj = None;
         self.school_obj_loaded = false;
         self.skills_obj = None;
-        self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
-        Ok(self.state.as_ref().expect("state was just set"))
+        self.require_resolved()
     }
 
     /// Lazy-load the resolved School binding. `Ok(None)` when no school is

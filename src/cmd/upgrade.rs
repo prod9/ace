@@ -21,7 +21,7 @@ fn run_inner(
         if !silent { ace.done("update check skipped (ACE_SKIP_UPDATE=1)"); }
         return Ok(());
     }
-    if let Ok(state) = ace.require_state() && state.skip_update {
+    if let Ok(r) = ace.require_resolved() && r.skip_update.value {
         if !silent { ace.done("update check skipped (skip_update = true)"); }
         return Ok(());
     }

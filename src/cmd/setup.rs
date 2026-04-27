@@ -26,11 +26,11 @@ fn run_inner(ace: &mut Ace, specifier: Option<&str>) -> Result<(), CmdError> {
     .run(ace)?;
 
     // Prepare school (install/update/link + MCP).
-    ace.require_state()?;
+    ace.require_resolved()?;
     super::main::prepare_school(ace, &resolved)?;
 
     // Post-prepare setup: gitignore and instructions file.
-    let backend = ace.state().backend.clone();
+    let backend = ace.backend()?.clone();
 
     UpdateGitignore {
         project_dir: &project_dir,

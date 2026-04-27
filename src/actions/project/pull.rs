@@ -54,7 +54,7 @@ impl PullOutcome {
 
 const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
 
-pub use crate::state::skills::{ChangeKind, SkillChange};
+pub use crate::skills::{ChangeKind, SkillChange};
 
 /// Outcome of a school clone update — carries data for the caller to act on.
 #[derive(Debug)]

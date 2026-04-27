@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use clap::Subcommand;
 
@@ -41,21 +41,27 @@ fn run_inner(ace: &mut Ace, command: Option<Command>) -> Result<(), CmdError> {
 
 /// Bare `ace config` — print effective resolved configuration.
 fn show(ace: &mut Ace) -> Result<(), CmdError> {
-    ace.require_state()?;
-    let state = ace.state();
+    let backend_name = ace.backend()?.name.clone();
+    let r = ace.require_resolved()?;
 
+    let session_prompt_value = r.session_prompt.value.clone();
+    let env_flat: HashMap<String, String> = r
+        .env
+        .iter()
+        .map(|(k, v)| (k.clone(), v.value.clone()))
+        .collect();
     let effective = AceToml {
-        school: state.school_specifier.clone().unwrap_or_default(),
-        backend: Some(state.backend.name.clone()),
-        session_prompt: if state.session_prompt.is_empty() {
+        school: r.school_specifier.value.clone().unwrap_or_default(),
+        backend: Some(backend_name),
+        session_prompt: if session_prompt_value.is_empty() {
             None
         } else {
-            Some(state.session_prompt.clone())
+            Some(session_prompt_value)
         },
-        env: state.env.clone(),
-        trust: state.trust,
-        resume: if state.resume { None } else { Some(false) },
-        skip_update: if state.skip_update { Some(true) } else { None },
+        env: env_flat,
+        trust: r.trust.value,
+        resume: if r.resume.value { None } else { Some(false) },
+        skip_update: if r.skip_update.value { Some(true) } else { None },
         ..AceToml::default()
     };
 
@@ -80,22 +86,26 @@ fn get(ace: &mut Ace, key: &str) -> Result<(), CmdError> {
     let config_key = ConfigKey::parse(key)
         .ok_or_else(|| CmdError::Other(format!("unknown config key: {key}")))?;
 
-    ace.require_state()?;
-    let state = ace.state();
+    let backend_name = if let ConfigKey::Backend = config_key {
+        Some(ace.backend()?.name.clone())
+    } else {
+        None
+    };
+    let r = ace.require_resolved()?;
 
     let value = match config_key {
-        ConfigKey::School => state.school_specifier.clone().unwrap_or_default(),
-        ConfigKey::Backend => state.backend.name.clone(),
-        ConfigKey::Trust => match state.trust {
+        ConfigKey::School => r.school_specifier.value.clone().unwrap_or_default(),
+        ConfigKey::Backend => backend_name.expect("just resolved"),
+        ConfigKey::Trust => match r.trust.value {
             Trust::Default => "default".to_string(),
             Trust::Auto => "auto".to_string(),
             Trust::Yolo => "yolo".to_string(),
         },
-        ConfigKey::Resume => state.resume.to_string(),
-        ConfigKey::SkipUpdate => state.skip_update.to_string(),
-        ConfigKey::SessionPrompt => state.session_prompt.clone(),
+        ConfigKey::Resume => r.resume.value.to_string(),
+        ConfigKey::SkipUpdate => r.skip_update.value.to_string(),
+        ConfigKey::SessionPrompt => r.session_prompt.value.clone(),
         ConfigKey::Env(ref env_key) => {
-            state.env.get(env_key).cloned().unwrap_or_default()
+            r.env.get(env_key).map(|v| v.value.clone()).unwrap_or_default()
         }
     };
 
@@ -123,8 +133,7 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
     match config_key {
         ConfigKey::School => config.school = value.to_string(),
         ConfigKey::Backend => {
-            ace.require_state()?;
-            let known = known_backend_names(&ace.state().config);
+            let known = known_backend_names(ace.require_tree()?);
             if !known.contains(value) {
                 let mut listed: Vec<&str> = known.iter().map(String::as_str).collect();
                 listed.sort();

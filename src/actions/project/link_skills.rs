@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use crate::ace::Ace;
 use crate::actions::project::link::LinkResult;
 use crate::config::tree::Tree;
-use crate::state::skills::{Resolved, Skills};
+use crate::skills::{Resolved, Skills};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesiredLink {

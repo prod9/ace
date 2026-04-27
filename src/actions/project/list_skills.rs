@@ -6,7 +6,7 @@
 
 use std::fmt::Write;
 
-use crate::state::skills::{Entry, Resolved, Skill, Skills, Source};
+use crate::skills::{Entry, Resolved, Skill, Skills, Source};
 
 /// Tab-separated table with header. Matches `ace paths` style for machine parsing.
 pub fn render_table(skills: &Skills<Resolved>, show_excluded: bool) -> String {
@@ -40,7 +40,7 @@ fn visible(
 ) -> impl Iterator<Item = &Skill<Resolved>> {
     skills
         .iter()
-        .filter(move |s| show_excluded || s.state.decision == crate::state::skills::Decision::Included)
+        .filter(move |s| show_excluded || s.state.decision == crate::skills::Decision::Included)
 }
 
 /// Human-readable summary of the last trace contribution. Used in the REASON
@@ -65,8 +65,8 @@ mod tests {
     use super::*;
     use crate::config::ace_toml::AceToml;
     use crate::config::tree::Tree;
-    use crate::state::discover::{DiscoveredSkill, Tier};
-    use crate::state::skills::Discovered;
+    use crate::skills::discover::{DiscoveredSkill, Tier};
+    use crate::skills::Discovered;
     use std::path::PathBuf;
 
     fn ace(skills: &[&str], inc: &[&str], exc: &[&str]) -> AceToml {

@@ -75,10 +75,7 @@ impl Prepare<'_> {
         };
 
         // Resolve which skills to link before constructing Link.
-        // require_state was already invoked transitively via Pull/specifier;
-        // tree is available on State.config.
-        ace.require_state()?;
-        let tree = ace.state().config.clone();
+        let tree = ace.require_tree()?.clone();
         let prepared = link_skills::prepare(&school_paths.root, &tree)
             .map_err(PrepareError::Write)?;
 

@@ -25,14 +25,23 @@ pub fn merge(tree: &Tree, overrides: &AceToml) -> Resolved {
         (Source::Override, overrides),
     ];
 
+    // Personal-only fields skip the project layer entirely; user, local, and
+    // the runtime override layer are all "personal" and contribute. See
+    // spec/configuration.md.
+    let personal: [(Source, &AceToml); 3] = [
+        (Source::User, user),
+        (Source::Local, local),
+        (Source::Override, overrides),
+    ];
+
     Resolved {
         school_specifier: school_specifier(&layers),
         backend_name: backend_name(&layers, tree.school_backend()),
         backend_decls: backend_decls(tree, &layers),
         session_prompt: session_prompt(&layers),
         env: env(&layers),
-        trust: trust(user, local),
-        resume: resume(user, local),
+        trust: trust(&personal),
+        resume: resume(&personal),
         skip_update: skip_update(&layers),
     }
 }
@@ -99,30 +108,26 @@ fn env(layers: &[(Source, &AceToml); 4]) -> HashMap<String, Sourced<String>> {
     out
 }
 
-fn trust(user: &AceToml, local: &AceToml) -> Sourced<Trust> {
-    // Personal-only: user + local. Local wins. Backcompat: yolo = true → Yolo.
-    if !local.trust.is_default() {
-        return Sourced::new(local.trust, Source::Local);
-    }
-    if local.yolo {
-        return Sourced::new(Trust::Yolo, Source::Local);
-    }
-    if !user.trust.is_default() {
-        return Sourced::new(user.trust, Source::User);
-    }
-    if user.yolo {
-        return Sourced::new(Trust::Yolo, Source::User);
+fn trust(layers: &[(Source, &AceToml)]) -> Sourced<Trust> {
+    // Last non-default trust wins; backcompat yolo=true → Trust::Yolo at the
+    // same layer.
+    for (src, layer) in layers.iter().rev() {
+        if !layer.trust.is_default() {
+            return Sourced::new(layer.trust, *src);
+        }
+        if layer.yolo {
+            return Sourced::new(Trust::Yolo, *src);
+        }
     }
     Sourced::default(Trust::Default)
 }
 
-fn resume(user: &AceToml, local: &AceToml) -> Sourced<bool> {
-    // Personal-only: user + local. Local wins. Default true.
-    if let Some(v) = local.resume {
-        return Sourced::new(v, Source::Local);
-    }
-    if let Some(v) = user.resume {
-        return Sourced::new(v, Source::User);
+fn resume(layers: &[(Source, &AceToml)]) -> Sourced<bool> {
+    // Last Some wins. Default true.
+    for (src, layer) in layers.iter().rev() {
+        if let Some(v) = layer.resume {
+            return Sourced::new(v, *src);
+        }
     }
     Sourced::default(true)
 }
