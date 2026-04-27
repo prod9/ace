@@ -8,7 +8,7 @@ use crate::config::school_paths::SchoolPaths;
 use crate::config::tree::Tree;
 use crate::config::{ConfigError, Scope};
 use crate::git::Git;
-use crate::state::{RuntimeOverrides, State};
+use crate::state::{RuntimeOverrides, School, State};
 
 pub use io::{logo, IoError, OutputMode};
 use io::Io;
@@ -18,6 +18,8 @@ pub struct Ace {
     tree: Option<Tree>,
     state: Option<State>,
     school: Option<SchoolPaths>,
+    school_obj: Option<School>,
+    school_obj_loaded: bool,
     runtime_overrides: RuntimeOverrides,
     scope_override: Option<Scope>,
     io: Io,
@@ -31,6 +33,8 @@ impl Ace {
             tree: None,
             state: None,
             school: None,
+            school_obj: None,
+            school_obj_loaded: false,
             runtime_overrides: RuntimeOverrides::default(),
             scope_override: None,
             io: Io::new(mode),
@@ -116,15 +120,31 @@ impl Ace {
     }
 
     /// Re-read school.toml from disk and re-resolve state. Does NOT re-read
-    /// ace.toml layers. Also drops the cached school path so the next
-    /// `require_school` call re-resolves it.
+    /// ace.toml layers. Also drops cached school bindings so the next
+    /// `require_school` / `school()` call re-derives them from the fresh tree.
     pub fn reload_state(&mut self) -> Result<&State, ConfigError> {
         let prev = self.state.as_ref().ok_or(ConfigError::NoConfig)?;
         let mut tree = prev.config.clone();
         tree.load_school(&self.project_dir)?;
+        self.tree = Some(tree.clone());
         self.school = None;
+        self.school_obj = None;
+        self.school_obj_loaded = false;
         self.state = Some(State::resolve(tree, self.runtime_overrides.clone())?);
         Ok(self.state.as_ref().expect("state was just set"))
+    }
+
+    /// Lazy-load the resolved School binding. `Ok(None)` when no school is
+    /// configured or school.toml is missing/unreadable. Does NOT require the
+    /// backend to resolve, so read-only inspection paths still work when the
+    /// selector points at an unknown backend.
+    pub fn school(&mut self) -> Result<Option<&School>, ConfigError> {
+        if !self.school_obj_loaded {
+            let tree = self.require_tree()?;
+            self.school_obj = tree.school.as_ref().map(|st| School::from(st.clone()));
+            self.school_obj_loaded = true;
+        }
+        Ok(self.school_obj.as_ref())
     }
 
     pub fn git<'a>(&self, repo: &'a Path) -> Git<'a> {

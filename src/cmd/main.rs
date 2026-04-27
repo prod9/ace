@@ -25,13 +25,15 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
     let school_paths = ace.require_school()?;
     let school_clone = school_paths.clone_path.clone();
 
-    let school = ace.state().school.as_ref()
-        .ok_or(ConfigError::NoSchool)?;
+    let (school_name, school_session_prompt) = {
+        let school = ace.school()?.ok_or(ConfigError::NoSchool)?;
+        (school.name.clone(), school.session_prompt.clone())
+    };
 
     let backend_dir = project_dir.join(ace.state().backend.backend_dir());
     let session_prompt = build_session_prompt(
-        &school.name,
-        &school.session_prompt,
+        &school_name,
+        &school_session_prompt,
         &ace.state().session_prompt,
         &backend_dir,
         &prepare_result.changes,
@@ -92,7 +94,7 @@ pub(super) fn prepare_school(
     ace.reload_state()?;
 
     // Register MCP servers from school.toml.
-    let mcp_entries: Vec<_> = ace.state().school.as_ref()
+    let mcp_entries: Vec<_> = ace.school()?
         .map(|s| s.mcp.clone())
         .unwrap_or_default();
 

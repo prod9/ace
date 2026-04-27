@@ -63,11 +63,13 @@ fn show(ace: &mut Ace) -> Result<(), CmdError> {
         .map_err(|e| CmdError::Other(e.to_string()))?;
     print!("{output}");
 
-    if let Some(school) = &ace.state().school {
-        let school_output = toml::to_string_pretty(school)
-            .map_err(|e| CmdError::Other(e.to_string()))?;
+    let school_output = ace.school()?
+        .map(toml::to_string_pretty)
+        .transpose()
+        .map_err(|e| CmdError::Other(e.to_string()))?;
+    if let Some(s) = school_output {
         println!("\n# school.toml");
-        print!("{school_output}");
+        print!("{s}");
     }
 
     Ok(())

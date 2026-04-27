@@ -27,7 +27,6 @@ pub struct State {
     pub backend: Backend,
     pub session_prompt: String,
     pub env: HashMap<String, String>,
-    pub school: Option<School>,
     pub trust: Trust,
     pub resume: bool,
     pub skip_update: bool,
@@ -38,7 +37,6 @@ impl State {
     /// Tree must have `load_school()` called first if school.toml is needed.
     pub fn resolve(tree: Tree, overrides: RuntimeOverrides) -> Result<Self, ConfigError> {
         let resolved = resolve_layers(&tree, overrides)?;
-        let school = tree.school.as_ref().map(|st| School::from(st.clone()));
         Ok(Self {
             school_specifier: resolved.school_specifier,
             backend: resolved.backend,
@@ -47,7 +45,6 @@ impl State {
             trust: resolved.trust,
             resume: resolved.resume,
             skip_update: resolved.skip_update,
-            school,
             config: tree,
         })
     }
@@ -63,7 +60,6 @@ impl State {
             trust: Trust::Default,
             resume: true,
             skip_update: false,
-            school: None,
         }
     }
 
