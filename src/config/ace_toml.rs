@@ -169,10 +169,38 @@ mod tests {
         let config = load(&path).expect("load");
         assert_eq!(config.backends.len(), 1);
         assert_eq!(config.backends[0].name, "claude");
+        assert!(config.backends[0].kind.is_none());
+        assert!(config.backends[0].cmd.is_empty());
         assert_eq!(
             config.backends[0].env.get("ANTHROPIC_BASE_URL").map(String::as_str),
             Some("https://example.com"),
         );
+    }
+
+    #[test]
+    fn load_parses_backends_with_kind_and_cmd() {
+        let dir = tempfile::tempdir().expect("create tempdir");
+        let path = dir.path().join("ace.toml");
+        std::fs::write(
+            &path,
+            r#"[[backends]]
+name = "bedrock-claude"
+kind = "claude"
+cmd = ["claude-bedrock", "--profile", "prod"]
+
+[backends.env]
+AWS_REGION = "us-east-1"
+"#,
+        )
+        .expect("write");
+
+        let config = load(&path).expect("load");
+        assert_eq!(config.backends.len(), 1);
+        let b = &config.backends[0];
+        assert_eq!(b.name, "bedrock-claude");
+        assert_eq!(b.kind.as_deref(), Some("claude"));
+        assert_eq!(b.cmd, vec!["claude-bedrock", "--profile", "prod"]);
+        assert_eq!(b.env.get("AWS_REGION").map(String::as_str), Some("us-east-1"));
     }
 
     #[test]

@@ -64,6 +64,39 @@ fn exec_backcompat_yolo_true() {
 }
 
 #[test]
+fn exec_custom_backend_records_cmd() {
+    // A custom backend with kind=flaude and an explicit cmd should land
+    // intact in the recorded SessionOpts.cmd — proves Backend.cmd[0] flows
+    // through Backend::exec_session into the per-backend exec.
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"test-school\"\n");
+    env.write_file(
+        "ace.local.toml",
+        "[[backends]]\nname = \"myflaude\"\nkind = \"flaude\"\ncmd = [\"my-binary\", \"--flag\"]\n",
+    );
+
+    env.ace().args(["--backend", "myflaude"]).assert().success();
+
+    let records = env.read_flaude_exec_records();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].cmd, vec!["my-binary", "--flag"]);
+}
+
+#[test]
+fn exec_builtin_backend_records_default_cmd() {
+    // Built-in flaude (no [[backends]] override) should still record cmd —
+    // defaulted to [kind.name()].
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"test-school\"\n");
+
+    env.ace().assert().success();
+
+    let records = env.read_flaude_exec_records();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].cmd, vec!["flaude"]);
+}
+
+#[test]
 fn exec_backend_flag_overrides_configured_backend() {
     let env = TestEnv::new();
     env.setup_flaude_school("name = \"test-school\"\n");
