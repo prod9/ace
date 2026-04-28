@@ -400,6 +400,43 @@ fn user_layer_trust_used_when_no_local() {
     assert_eq!(stdout.trim(), "auto");
 }
 
+// -- read-only inspection survives a stale backend selector --
+
+#[test]
+fn config_show_survives_unknown_backend() {
+    let env = TestEnv::new();
+    env.setup_embedded("phoenix");
+    env.write_file("ace.local.toml", "backend = \"no-such-backend\"\n");
+
+    let output = env.ace()
+        .args(["config"])
+        .output()
+        .expect("ace config");
+
+    assert!(output.status.success(), "ace config show should succeed even with unknown backend");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("backend = \"no-such-backend\""),
+        "should print the configured backend name verbatim, got: {stdout}"
+    );
+}
+
+#[test]
+fn config_get_backend_survives_unknown_backend() {
+    let env = TestEnv::new();
+    env.setup_embedded("phoenix");
+    env.write_file("ace.local.toml", "backend = \"no-such-backend\"\n");
+
+    let output = env.ace()
+        .args(["config", "get", "backend"])
+        .output()
+        .expect("ace config get backend");
+
+    assert!(output.status.success(), "ace config get backend should succeed even with unknown backend");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(stdout.trim(), "no-such-backend");
+}
+
 // -- yolo with scope --
 
 #[test]

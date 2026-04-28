@@ -40,9 +40,13 @@ fn run_inner(ace: &mut Ace, command: Option<Command>) -> Result<(), CmdError> {
 }
 
 /// Bare `ace config` — print effective resolved configuration.
+///
+/// Reads the merged `Resolved` only; does not bind the backend. A stale
+/// `backend = "..."` selector (one not in the registry) still prints the
+/// configured name without erroring — recovery is the bare `ace` command's job.
 fn show(ace: &mut Ace) -> Result<(), CmdError> {
-    let backend_name = ace.backend()?.name.clone();
     let r = ace.require_resolved()?;
+    let backend_name = r.backend_name.value.clone();
 
     let session_prompt_value = r.session_prompt.value.clone();
     let env_flat: HashMap<String, String> = r
@@ -86,16 +90,11 @@ fn get(ace: &mut Ace, key: &str) -> Result<(), CmdError> {
     let config_key = ConfigKey::parse(key)
         .ok_or_else(|| CmdError::Other(format!("unknown config key: {key}")))?;
 
-    let backend_name = if let ConfigKey::Backend = config_key {
-        Some(ace.backend()?.name.clone())
-    } else {
-        None
-    };
     let r = ace.require_resolved()?;
 
     let value = match config_key {
         ConfigKey::School => r.school_specifier.value.clone().unwrap_or_default(),
-        ConfigKey::Backend => backend_name.expect("just resolved"),
+        ConfigKey::Backend => r.backend_name.value.clone(),
         ConfigKey::Trust => match r.trust.value {
             Trust::Default => "default".to_string(),
             Trust::Auto => "auto".to_string(),
