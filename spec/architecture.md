@@ -2,123 +2,145 @@
 
 ## Layers
 
-Three layers, each with a single responsibility:
+Five layers, demand-driven. Each binding loads on first request and caches.
+See `spec/decisions/007-config-resolution-redesign.md` for the rationale.
+
+```
+disk → Tree → Resolved → Bindings (Backend / School / Skills) → Ace → Actions / Cmd
+       parse  merge       lookup / I/O                          orchestrate
+```
 
 ### Config (`src/config/`)
 
-Dumb I/O. Loads files from disk, parses TOML, writes back. No merging, no resolution,
-no business logic.
+Dumb I/O. Parses TOML, writes back. No merging, no resolution.
 
-- `AceToml` — shape of `ace.toml` / `ace.local.toml` / `~/.config/ace/ace.toml`
-- `SchoolToml` — shape of `school.toml`
-- `IndexToml` — shape of `~/.cache/ace/index.toml` (tracks downloaded schools)
-- `AcePaths` — computes config file locations from project dir
-- `SchoolPaths` — computes school clone/root locations from specifier
+- `AceToml` — shape of `ace.toml` / `ace.local.toml` / `~/.config/ace/ace.toml`.
+- `SchoolToml` — shape of `school.toml`.
+- `IndexToml` — shape of `~/.local/share/ace/index.toml` (downloaded schools).
+- `AcePaths`, `SchoolPaths` — resolve config / clone locations from a project dir.
+- `Tree` — `Option<AceToml>` for user/project/local plus `Option<SchoolToml>`. Built by
+  `Tree::load(&AcePaths)` followed by `Tree::load_school(&Path)`. `None` means "no file
+  on disk" — distinct from "present but empty," which matters for diagnostics.
+- `ConfigError` — parse / I/O failures only. Binding-level failures live elsewhere.
 
-Config structs are parse-and-forget. They don't know about each other or about
-override precedence.
+### Resolver (`src/resolver/`)
 
-### State (`src/state/`)
+Pure logic. Given `Tree` + an `AceToml`-shaped overrides layer, produce a merged view
+with per-field provenance. Infallible past parse.
 
-The live, mutable domain tree. Passed to actions as the single source of truth.
+- `merge(tree, overrides) -> Resolved` — fold the four layers (user → project → local →
+  overrides) plus the school layer per the rules in `spec/configuration.md`.
+- `Resolved` — the merged scalars: `school_specifier`, `backend_name`, `backend_decls`,
+  `session_prompt`, `env`, `trust`, `resume`, `skip_update`. Each value is `Sourced<T>`
+  carrying a `Source { User, Project, Local, School, Override, Default }`.
+- `resolve_skills(...) -> Resolution` — the skills-specific resolver (lives here for
+  shared `Source` vocabulary; consumed by `skills/`).
 
-State imports Config types and owns conversion to/from disk representation:
-- **Loading** — reads Config structs, applies merge/resolution semantics (override
-  precedence, env merging, school specifier resolution), produces the state tree
-- **Saving** — converts state back into Config structs for persistence
+The resolver does not look up the backend, read school.toml beyond what
+`Tree::load_school` already loaded, or touch the filesystem.
 
-State owns:
-- **Domain objects** — `School`, `SkillSet`, `DiscoveredSkill`, `Tier`, conventions
-- **Merge/resolution rules** — which layers override which, how env keys combine
-- **Serialization boundary** — `from(config structs) -> State`, `to() -> config structs`
-- **Pure reads** — `discover_skills` lives here alongside `SkillSet` since the
-  producer/consumer pipeline is straightforward
+### Bindings — `Backend`, `School`, `Skills`
 
-State is data, not behavior. Actions consume it.
+Each binding is independent and fallible. No shared trait — operations differ too much
+(pure lookup vs filesystem I/O vs typestate transitions).
 
-### Actions (`src/actions/`)
+- `src/backend/` — `Kind`, `Backend`, `Registry`, `BackendError`.
+  `registry::bind(resolved)` walks `[[backends]]` declarations into a `Registry` seeded
+  with built-ins, then looks up `resolved.backend_name`. Errors: `Unknown` /
+  `Unresolvable` / `KindMismatch`.
+- `src/school.rs` — `School` domain object built by `From<SchoolToml>`.
+  `SchoolError::Missing` when no school is configured.
+- `src/skills/` — `Skills<Discovered>` / `Skills<Resolved>` typestate. `Skills::discover`
+  walks `<school>/skills/`; `.resolve(&Tree)` produces the resolved set with diagnostics.
+  `SkillError` wraps discovery I/O plus upstream `ConfigError` / `SchoolError`.
 
-Peer to State, not nested inside it. Actions are operations *on* State and the
-filesystem. Grouped by user role, not by mutation subject
-(see `spec/decisions/005-action-layout.md`):
-
-- **`actions/project/`** — consumer-side. User is working in their own repo
-  that consumes a school. Covers setup, prepare, clone, link, pull,
-  register/remove MCP, update gitignore.
-- **`actions/school/`** — maintainer-side. User is working inside a school
-  repo, curating skills. Covers init, add_import, pull_imports.
+Each binding's error type carries `#[from] ConfigError` so tree-load failures bubble
+through without forced double-handling.
 
 ### Ace (`src/ace/`)
 
-Entrypoint. Orchestrates the lifecycle:
+The session orchestrator. A single `Ace` instance is created in `main()` and threaded
+through every command. It owns the project dir, output sink, runtime overrides, and a
+lazy cache cell per layer (`tree`, `resolved`, `backend`, `school`, `skills`).
 
-1. Calls State to load from disk (State uses Config internally)
-2. Actions run, mutating the state tree
-3. Ace calls State to persist changes (State uses Config internally)
+Commands declare what they need by calling accessors on the existing instance:
 
-## Ace Instance Contract
+| Method                  | Returns                                  | What it does                                      |
+| ----------------------- | ---------------------------------------- | ------------------------------------------------- |
+| `require_tree()`        | `Result<&Tree, ConfigError>`             | Parse the four config files; load school.toml.    |
+| `require_resolved()`    | `Result<&Resolved, ConfigError>`         | Run the merge over `Tree` + overrides.            |
+| `backend()`             | `Result<&Backend, BackendError>`         | Build the registry; look up the selected name.    |
+| `require_school()`      | `Result<&SchoolPaths, SchoolError>`      | Resolve school clone path (dual-context aware).   |
+| `school()`              | `Result<Option<&School>, SchoolError>`   | Build the `School` domain object from school.toml. |
+| `skills()`              | `Result<&Skills<Resolved>, SkillError>`  | Discover `<school>/skills/` and resolve.          |
+| `set_backend_override`  | —                                        | Push a runtime override; invalidates resolved.    |
+| `reload_state`          | `Result<&Resolved, ConfigError>`         | Re-read school.toml + invalidate downstream caches. |
 
-A single `Ace` instance is created in `main()` and passed to all commands. It starts with
-empty state — functioning only as an output sink.
-
-Commands declare what they need by calling `require_*` methods on the existing instance:
-
-- **`require_state()`** — lazily loads the config tree and resolves State. No-op if already
-  loaded. Gives access to `school_specifier`, `backend`, `session_prompt`, `env`, etc.
-- **`require_school()`** — resolves school context (root, cache, specifier). Handles
-  dual-context detection: `school.toml` in cwd (school repo) vs `ace.toml` specifier (app
-  repo). Calls `require_state()` internally when in app repo context.
+Failures stay local. `ace config show` calling `resolved()` is unaffected by an unknown
+backend selector. `cmd::main` matches `BackendError::Unknown` directly to drive the
+recovery picker (see `spec/decisions/007` §"Recovery UX").
 
 Commands fall into three tiers:
 
-1. **No state** — `setup`, `fmt`, `school init`. Ace is purely an output sink.
-2. **Partial state** — `paths`, `diff`, `import`, `update`. Call `require_state()`
-   or `require_school()` for what they need.
-3. **Full orchestration** — bare `ace` (no subcommand). Runs Prepare, loads school.toml,
-   builds session prompt, execs backend.
+1. **No state** — `paths`, `fmt`, `school init`. `Ace` is purely an output sink.
+2. **Partial bindings** — `config get/set/show`, `diff`, `import`, `school pull`. Call
+   only the accessors they need.
+3. **Full orchestration** — bare `ace`, `ace auto`, `ace yolo`. Run Prepare → register
+   MCP → build session prompt → exec the backend.
 
-Never create new Ace instances inside commands. The single instance is the context — extend
-it with lazy loading rather than bypassing it.
+Never create new `Ace` instances inside commands. Extend the single instance with lazy
+loading rather than bypassing it.
+
+### Actions (`src/actions/`)
+
+Peer to bindings, not nested inside them. Actions are operations *on* `Ace` and the
+filesystem. Grouped by user role (see `spec/decisions/005-action-layout.md`):
+
+- **`actions/project/`** — consumer-side. User is in their own repo that consumes a
+  school. Covers setup, prepare, clone, link, register/remove MCP, update gitignore,
+  list/explain skills.
+- **`actions/school/`** — maintainer-side. User is in a school repo, curating skills.
+  Covers init, add_import, pull_imports.
+
+Each action has its own scoped error type (`SetupError`, `PrepareError`, etc.); see
+`CLAUDE.md` for the convention.
 
 ## Data Flow
 
 ```
-disk → State::load() → state tree
-                           ↓
-                       actions mutate
-                           ↓
-                       State::save() → disk
+disk → Tree → Resolved → Backend / School / Skills → action.run(&mut Ace) → disk
 ```
 
-State internally uses Config for the disk I/O:
-
-```
-State::load():  Config::load() → parsed structs → merge/resolve → state tree
-State::save():  state tree → config structs → Config::save() → disk
-```
+Each arrow is demand-driven. `Tree` is parsed only when something asks for it; `Resolved`
+is merged only after `Tree` exists; bindings are built only when a command reaches for
+them. Cache invalidation is explicit (`reload_state`, `invalidate_*`) and called at the
+small set of write sites (after `ace config set`, after `ace setup`, after `ace school
+pull`).
 
 ## Dependency Direction
 
 ```
-Config ← State ← Ace
-              ← Actions
+config ← resolver ← backend, school, skills ← ace ← actions, cmd
 ```
 
-- Config imports nothing from the project
-- State imports Config (for disk representation types)
-- Ace and Actions import State (for the domain tree)
-- Config never imports State
-- State never imports Actions
+- `config` imports nothing from the project.
+- `resolver` imports `config` (raw types) only.
+- Bindings import `config` and `resolver`.
+- `ace` imports bindings, threads them through accessors.
+- `actions` and `cmd` consume `ace`.
+- No layer imports a layer to its right. `config` never imports `resolver`; bindings
+  never import `ace`.
 
 ## Standalone Modules
 
-Not everything fits the Config → State → Ace pipeline. Standalone helper modules
-live at the `src/` top level when they are independent of the domain tree:
+Helper modules independent of the binding pipeline live at the `src/` top level:
 
-- `src/git.rs` — git subprocess helpers
-- `src/glob.rs` — simple glob matching
-- `src/upgrade/` — self-update: version check, binary download, self-replacement
+- `src/git.rs` — git subprocess helpers (with `GIT_TERMINAL_PROMPT=0` baked in).
+- `src/glob.rs` — simple glob matching.
+- `src/fsutil.rs` — recursive copy, symlink helpers.
+- `src/paths.rs`, `src/platform.rs` — XDG / OS-specific path handling.
+- `src/upgrade/` — self-update: version check, binary download, self-replacement.
+- `src/templates/` — session-prompt template engine.
 
-These modules may be called from `main()`, `cmd/`, or `Ace` but do not import
-State or Actions. They receive only the specific values they need (paths, version
-strings, output mode) rather than the full `Ace` instance.
+These modules may be called from `main()`, `cmd/`, `Ace`, or any binding, but they do
+not import bindings, `Ace`, or actions. They receive only the values they need.
