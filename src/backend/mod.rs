@@ -220,7 +220,7 @@ impl Backend {
 }
 
 /// Name → Backend lookup. Built with `Registry::with_builtins()`; layer-merge
-/// from `[[backends]]` happens in `state::resolve_layers`.
+/// from `[[backends]]` happens in `registry::build_registry`.
 #[derive(Debug, Default, Clone)]
 pub struct Registry {
     entries: HashMap<String, Backend>,

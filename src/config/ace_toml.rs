@@ -10,7 +10,7 @@ pub struct BackendDecl {
     pub name: String,
     /// Explicit kind (built-in name: claude/codex/flaude). When omitted,
     /// kind is inferred from `name` matching a built-in, then from `cmd[0]`
-    /// basename. See `state::backend_resolve`.
+    /// basename. See `backend::registry::resolve_kind`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
     /// Argv for launching the binary. Empty = default to `[kind.name()]`

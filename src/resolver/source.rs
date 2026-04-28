@@ -1,7 +1,7 @@
 /// Provenance: which layer (or sentinel) supplied a resolved value.
 ///
 /// Shared across scalar config resolution (`Resolved`) and skills resolution.
-/// Today's `state::resolver::Scope::Implicit` folds into `Source::Default`.
+/// `Default` is the sentinel for fields with no contributing layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Source {
     User,
