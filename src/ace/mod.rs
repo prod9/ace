@@ -23,10 +23,11 @@ pub struct Ace {
     tree: Option<Tree>,
     resolved: Option<Resolved>,
     backend: Option<Backend>,
-    school: Option<SchoolPaths>,
-    school_obj: Option<School>,
-    school_obj_loaded: bool,
-    skills_obj: Option<Skills<SkillsResolved>>,
+    school_paths: Option<SchoolPaths>,
+    /// `None` = not loaded yet. `Some(None)` = loaded, no school configured.
+    /// `Some(Some(_))` = loaded, school present.
+    school: Option<Option<School>>,
+    skills: Option<Skills<SkillsResolved>>,
     overrides: AceToml,
     scope_override: Option<Scope>,
     io: Io,
@@ -40,10 +41,9 @@ impl Ace {
             tree: None,
             resolved: None,
             backend: None,
+            school_paths: None,
             school: None,
-            school_obj: None,
-            school_obj_loaded: false,
-            skills_obj: None,
+            skills: None,
             overrides: AceToml::default(),
             scope_override: None,
             io: Io::new(mode),
@@ -107,11 +107,6 @@ impl Ace {
         Ok(self.resolved.as_ref().expect("resolved was just set"))
     }
 
-    /// Panicking accessor — only after `require_resolved` succeeds.
-    pub fn resolved(&self) -> &Resolved {
-        self.resolved.as_ref().expect("resolved not loaded, call require_resolved first")
-    }
-
     /// Lazy-load the resolved Backend binding (registry build + name lookup).
     /// `Err(BackendError::Unknown(_))` when the selector points at a name
     /// that isn't a built-in or declared `[[backends]]`.
@@ -128,9 +123,9 @@ impl Ace {
     /// - If school.toml exists in project_dir → school repo context
     /// - Otherwise require_tree → specifier → school_paths
     pub fn require_school(&mut self) -> Result<&SchoolPaths, SchoolError> {
-        if self.school.is_none() {
+        if self.school_paths.is_none() {
             if self.project_dir.join("school.toml").exists() {
-                self.school = Some(SchoolPaths {
+                self.school_paths = Some(SchoolPaths {
                     source: ".".to_string(),
                     clone_path: None,
                     root: self.project_dir.clone(),
@@ -141,24 +136,23 @@ impl Ace {
                     return Err(SchoolError::Missing);
                 };
                 let sp = config::school_paths::resolve(&self.project_dir, &spec)?;
-                self.school = Some(sp);
+                self.school_paths = Some(sp);
             }
         }
-        Ok(self.school.as_ref().expect("school was just confirmed present"))
+        Ok(self.school_paths.as_ref().expect("school_paths was just confirmed present"))
     }
 
     /// Re-read school.toml from disk and invalidate downstream caches so the
     /// next accessors derive from the freshly loaded tree. Used after
     /// clone-on-first-run.
-    pub fn reload_state(&mut self) -> Result<&Resolved, ConfigError> {
+    pub fn reload_tree(&mut self) -> Result<&Resolved, ConfigError> {
         let mut tree = self.tree.clone().ok_or(ConfigError::NoConfig)?;
         tree.load_school(&self.project_dir)?;
         self.tree = Some(tree);
         self.invalidate_resolved();
+        self.school_paths = None;
         self.school = None;
-        self.school_obj = None;
-        self.school_obj_loaded = false;
-        self.skills_obj = None;
+        self.skills = None;
         self.require_resolved()
     }
 
@@ -167,25 +161,26 @@ impl Ace {
     /// backend to resolve, so read-only inspection paths still work when the
     /// selector points at an unknown backend.
     pub fn school(&mut self) -> Result<Option<&School>, SchoolError> {
-        if !self.school_obj_loaded {
+        if self.school.is_none() {
             let tree = self.require_tree()?;
-            self.school_obj = tree.school.as_ref().map(|st| School::from(st.clone()));
-            self.school_obj_loaded = true;
+            let school = tree.school.as_ref().map(|st| School::from(st.clone()));
+            self.school = Some(school);
         }
-        Ok(self.school_obj.as_ref())
+        Ok(self.school.as_ref().expect("school just loaded").as_ref())
     }
 
     /// Lazy-load the resolved SkillSet — discover the school's `skills/` tree
     /// and resolve against the layered config. Errors when no school is
     /// configured (skills require a school root) or discovery I/O fails.
     pub fn skills(&mut self) -> Result<&Skills<SkillsResolved>, SkillError> {
-        if self.skills_obj.is_none() {
+        if self.skills.is_none() {
             let school_root = self.require_school()?.root.clone();
-            let tree = self.require_tree()?.clone();
-            let resolved = Skills::discover(&school_root)?.resolve(&tree);
-            self.skills_obj = Some(resolved);
+            let discovered = Skills::discover(&school_root)?;
+            let tree = self.require_tree()?;
+            let resolved = discovered.resolve(tree);
+            self.skills = Some(resolved);
         }
-        Ok(self.skills_obj.as_ref().expect("skills was just set"))
+        Ok(self.skills.as_ref().expect("skills was just set"))
     }
 
     pub fn git<'a>(&self, repo: &'a Path) -> Git<'a> {

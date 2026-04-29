@@ -9,10 +9,10 @@ pub fn run(ace: &mut Ace, key: Option<&str>) {
 }
 
 fn run_inner(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
-    ace.require_resolved()?;
+    let school_specifier = ace.require_resolved()?.school_specifier.value.clone();
     let p = paths::resolve(ace.project_dir())?;
 
-    let all = build_paths(ace, &p)?;
+    let all = build_paths(ace, &p, school_specifier.as_deref())?;
 
     match key {
         Some(k) => {
@@ -34,6 +34,7 @@ fn run_inner(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
 fn build_paths(
     ace: &Ace,
     p: &paths::AcePaths,
+    school_specifier: Option<&str>,
 ) -> Result<Vec<(String, String)>, CmdError> {
     let mut out = Vec::new();
 
@@ -41,7 +42,7 @@ fn build_paths(
     out.push(("project".into(), ace.project_dir().display().to_string()));
     out.push(("cache".into(), p.cache.display().to_string()));
 
-    if let Some(spec) = ace.resolved().school_specifier.value.as_deref() {
+    if let Some(spec) = school_specifier {
         let sp = school_paths::resolve(ace.project_dir(), spec)?;
         out.push(("school".into(), sp.root.display().to_string()));
     }

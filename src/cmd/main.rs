@@ -15,8 +15,10 @@ pub fn run(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) {
 fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> Result<(), CmdError> {
     require_resolved_or_recover(ace)?;
 
-    let specifier = ace.resolved().school_specifier.value.clone()
-        .ok_or(crate::school::SchoolError::Missing)?;
+    let specifier = {
+        let r = ace.require_resolved()?;
+        r.school_specifier.value.clone().ok_or(crate::school::SchoolError::Missing)?
+    };
 
     let prepare_result = prepare_school(ace, &specifier)?;
 
@@ -29,7 +31,17 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
     };
 
     let backend_dir = project_dir.join(ace.backend()?.backend_dir());
-    let resolved_session_prompt = ace.resolved().session_prompt.value.clone();
+
+    let (resolved_session_prompt, trust, resume_pref, env) = {
+        let r = ace.require_resolved()?;
+        let env: std::collections::HashMap<String, String> = r
+            .env
+            .iter()
+            .map(|(k, v)| (k.clone(), v.value.clone()))
+            .collect();
+        (r.session_prompt.value.clone(), r.trust.value, r.resume.value, env)
+    };
+
     let session_prompt = build_session_prompt(
         &school_name,
         &school_session_prompt,
@@ -40,7 +52,6 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         prepare_result.school_is_dirty,
     );
 
-    let trust = ace.resolved().trust.value;
     if !trust.is_default() {
         match ace.backend()?.supports_trust(trust) {
             Ok(()) => match trust {
@@ -52,19 +63,13 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         }
     }
 
-    let resume = should_resume && ace.resolved().resume.value;
+    let resume = should_resume && resume_pref;
     if resume {
         ace.hint("Resuming previous session. If this fails, run: ace new");
     }
 
     ace.separator();
 
-    let env: std::collections::HashMap<String, String> = ace
-        .resolved()
-        .env
-        .iter()
-        .map(|(k, v)| (k.clone(), v.value.clone()))
-        .collect();
     ace.backend()?.exec_session(SessionOpts {
         trust,
         session_prompt,
@@ -96,7 +101,7 @@ pub(super) fn prepare_school(
     .run(ace)?;
 
     // Reload with fresh school.toml after Prepare.
-    ace.reload_state()?;
+    ace.reload_tree()?;
 
     // Register MCP servers from school.toml.
     let mcp_entries: Vec<_> = ace.school()?

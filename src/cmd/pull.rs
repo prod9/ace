@@ -11,9 +11,10 @@ pub fn run(ace: &mut Ace) {
 }
 
 fn run_inner(ace: &mut Ace) -> Result<(), CmdError> {
-    ace.require_resolved()?;
-
-    let specifier = ace.resolved().school_specifier.value.clone()
+    let specifier = ace.require_resolved()?
+        .school_specifier
+        .value
+        .clone()
         .ok_or(crate::school::SchoolError::Missing)?;
 
     let project_dir = ace.project_dir().to_path_buf();
