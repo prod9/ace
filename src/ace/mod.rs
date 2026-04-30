@@ -13,7 +13,7 @@ use crate::git::Git;
 use crate::resolver;
 use crate::resolver::Resolved;
 use crate::school::{School, SchoolError};
-use crate::skills::{Resolved as SkillsResolved, SkillError, Skills};
+use crate::skills::{Decided, SkillError, Skills};
 
 pub use io::{logo, IoError, OutputMode};
 use io::Io;
@@ -27,7 +27,7 @@ pub struct Ace {
     /// `None` = not loaded yet. `Some(None)` = loaded, no school configured.
     /// `Some(Some(_))` = loaded, school present.
     school: Option<Option<School>>,
-    skills: Option<Skills<SkillsResolved>>,
+    skills: Option<Skills<Decided>>,
     overrides: AceToml,
     scope_override: Option<Scope>,
     io: Io,
@@ -172,7 +172,7 @@ impl Ace {
     /// Lazy-load the resolved SkillSet — discover the school's `skills/` tree
     /// and resolve against the layered config. Errors when no school is
     /// configured (skills require a school root) or discovery I/O fails.
-    pub fn skills(&mut self) -> Result<&Skills<SkillsResolved>, SkillError> {
+    pub fn skills(&mut self) -> Result<&Skills<Decided>, SkillError> {
         if self.skills.is_none() {
             let school_root = self.require_school()?.root.clone();
             let discovered = Skills::discover(&school_root)?;

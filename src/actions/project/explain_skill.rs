@@ -1,10 +1,10 @@
 //! Detailed explanation of a single skill's resolution + provenance.
 //!
-//! Pure: takes `&Skills<Resolved>` and a target name; either returns a
-//! reference to the matching `Skill<Resolved>` (caller renders) or an
+//! Pure: takes `&Skills<Decided>` and a target name; either returns a
+//! reference to the matching `Skill<Decided>` (caller renders) or an
 //! `ExplainError::NotFound` carrying near-match suggestions.
 
-use crate::skills::{Entry, Resolved, Skill, Skills, Source};
+use crate::skills::{Entry, Decided, Skill, Skills, Source};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ExplainError {
@@ -21,9 +21,9 @@ fn format_near(near: &[String]) -> String {
 }
 
 pub fn find_or_suggest<'a>(
-    skills: &'a Skills<Resolved>,
+    skills: &'a Skills<Decided>,
     name: &str,
-) -> Result<&'a Skill<Resolved>, ExplainError> {
+) -> Result<&'a Skill<Decided>, ExplainError> {
     if let Some(skill) = skills.find(name) {
         return Ok(skill);
     }
@@ -34,7 +34,7 @@ pub fn find_or_suggest<'a>(
 }
 
 /// Render a single resolved skill's explanation block.
-pub fn render(skill: &Skill<Resolved>) -> String {
+pub fn render(skill: &Skill<Decided>) -> String {
     let mut s = format!(
         "{} ({})\n  status: {}\n  trace:\n",
         skill.name,
@@ -67,7 +67,7 @@ fn format_trace_line(e: &Entry) -> String {
 
 /// Up to 5 names with at least 3-char overlap with the query. Cheap heuristic;
 /// good enough for "did you mean" prompts without pulling in a fuzzy crate.
-fn near_matches(query: &str, skills: &Skills<Resolved>) -> Vec<String> {
+fn near_matches(query: &str, skills: &Skills<Decided>) -> Vec<String> {
     let q = query.to_lowercase();
     let mut scored: Vec<(usize, &str)> = skills
         .iter()
@@ -140,7 +140,7 @@ mod tests {
         }
     }
 
-    fn resolve(names: &[&str], t: &Tree) -> Skills<Resolved> {
+    fn resolve(names: &[&str], t: &Tree) -> Skills<Decided> {
         let disc: Vec<DiscoveredSkill> = names.iter().map(|n| discovered(n, Tier::Curated)).collect();
         Skills::<Discovered>::from_discovered(&disc).resolve(t)
     }

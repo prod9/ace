@@ -1,15 +1,15 @@
 //! Render the `ace skills` listing.
 //!
-//! Walks `Skills<Resolved>` directly — no intermediate row struct. Default
+//! Walks `Skills<Decided>` directly — no intermediate row struct. Default
 //! hides excluded; `show_excluded` flips that. Output sorted by name (the
 //! resolver emits skills in BTreeMap order, so the iterator is already sorted).
 
 use std::fmt::Write;
 
-use crate::skills::{Entry, Resolved, Skill, Skills, Source};
+use crate::skills::{Entry, Decided, Skill, Skills, Source};
 
 /// Tab-separated table with header. Matches `ace paths` style for machine parsing.
-pub fn render_table(skills: &Skills<Resolved>, show_excluded: bool) -> String {
+pub fn render_table(skills: &Skills<Decided>, show_excluded: bool) -> String {
     let mut out = String::from("NAME\tTIER\tSTATUS\tREASON\n");
     for skill in visible(skills, show_excluded) {
         let _ = writeln!(
@@ -25,7 +25,7 @@ pub fn render_table(skills: &Skills<Resolved>, show_excluded: bool) -> String {
 }
 
 /// Bare names, one per line. Scriptable.
-pub fn render_names(skills: &Skills<Resolved>, show_excluded: bool) -> String {
+pub fn render_names(skills: &Skills<Decided>, show_excluded: bool) -> String {
     let mut out = String::new();
     for skill in visible(skills, show_excluded) {
         out.push_str(&skill.name);
@@ -35,9 +35,9 @@ pub fn render_names(skills: &Skills<Resolved>, show_excluded: bool) -> String {
 }
 
 fn visible(
-    skills: &Skills<Resolved>,
+    skills: &Skills<Decided>,
     show_excluded: bool,
-) -> impl Iterator<Item = &Skill<Resolved>> {
+) -> impl Iterator<Item = &Skill<Decided>> {
     skills
         .iter()
         .filter(move |s| show_excluded || s.state.decision == crate::skills::Decision::Included)
@@ -46,7 +46,7 @@ fn visible(
 /// Human-readable summary of the last trace contribution. Used in the REASON
 /// column. `Implicit` gets a special-case phrasing; everything else reads as
 /// `<scope>: <field> "<pattern>"`.
-fn reason_for(skill: &Skill<Resolved>) -> String {
+fn reason_for(skill: &Skill<Decided>) -> String {
     let Some(last) = skill.state.trace.last() else {
         return String::new();
     };
@@ -99,7 +99,7 @@ mod tests {
         names.iter().map(|n| discovered(n, Tier::Curated)).collect()
     }
 
-    fn resolve(disc: Vec<DiscoveredSkill>, tree: &Tree) -> Skills<Resolved> {
+    fn resolve(disc: Vec<DiscoveredSkill>, tree: &Tree) -> Skills<Decided> {
         Skills::<Discovered>::from_discovered(&disc).resolve(tree)
     }
 

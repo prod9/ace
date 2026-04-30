@@ -49,7 +49,7 @@ pub struct SkillChange {
 pub struct Discovered;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Resolved {
+pub struct Decided {
     pub decision: Decision,
     pub trace: Vec<Entry>,
 }
@@ -98,7 +98,7 @@ impl Skills<Discovered> {
 
     /// Run the three-layer resolver against the given config tree.
     /// Consumes `self` — the typestate transition is one-way.
-    pub fn resolve(self, tree: &Tree) -> Skills<Resolved> {
+    pub fn resolve(self, tree: &Tree) -> Skills<Decided> {
         let names: Vec<String> = self.items.iter().map(|s| s.name.clone()).collect();
         let default = crate::config::ace_toml::AceToml::default();
         let user = tree.user.as_ref().unwrap_or(&default);
@@ -121,7 +121,7 @@ impl Skills<Discovered> {
                     name: r.name,
                     path,
                     tier,
-                    state: Resolved {
+                    state: Decided {
                         decision: r.decision,
                         trace: r.trace,
                     },
@@ -187,18 +187,18 @@ impl Skills<Discovered> {
     }
 }
 
-// ---- Skills<Resolved> ----
+// ---- Skills<Decided> ----
 
-impl Skills<Resolved> {
-    pub fn find(&self, name: &str) -> Option<&Skill<Resolved>> {
+impl Skills<Decided> {
+    pub fn find(&self, name: &str) -> Option<&Skill<Decided>> {
         self.items.iter().find(|s| s.name == name)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Skill<Resolved>> {
+    pub fn iter(&self) -> impl Iterator<Item = &Skill<Decided>> {
         self.items.iter()
     }
 
-    pub fn included(&self) -> impl Iterator<Item = &Skill<Resolved>> {
+    pub fn included(&self) -> impl Iterator<Item = &Skill<Decided>> {
         self.items
             .iter()
             .filter(|s| s.state.decision == Decision::Included)

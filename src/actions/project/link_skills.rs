@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use crate::ace::Ace;
 use crate::actions::project::link::LinkResult;
 use crate::config::tree::Tree;
-use crate::skills::{Resolved, Skills};
+use crate::skills::{Decided, Skills};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DesiredLink {
@@ -137,7 +137,7 @@ pub enum ClassifyInput {
 ///
 /// Walks the school's `skills/` tree, resolves against the three config
 /// layers, and emits one `DesiredLink` per included skill. Path comes
-/// straight from `Skill<Resolved>` — no separate name→path join.
+/// straight from `Skill<Decided>` — no separate name→path join.
 pub fn prepare(school_root: &Path, tree: &Tree) -> io::Result<PreparedSkills> {
     let skills = Skills::discover(school_root)?.resolve(tree);
     let desired = skills
@@ -153,7 +153,7 @@ pub fn prepare(school_root: &Path, tree: &Tree) -> io::Result<PreparedSkills> {
 #[derive(Debug)]
 pub struct PreparedSkills {
     pub desired: Vec<DesiredLink>,
-    pub skills: Skills<Resolved>,
+    pub skills: Skills<Decided>,
 }
 
 /// Reconcile per-skill symlinks under `project_skills_dir`.
