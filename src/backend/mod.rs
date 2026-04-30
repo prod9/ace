@@ -106,11 +106,6 @@ impl Kind {
         }
     }
 
-    pub fn supports_trust(&self, _trust: Trust) -> Result<(), String> {
-        // All current backends (Claude, Codex, Flaude) support all trust levels.
-        Ok(())
-    }
-
     pub fn exec_session(&self, cmd: &[String], opts: SessionOpts) -> Result<(), std::io::Error> {
         dispatch!(self, exec_session, cmd, opts)
     }
@@ -190,10 +185,6 @@ impl Backend {
         self.kind.instructions_file()
     }
 
-    pub fn supports_trust(&self, trust: Trust) -> Result<(), String> {
-        self.kind.supports_trust(trust)
-    }
-
     pub fn exec_session(&self, mut opts: SessionOpts) -> Result<(), std::io::Error> {
         // per-backend env merges over global env (later wins on collision).
         for (k, v) in &self.env {
@@ -270,45 +261,6 @@ pub(super) fn parse_status_array(json: &str) -> Vec<McpStatus> {
 #[cfg(test)]
 mod tests {
     use super::{Kind, Registry};
-    use crate::config::ace_toml::Trust;
-
-    #[test]
-    fn supports_trust_default_all() {
-        for backend in [Kind::Claude, Kind::Flaude, Kind::Codex] {
-            backend.supports_trust(Trust::Default)
-                .unwrap_or_else(|_| panic!("{:?} should support Default", backend));
-        }
-    }
-
-    #[test]
-    fn supports_trust_auto_claude() {
-        Kind::Claude.supports_trust(Trust::Auto).expect("Claude supports Auto");
-    }
-
-    #[test]
-    fn supports_trust_yolo_claude() {
-        Kind::Claude.supports_trust(Trust::Yolo).expect("Claude supports Yolo");
-    }
-
-    #[test]
-    fn supports_trust_auto_flaude() {
-        Kind::Flaude.supports_trust(Trust::Auto).expect("Flaude supports Auto");
-    }
-
-    #[test]
-    fn supports_trust_yolo_flaude() {
-        Kind::Flaude.supports_trust(Trust::Yolo).expect("Flaude supports Yolo");
-    }
-
-    #[test]
-    fn supports_trust_auto_codex() {
-        Kind::Codex.supports_trust(Trust::Auto).expect("Codex supports Auto");
-    }
-
-    #[test]
-    fn supports_trust_yolo_codex() {
-        Kind::Codex.supports_trust(Trust::Yolo).expect("Codex supports Yolo");
-    }
 
     #[test]
     fn registry_with_builtins_lookup() {

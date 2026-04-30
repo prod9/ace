@@ -36,7 +36,7 @@ impl<T> Sourced<T> {
         Self { value, from }
     }
 
-    pub fn default(value: T) -> Self {
+    pub fn at_default(value: T) -> Self {
         Self { value, from: Source::Default }
     }
 }
@@ -67,8 +67,8 @@ mod tests {
     }
 
     #[test]
-    fn sourced_default_helper() {
-        let s: Sourced<&str> = Sourced::default("hi");
+    fn sourced_at_default_helper() {
+        let s: Sourced<&str> = Sourced::at_default("hi");
         assert_eq!(s.from, Source::Default);
         assert_eq!(s.value, "hi");
     }

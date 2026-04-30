@@ -53,7 +53,7 @@ fn school_specifier(layers: &[(Source, &AceToml); 4]) -> Sourced<Option<String>>
             return Sourced::new(Some(layer.school.clone()), *src);
         }
     }
-    Sourced::default(None)
+    Sourced::at_default(None)
 }
 
 fn backend_name(
@@ -69,7 +69,7 @@ fn backend_name(
     if let Some(name) = school_backend {
         return Sourced::new(name.to_string(), Source::School);
     }
-    Sourced::default(Kind::default().into())
+    Sourced::at_default(Kind::default().into())
 }
 
 fn backend_decls(tree: &Tree, layers: &[(Source, &AceToml); 4]) -> Vec<Sourced<BackendDecl>> {
@@ -94,7 +94,7 @@ fn session_prompt(layers: &[(Source, &AceToml); 4]) -> Sourced<String> {
             return Sourced::new(p.clone(), *src);
         }
     }
-    Sourced::default(String::new())
+    Sourced::at_default(String::new())
 }
 
 fn env(layers: &[(Source, &AceToml); 4]) -> HashMap<String, Sourced<String>> {
@@ -119,7 +119,7 @@ fn trust(layers: &[(Source, &AceToml)]) -> Sourced<Trust> {
             return Sourced::new(Trust::Yolo, *src);
         }
     }
-    Sourced::default(Trust::Default)
+    Sourced::at_default(Trust::Default)
 }
 
 fn resume(layers: &[(Source, &AceToml)]) -> Sourced<bool> {
@@ -129,7 +129,7 @@ fn resume(layers: &[(Source, &AceToml)]) -> Sourced<bool> {
             return Sourced::new(v, *src);
         }
     }
-    Sourced::default(true)
+    Sourced::at_default(true)
 }
 
 fn skip_update(layers: &[(Source, &AceToml); 4]) -> Sourced<bool> {
@@ -139,7 +139,7 @@ fn skip_update(layers: &[(Source, &AceToml); 4]) -> Sourced<bool> {
             return Sourced::new(v, *src);
         }
     }
-    Sourced::default(false)
+    Sourced::at_default(false)
 }
 
 #[cfg(test)]

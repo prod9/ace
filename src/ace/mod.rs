@@ -60,6 +60,7 @@ impl Ace {
     }
 
     pub fn set_backend_override(&mut self, backend: Option<String>) {
+        // Only resolved + backend depend on the selector; school + skills don't.
         self.overrides.backend = backend;
         self.invalidate_resolved();
     }

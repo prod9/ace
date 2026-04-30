@@ -52,15 +52,10 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         prepare_result.school_is_dirty,
     );
 
-    if !trust.is_default() {
-        match ace.backend()?.supports_trust(trust) {
-            Ok(()) => match trust {
-                Trust::Auto => ace.hint("auto mode — AI decides approvals"),
-                Trust::Yolo => ace.warn("yolo mode — permission prompts disabled"),
-                Trust::Default => {}
-            },
-            Err(msg) => ace.warn(&format!("trust ignored: {msg}")),
-        }
+    match trust {
+        Trust::Auto => ace.hint("auto mode — AI decides approvals"),
+        Trust::Yolo => ace.warn("yolo mode — permission prompts disabled"),
+        Trust::Default => {}
     }
 
     let resume = should_resume && resume_pref;
