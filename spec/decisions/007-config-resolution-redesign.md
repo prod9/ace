@@ -67,13 +67,19 @@ pub struct Resolved {
     pub trust:            Sourced<Trust>,
     pub resume:           Sourced<bool>,
     pub skip_update:      Sourced<bool>,
-    pub skills_config:    ResolvedSkills,   // already provenance-aware
 }
 
 pub struct Sourced<T> { pub value: T, pub from: Source }
 
 pub enum Source { User, Project, Local, School, Override, Default }
 ```
+
+Skills resolution lives on its own typestate (`Skills<Discovered>` →
+`Skills<Decided>` in `src/skills/`), not on `Resolved`. Folding it in would
+either drop trace information or force `Resolved::merge` to take a discovered
+school clone as input — which defeats PROD9-146 (`ace config show` must
+survive without a school clone). `Ace::skills()` runs the resolver lazily
+against `tree()` when something asks.
 
 `Resolved::merge(tree: &Tree, overrides: &AceToml) -> Resolved` — pure transform.
 Infallible past parse. Tracks which layer contributed each field.
