@@ -439,6 +439,83 @@ fn config_get_backend_survives_unknown_backend() {
 
 // -- yolo with scope --
 
+// -- config explain --
+
+#[test]
+fn config_explain_shows_all_keys() {
+    let env = TestEnv::new();
+    env.setup_embedded("phoenix");
+    env.write_file("ace.local.toml", "trust = \"auto\"\n");
+
+    let output = env.ace()
+        .args(["config", "explain"])
+        .output()
+        .expect("ace config explain");
+
+    assert!(output.status.success(), "ace config explain should succeed");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("school"), "should show school key");
+    assert!(stdout.contains("backend"), "should show backend key");
+    assert!(stdout.contains("trust = \"auto\""), "trust winner shown");
+    assert!(stdout.contains("[local]"), "winner source label");
+    assert!(stdout.contains("← winner"), "winner marker");
+    assert!(stdout.contains("user:"), "per-layer breakdown");
+    assert!(stdout.contains("project:"));
+    assert!(stdout.contains("local:"));
+    assert!(stdout.contains("override:"));
+}
+
+#[test]
+fn config_explain_filters_to_one_key() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"phoenix\"\n");
+
+    let output = env.ace()
+        .args(["config", "explain", "backend"])
+        .output()
+        .expect("ace config explain backend");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("backend = \"flaude\""), "backend winner shown");
+    assert!(stdout.contains("[project]"), "project layer set backend");
+    assert!(stdout.contains("school:"), "school row present in backend block");
+    assert!(!stdout.contains("trust"), "other keys filtered out");
+    assert!(!stdout.contains("session_prompt"));
+}
+
+#[test]
+fn config_explain_unknown_key() {
+    let env = TestEnv::new();
+    env.setup_embedded("phoenix");
+
+    env.ace()
+        .args(["config", "explain", "nonexistent"])
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("unknown config key"));
+}
+
+#[test]
+fn config_explain_default_collapses_when_no_layer_set() {
+    let env = TestEnv::new();
+    env.setup_embedded("phoenix");
+
+    let output = env.ace()
+        .args(["config", "explain", "trust"])
+        .output()
+        .expect("ace config explain trust");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("trust = \"default\""));
+    assert!(stdout.contains("[default]"));
+    // No breakdown rows when no layer contributes
+    assert!(!stdout.contains("user:"), "should collapse: {stdout}");
+}
+
+// -- yolo with scope --
+
 #[test]
 fn yolo_with_user_scope() {
     let env = TestEnv::new();

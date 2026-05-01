@@ -226,6 +226,31 @@ Print the effective resolved value for a single key. Outputs the raw value, one 
 
 Keys: `school`, `backend`, `trust`, `resume`, `session_prompt`, `skip_update`, `env.KEY`.
 
+### `ace config explain [key]`
+
+Print provenance per layer for one or all keys. Bare form lists every key; pass a key
+name (e.g. `backend`, `trust`, `env.FOO`) to filter to one block.
+
+Each block shows the resolved winner with its source label, then a per-layer breakdown
+(`user`/`project`/`local`/`school`/`override`). The winning layer is marked `← winner`.
+When no layer contributes a value (winner is `default`), the block collapses to a single
+line.
+
+```
+backend = "bailer"  [project]
+  user:     (unset)
+  project:  "bailer"  ← winner
+  local:    (unset)
+  school:   (unset)
+  override: (unset)
+
+trust = "default"  [default]
+```
+
+The breakdown shows the raw value present in each file. For personal-only keys
+(`trust`, `resume`), the merge ignores the project layer — a value listed under
+`project:` for those keys is informational only and does not influence the winner.
+
 ### `ace config set <key> <value> [--user|--project|--local]`
 
 Write a single field to the appropriate layer. Loads the target file, modifies the field,

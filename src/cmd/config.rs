@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use clap::Subcommand;
 
@@ -7,6 +7,7 @@ use crate::backend::Kind;
 use crate::config::ace_toml::{self, AceToml, Trust};
 use crate::config::tree::Tree;
 use crate::config::{ConfigKey, Scope};
+use crate::resolver::Source;
 
 use super::CmdError;
 
@@ -24,6 +25,11 @@ pub enum Command {
         /// Value to set
         value: String,
     },
+    /// Show provenance per layer for one or all keys
+    Explain {
+        /// Optional key to inspect (omit for all keys)
+        key: Option<String>,
+    },
 }
 
 pub fn run(ace: &mut Ace, command: Option<Command>) {
@@ -36,6 +42,7 @@ fn run_inner(ace: &mut Ace, command: Option<Command>) -> Result<(), CmdError> {
         None => show(ace),
         Some(Command::Get { key }) => get(ace, &key),
         Some(Command::Set { key, value }) => set(ace, &key, &value),
+        Some(Command::Explain { key }) => explain(ace, key.as_deref()),
     }
 }
 
@@ -166,6 +173,235 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
     ace_toml::save(target, &config)?;
     ace.done(&format!("{key} = {value}"));
     Ok(())
+}
+
+/// `ace config explain [key]` — print provenance per layer for one or all keys.
+///
+/// Reads the raw `Tree` and overrides directly so users can see what each layer
+/// contributes — not just the merged winner. Output collapses to a single line
+/// when no layer contributes (winner is `Source::Default`).
+fn explain(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
+    let parsed = key
+        .map(|k| {
+            ConfigKey::parse(k)
+                .ok_or_else(|| CmdError::Other(format!("unknown config key: {k}")))
+        })
+        .transpose()?;
+
+    ace.require_resolved()?;
+    let tree = ace.require_tree()?.clone();
+    let overrides = ace.overrides().clone();
+    let resolved = ace.require_resolved()?.clone();
+
+    let mut blocks: Vec<String> = Vec::new();
+
+    let want = |k: &ConfigKey| match &parsed {
+        None => true,
+        Some(target) => target == k,
+    };
+
+    if want(&ConfigKey::School) {
+        let layers = scalar_layers(&tree, &overrides, |c| {
+            if c.school.is_empty() { None } else { Some(c.school.clone()) }
+        });
+        let winner_value = resolved.school_specifier.value.clone().unwrap_or_default();
+        blocks.push(format_block(
+            "school",
+            &quoted(&winner_value),
+            resolved.school_specifier.from,
+            &layers,
+            None,
+        ));
+    }
+
+    if want(&ConfigKey::Backend) {
+        let layers = scalar_layers(&tree, &overrides, |c| c.backend.clone());
+        let school_contrib = tree
+            .school
+            .as_ref()
+            .and_then(|s| s.backend.clone())
+            .filter(|s| !s.is_empty());
+        blocks.push(format_block(
+            "backend",
+            &quoted(&resolved.backend_name.value),
+            resolved.backend_name.from,
+            &layers,
+            school_contrib.as_deref(),
+        ));
+    }
+
+    if want(&ConfigKey::Trust) {
+        let layers = scalar_layers(&tree, &overrides, |c| {
+            if c.trust.is_default() && !c.yolo { None } else { Some(trust_label(effective_trust(c)).to_string()) }
+        });
+        blocks.push(format_block(
+            "trust",
+            &quoted(trust_label(resolved.trust.value)),
+            resolved.trust.from,
+            &layers,
+            None,
+        ));
+    }
+
+    if want(&ConfigKey::Resume) {
+        let layers = scalar_layers(&tree, &overrides, |c| c.resume.map(|b| b.to_string()));
+        blocks.push(format_block(
+            "resume",
+            &resolved.resume.value.to_string(),
+            resolved.resume.from,
+            &layers,
+            None,
+        ));
+    }
+
+    if want(&ConfigKey::SkipUpdate) {
+        let layers = scalar_layers(&tree, &overrides, |c| c.skip_update.map(|b| b.to_string()));
+        blocks.push(format_block(
+            "skip_update",
+            &resolved.skip_update.value.to_string(),
+            resolved.skip_update.from,
+            &layers,
+            None,
+        ));
+    }
+
+    if want(&ConfigKey::SessionPrompt) {
+        let layers = scalar_layers(&tree, &overrides, |c| c.session_prompt.clone());
+        blocks.push(format_block(
+            "session_prompt",
+            &quoted(&resolved.session_prompt.value),
+            resolved.session_prompt.from,
+            &layers,
+            None,
+        ));
+    }
+
+    let mut env_keys: BTreeSet<String> = BTreeSet::new();
+    for layer in tree_layer_iter(&tree, &overrides).flatten() {
+        env_keys.extend(layer.env.keys().cloned());
+    }
+    env_keys.extend(resolved.env.keys().cloned());
+    if let Some(ConfigKey::Env(name)) = &parsed {
+        // Filtered to a specific env.X — always emit a block, even when no
+        // layer has it set, so the user sees an explicit "(default)" answer.
+        env_keys.insert(name.clone());
+    }
+    for env_key in env_keys {
+        let key_str = format!("env.{env_key}");
+        let target = ConfigKey::Env(env_key.clone());
+        if !want(&target) {
+            continue;
+        }
+        let layers = scalar_layers(&tree, &overrides, |c| c.env.get(&env_key).cloned());
+        let (winner_value, winner_from) = resolved
+            .env
+            .get(&env_key)
+            .map(|s| (s.value.clone(), s.from))
+            .unwrap_or((String::new(), Source::Default));
+        blocks.push(format_block(
+            &key_str,
+            &quoted(&winner_value),
+            winner_from,
+            &layers,
+            None,
+        ));
+    }
+
+    if blocks.is_empty() {
+        // A specific key was requested but produced nothing. Only env.* can hit
+        // this path (unknown env name); other keys always exist with defaults.
+        if let Some(k) = key {
+            return Err(CmdError::Other(format!("unknown config key: {k}")));
+        }
+    }
+
+    print!("{}", blocks.join("\n"));
+    Ok(())
+}
+
+/// Per-layer values for a scalar field. Returns 4 entries: user, project, local,
+/// override — in that fixed order. School is handled separately per-key (only
+/// `backend` is school-contributable today).
+fn scalar_layers(
+    tree: &Tree,
+    overrides: &AceToml,
+    pick: impl Fn(&AceToml) -> Option<String>,
+) -> [(Source, Option<String>); 4] {
+    let user_val = tree.user.as_ref().and_then(&pick);
+    let project_val = tree.project.as_ref().and_then(&pick);
+    let local_val = tree.local.as_ref().and_then(&pick);
+    let override_val = pick(overrides);
+    [
+        (Source::User, user_val),
+        (Source::Project, project_val),
+        (Source::Local, local_val),
+        (Source::Override, override_val),
+    ]
+}
+
+fn tree_layer_iter<'a>(
+    tree: &'a Tree,
+    overrides: &'a AceToml,
+) -> impl Iterator<Item = Option<&'a AceToml>> {
+    [
+        tree.user.as_ref(),
+        tree.project.as_ref(),
+        tree.local.as_ref(),
+        Some(overrides),
+    ]
+    .into_iter()
+}
+
+/// Build one block. `school_contrib` is the optional school-layer value (only
+/// `backend` uses this slot today); when present it appears as the school row.
+fn format_block(
+    key: &str,
+    winner_value: &str,
+    winner_from: Source,
+    layers: &[(Source, Option<String>); 4],
+    school_contrib: Option<&str>,
+) -> String {
+    let any_set = layers.iter().any(|(_, v)| v.is_some()) || school_contrib.is_some();
+
+    if !any_set {
+        return format!("{key} = {winner_value}  [{}]\n", winner_from.label());
+    }
+
+    let mut out = format!("{key} = {winner_value}  [{}]\n", winner_from.label());
+    let mut rows: Vec<(Source, Option<String>)> = vec![
+        layers[0].clone(),
+        layers[1].clone(),
+        layers[2].clone(),
+        (Source::School, school_contrib.map(str::to_string)),
+        layers[3].clone(),
+    ];
+    for (src, val) in rows.drain(..) {
+        let label = format!("{}:", src.label());
+        let value_str = match val {
+            Some(v) => quoted(&v),
+            None => "(unset)".to_string(),
+        };
+        let marker = if src == winner_from { "  ← winner" } else { "" };
+        out.push_str(&format!("  {label:<10}{value_str}{marker}\n"));
+    }
+    out
+}
+
+fn quoted(s: &str) -> String {
+    format!("\"{s}\"")
+}
+
+fn trust_label(t: Trust) -> &'static str {
+    match t {
+        Trust::Default => "default",
+        Trust::Auto => "auto",
+        Trust::Yolo => "yolo",
+    }
+}
+
+/// Honour the deprecated `yolo = true` field as `Trust::Yolo` for display.
+fn effective_trust(c: &AceToml) -> Trust {
+    if c.yolo && c.trust.is_default() { Trust::Yolo } else { c.trust }
 }
 
 /// Names that resolve as a backend selector: built-ins + any `[[backends]]`

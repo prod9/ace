@@ -65,6 +65,10 @@ impl Ace {
         self.invalidate_resolved();
     }
 
+    pub fn overrides(&self) -> &AceToml {
+        &self.overrides
+    }
+
     fn invalidate_resolved(&mut self) {
         self.resolved = None;
         self.backend = None;
