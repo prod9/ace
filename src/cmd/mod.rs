@@ -14,9 +14,12 @@ mod skills;
 mod upgrade;
 mod yolo;
 
+use std::collections::HashMap;
+
 use clap::{Parser, Subcommand};
 
 use crate::ace::{Ace, IoError};
+use crate::config::ace_toml::{AceToml, Trust};
 use crate::config::{ConfigError, Scope};
 use crate::actions::school::{AddImportError, PullImportsError};
 use crate::actions::project::RegisterMcpError;
@@ -52,6 +55,31 @@ pub struct Cli {
     /// Shortcut for `--backend flaude`
     #[arg(long, global = true)]
     flaude: bool,
+
+    /// Trust mode for this invocation (default | auto | yolo).
+    /// One-shot override; does not write to disk. Use `ace auto` / `ace yolo`
+    /// to persist.
+    #[arg(long, global = true, value_name = "MODE")]
+    trust: Option<String>,
+
+    /// Shortcut for `--trust auto`. One-shot; does not write to disk.
+    /// Use the `auto` subcommand to persist.
+    #[arg(long, global = true)]
+    auto: bool,
+
+    /// Shortcut for `--trust yolo`. One-shot; does not write to disk.
+    /// Use the `yolo` subcommand to persist.
+    #[arg(long, global = true)]
+    yolo: bool,
+
+    /// Inline session prompt for this invocation. One-shot override.
+    #[arg(long, global = true, value_name = "TEXT")]
+    session_prompt: Option<String>,
+
+    /// Add or override an environment variable for this invocation.
+    /// Repeatable: `--env KEY=VAL --env OTHER=VAL`.
+    #[arg(long = "env", global = true, value_name = "KEY=VAL")]
+    env: Vec<String>,
 
     /// Write to user-level config (~/.config/ace/ace.toml)
     #[arg(long, global = true)]
@@ -201,8 +229,8 @@ pub(crate) enum CmdError {
 }
 
 pub fn run(ace: &mut Ace, cli: Cli) {
-    let backend_override = match resolve_backend_override(&cli) {
-        Ok(backend) => backend,
+    let overrides = match build_overrides(&cli) {
+        Ok(o) => o,
         Err(err) => {
             exit_on_err(ace, Err(err));
             return;
@@ -217,7 +245,7 @@ pub fn run(ace: &mut Ace, cli: Cli) {
         }
     };
 
-    ace.set_backend_override(backend_override);
+    ace.set_overrides(overrides);
     ace.set_scope_override(scope_override);
 
     #[cfg(windows)]
@@ -277,6 +305,16 @@ fn resolve_scope_override(cli: &Cli) -> Result<Option<Scope>, CmdError> {
     }
 }
 
+fn build_overrides(cli: &Cli) -> Result<AceToml, CmdError> {
+    Ok(AceToml {
+        backend: resolve_backend_override(cli)?,
+        trust: resolve_trust_override(cli)?.unwrap_or_default(),
+        session_prompt: cli.session_prompt.clone(),
+        env: parse_env_overrides(&cli.env)?,
+        ..AceToml::default()
+    })
+}
+
 fn resolve_backend_override(cli: &Cli) -> Result<Option<String>, CmdError> {
     let mut selected = Vec::new();
 
@@ -302,6 +340,46 @@ fn resolve_backend_override(cli: &Cli) -> Result<Option<String>, CmdError> {
             "cannot combine multiple backend override flags".to_string(),
         )),
     }
+}
+
+fn resolve_trust_override(cli: &Cli) -> Result<Option<Trust>, CmdError> {
+    let mut selected: Vec<Trust> = Vec::new();
+
+    if let Some(raw) = &cli.trust {
+        selected.push(raw.parse::<Trust>().map_err(CmdError::Other)?);
+    }
+    if cli.auto {
+        selected.push(Trust::Auto);
+    }
+    if cli.yolo {
+        selected.push(Trust::Yolo);
+    }
+
+    selected.dedup();
+
+    match selected.as_slice() {
+        [] => Ok(None),
+        [t] => Ok(Some(*t)),
+        _ => Err(CmdError::Other(
+            "cannot combine multiple trust override flags (--trust, --auto, --yolo)".to_string(),
+        )),
+    }
+}
+
+fn parse_env_overrides(entries: &[String]) -> Result<HashMap<String, String>, CmdError> {
+    let mut out = HashMap::new();
+    for entry in entries {
+        let (key, value) = entry.split_once('=').ok_or_else(|| {
+            CmdError::Other(format!("invalid --env `{entry}` (expected KEY=VAL)"))
+        })?;
+        if key.is_empty() {
+            return Err(CmdError::Other(format!(
+                "invalid --env `{entry}` (expected KEY=VAL)"
+            )));
+        }
+        out.insert(key.to_string(), value.to_string());
+    }
+    Ok(out)
 }
 
 fn exit_on_err(ace: &mut Ace, result: Result<(), CmdError>) {

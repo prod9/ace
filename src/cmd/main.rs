@@ -154,7 +154,7 @@ fn recover_backend(ace: &mut Ace, attempted: &str) -> Result<(), CmdError> {
     let names = list_known_backend_names(ace)?;
     ace.warn(&format!("backend `{attempted}` is not in the registry"));
     let pick = ace.prompt_select("Pick a backend for this session:", names)?;
-    ace.set_backend_override(Some(pick.clone()));
+    ace.override_backend(pick.clone());
     ace.backend()?;
     ace.hint(&format!("to make permanent: ace config set backend {pick}"));
     Ok(())

@@ -423,14 +423,7 @@ fn known_backend_names(tree: &Tree) -> HashSet<String> {
 }
 
 fn parse_trust(value: &str) -> Result<Trust, CmdError> {
-    match value {
-        "default" => Ok(Trust::Default),
-        "auto" => Ok(Trust::Auto),
-        "yolo" => Ok(Trust::Yolo),
-        _ => Err(CmdError::Other(format!(
-            "unknown trust mode: {value} (expected default, auto, yolo)"
-        ))),
-    }
+    value.parse::<Trust>().map_err(CmdError::Other)
 }
 
 fn parse_bool(value: &str) -> Result<bool, CmdError> {

@@ -59,9 +59,23 @@ impl Ace {
         self.mode
     }
 
-    pub fn set_backend_override(&mut self, backend: Option<String>) {
-        // Only resolved + backend depend on the selector; school + skills don't.
-        self.overrides.backend = backend;
+    /// Replace the runtime-override layer wholesale. The CLI builds an
+    /// `AceToml` from global flags (--backend, --trust, --session-prompt,
+    /// --env, ...) and hands it in once at startup. Higher-priority than
+    /// any on-disk layer (see `spec/decisions/007.md`).
+    pub fn set_overrides(&mut self, overrides: AceToml) {
+        self.overrides = overrides;
+        self.invalidate_resolved();
+    }
+
+    /// Set just the backend field on the override layer. Used by the
+    /// PROD9-146 recovery picker when an unknown backend selector is
+    /// re-pointed mid-session.
+    pub fn override_backend(&mut self, backend: String) {
+        if self.overrides.backend.as_deref() == Some(&backend) {
+            return;
+        }
+        self.overrides.backend = Some(backend);
         self.invalidate_resolved();
     }
 

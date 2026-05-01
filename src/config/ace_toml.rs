@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
+use std::str::FromStr;
 
 use super::{is_empty_str, is_empty_map, ConfigError};
 
@@ -33,6 +34,21 @@ pub enum Trust {
 impl Trust {
     pub fn is_default(&self) -> bool {
         matches!(self, Trust::Default)
+    }
+}
+
+impl FromStr for Trust {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "default" => Ok(Trust::Default),
+            "auto" => Ok(Trust::Auto),
+            "yolo" => Ok(Trust::Yolo),
+            other => Err(format!(
+                "invalid trust value `{other}` (expected: default, auto, yolo)"
+            )),
+        }
     }
 }
 
