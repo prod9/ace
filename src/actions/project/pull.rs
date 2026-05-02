@@ -221,15 +221,9 @@ fn parse_diff_output(output: &str) -> Vec<SkillChange> {
             None => continue,
         };
 
-        // Extract skill name from "skills/{name}/..."
-        let rest = match path.strip_prefix("skills/") {
-            Some(r) => r,
-            None => continue,
-        };
-        let name = rest.split('/').next().unwrap_or(rest);
-        if name.is_empty() {
+        let Some(name) = skill_name_from_path(path) else {
             continue;
-        }
+        };
 
         if !seen.insert(name.to_string()) {
             continue;
@@ -248,6 +242,23 @@ fn parse_diff_output(output: &str) -> Vec<SkillChange> {
     }
 
     changes
+}
+
+/// Extract the skill name from a `skills/[.tier/]<name>/...` path. Returns
+/// `None` for paths outside `skills/` or where only a tier dir is present.
+fn skill_name_from_path(path: &str) -> Option<&str> {
+    let rest = path.strip_prefix("skills/")?;
+    let mut parts = rest.split('/');
+    let first = parts.next()?;
+    let name = if crate::skills::discover::TIER_DIRS.contains(&first) {
+        parts.next()?
+    } else {
+        first
+    };
+    if name.is_empty() {
+        return None;
+    }
+    Some(name)
 }
 
 #[cfg(test)]
@@ -294,6 +305,51 @@ mod tests {
     fn empty_output() {
         assert!(parse_diff_output("").is_empty());
         assert!(parse_diff_output("  \n  \n").is_empty());
+    }
+
+    #[test]
+    fn extracts_skill_name_under_curated_tier() {
+        let output = "M\tskills/.curated/foo/SKILL.md\n";
+        let changes = parse_diff_output(output);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].name, "foo");
+    }
+
+    #[test]
+    fn extracts_skill_name_under_experimental_tier() {
+        let output = "A\tskills/.experimental/bar/SKILL.md\n";
+        let changes = parse_diff_output(output);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].name, "bar");
+        assert_eq!(changes[0].kind, ChangeKind::Added);
+    }
+
+    #[test]
+    fn extracts_skill_name_under_system_tier() {
+        let output = "D\tskills/.system/baz/SKILL.md\n";
+        let changes = parse_diff_output(output);
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].name, "baz");
+        assert_eq!(changes[0].kind, ChangeKind::Removed);
+    }
+
+    #[test]
+    fn dedup_within_tier_dir() {
+        let output = "M\tskills/.curated/foo/SKILL.md\n\
+                       M\tskills/.curated/foo/notes.md\n\
+                       M\tskills/.curated/other/SKILL.md\n";
+        let changes = parse_diff_output(output);
+        assert_eq!(changes.len(), 2);
+        assert_eq!(changes[0].name, "foo");
+        assert_eq!(changes[1].name, "other");
+    }
+
+    #[test]
+    fn tier_dir_alone_is_skipped() {
+        // Just the tier dir with no skill name shouldn't crash or appear.
+        let output = "M\tskills/.curated/\n";
+        let changes = parse_diff_output(output);
+        assert!(changes.is_empty());
     }
 
     #[test]

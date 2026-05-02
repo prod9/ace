@@ -1,6 +1,11 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+/// Hidden directory names that mark tier sub-trees under `skills/`. Source of
+/// truth for both `discover_skills` and any downstream code that needs to
+/// distinguish a tier dir from a real skill dir (e.g. diff parsing).
+pub const TIER_DIRS: &[&str] = &[".curated", ".experimental", ".system"];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Tier {
     Curated,
