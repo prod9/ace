@@ -65,16 +65,16 @@ lazy cache cell per layer (`tree`, `resolved`, `backend`, `school`, `skills`).
 
 Commands declare what they need by calling accessors on the existing instance:
 
-| Method                  | Returns                                  | What it does                                      |
-| ----------------------- | ---------------------------------------- | ------------------------------------------------- |
-| `require_tree()`        | `Result<&Tree, ConfigError>`             | Parse the four config files; load school.toml.    |
-| `require_resolved()`    | `Result<&Resolved, ConfigError>`         | Run the merge over `Tree` + overrides.            |
-| `backend()`             | `Result<&Backend, BackendError>`         | Build the registry; look up the selected name.    |
-| `require_school()`      | `Result<&SchoolPaths, SchoolError>`      | Resolve school clone path (dual-context aware).   |
-| `school()`              | `Result<Option<&School>, SchoolError>`   | Build the `School` domain object from school.toml. |
-| `skills()`              | `Result<&Skills<Resolved>, SkillError>`  | Discover `<school>/skills/` and resolve.          |
-| `set_backend_override`  | —                                        | Push a runtime override; invalidates resolved.    |
-| `reload_state`          | `Result<&Resolved, ConfigError>`         | Re-read school.toml + invalidate downstream caches. |
+| Method                 | Returns                                 | What it does                                        |
+| ---------------------- | --------------------------------------- | --------------------------------------------------- |
+| `require_tree()`       | `Result<&Tree, ConfigError>`            | Parse the four config files; load school.toml.      |
+| `require_resolved()`   | `Result<&Resolved, ConfigError>`        | Run the merge over `Tree` + overrides.              |
+| `backend()`            | `Result<&Backend, BackendError>`        | Build the registry; look up the selected name.      |
+| `require_school()`     | `Result<&SchoolPaths, SchoolError>`     | Resolve school clone path (dual-context aware).     |
+| `school()`             | `Result<Option<&School>, SchoolError>`  | Build the `School` domain object from school.toml.  |
+| `skills()`             | `Result<&Skills<Resolved>, SkillError>` | Discover `<school>/skills/` and resolve.            |
+| `set_backend_override` | —                                       | Push a runtime override; invalidates resolved.      |
+| `reload_state`         | `Result<&Resolved, ConfigError>`        | Re-read school.toml + invalidate downstream caches. |
 
 Failures stay local. `ace config show` calling `resolved()` is unaffected by an unknown
 backend selector. `cmd::main` matches `BackendError::Unknown` directly to drive the

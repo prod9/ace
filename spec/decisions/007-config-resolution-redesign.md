@@ -2,7 +2,8 @@
 
 ## Context
 
-Today's `State::resolve` is one eager pass that conflates two distinct concerns into a single fallible operation:
+Today's `State::resolve` is one eager pass that conflates two distinct concerns into a
+single fallible operation:
 
 1. **Merged config** — the layered config files (user / project / local / school) folded
    into one effective view per the project's resolution rules.
@@ -104,12 +105,13 @@ We unify what *can* be unified and accept divergence where the shapes genuinely 
 - **`Source` enum is shared.** Skills resolution uses the same `Source { User, Project,
   Local, School, Override, Default }` enum as scalar resolution. Today's `resolver::Scope`
   type folds into this — one vocabulary across the codebase for "which layer."
-- **Trace shape stays skill-specific.** Each `ResolvedSkill` keeps its multi-entry trace
-  (`Vec<Entry>` of layer + op contributions). Forcing it into `Sourced<Skill>` would either
-  drop information (only the "winning" layer) or require `Sourced` to grow a multi-entry
-  variant that scalars don't need.
-- **Naming aligns.** Today's `Decision` / `Op` / `Field` types stay; they're skill-specific
-  vocabulary. But anywhere a "which layer" appears, it's `Source`, not a skills-only type.
+- **Trace shape stays skill-specific.** Each `ResolvedSkill` keeps its multi-entry
+  trace (`Vec<Entry>` of layer + op contributions). Forcing it into `Sourced<Skill>`
+  would either drop information (only the "winning" layer) or require `Sourced` to
+  grow a multi-entry variant that scalars don't need.
+- **Naming aligns.** Today's `Decision` / `Op` / `Field` types stay; they're
+  skill-specific vocabulary. But anywhere a "which layer" appears, it's `Source`, not
+  a skills-only type.
 
 Result: `ace config explain backend` and `ace config explain skills` share the layer
 vocabulary in their output ("project", "local", "override") even though the per-key
@@ -204,9 +206,12 @@ Result: `--backend X`, `--trust auto`, `--no-resume`, `--env KEY=val`, `--sessio
 
 ## Module layout
 
-- `src/config/` — `Tree`, `AceToml`, `SchoolToml`, `BackendDecl`, `ConfigError`. Disk parse.
-- `src/resolver/` — `Resolved`, `Sourced`, `Source`, merge engine. (Replaces today's `src/state/`.)
-- `src/resolver/skills.rs` — skill-specific resolution, folded from today's `state/resolver.rs`.
+- `src/config/` — `Tree`, `AceToml`, `SchoolToml`, `BackendDecl`, `ConfigError`. Disk
+  parse.
+- `src/resolver/` — `Resolved`, `Sourced`, `Source`, merge engine. (Replaces today's
+  `src/state/`.)
+- `src/resolver/skills.rs` — skill-specific resolution, folded from today's
+  `state/resolver.rs`.
 - `src/backend/`, `src/school/`, `src/skills/` — bindings with their own error types.
 - `src/ace/` — orchestrator, lazy caches.
 
@@ -217,18 +222,18 @@ Result: `--backend X`, `--trust auto`, `--no-resume`, `--env KEY=val`, `--sessio
 
 Each command asks for exactly what it needs.
 
-| Command | Needs | Notes |
-|---|---|---|
-| `ace config get` / `set` | `tree()`, `resolved()` | Set writes to a Tree layer; get reads merged Resolved. No bindings. |
-| `ace config show` | `resolved()` | Print merged values. Stale backend selector doesn't block. |
-| `ace config explain [key]` | `resolved()` | New. Prints `Sourced` provenance per field. |
-| `ace setup` | `school()` | Backend irrelevant. |
-| `ace school pull` / `init` / `add-import` | `school()`, `tree()` | Backend irrelevant. |
-| `ace import` | `tree()` | Writes to school skills/. |
-| `ace doctor` | `resolved()`, `backend()`, `school()`, `skills()` | All bindings, but each failure is reported independently. |
-| `ace upgrade` | `resolved()` | Just needs `skip_update`. |
-| `ace paths` | `paths` directly | No tree/resolved needed. |
-| `ace` / `ace auto` | full pipeline | On `BackendError::Unknown`, run recovery picker. |
+| Command                                   | Needs                                             | Notes                                                               |
+| ----------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------- |
+| `ace config get` / `set`                  | `tree()`, `resolved()`                            | Set writes to a Tree layer; get reads merged Resolved. No bindings. |
+| `ace config show`                         | `resolved()`                                      | Print merged values. Stale backend selector doesn't block.          |
+| `ace config explain [key]`                | `resolved()`                                      | New. Prints `Sourced` provenance per field.                         |
+| `ace setup`                               | `school()`                                        | Backend irrelevant.                                                 |
+| `ace school pull` / `init` / `add-import` | `school()`, `tree()`                              | Backend irrelevant.                                                 |
+| `ace import`                              | `tree()`                                          | Writes to school skills/.                                           |
+| `ace doctor`                              | `resolved()`, `backend()`, `school()`, `skills()` | All bindings, but each failure is reported independently.           |
+| `ace upgrade`                             | `resolved()`                                      | Just needs `skip_update`.                                           |
+| `ace paths`                               | `paths` directly                                  | No tree/resolved needed.                                            |
+| `ace` / `ace auto`                        | full pipeline                                     | On `BackendError::Unknown`, run recovery picker.                    |
 
 ## `ace config explain`
 
@@ -259,7 +264,10 @@ Bare `ace config explain` prints all keys. `ace config explain backend` filters 
 Session-start sites (`cmd::main::run_inner`, `cmd::auto`) call `ace.backend()`. On
 `Err(BackendError::Unknown(name))`:
 
-- **TTY**: `term_ui::select` over registry names. User picks. Re-resolve via `ace.overrides.backend = Some(pick); ace.invalidate_resolved(); ace.invalidate_backend();`. Run session. Print hint: `to make permanent: ace config set backend <pick>`.
+- **TTY**: `term_ui::select` over registry names. User picks. Re-resolve via
+  `ace.overrides.backend = Some(pick); ace.invalidate_resolved();
+  ace.invalidate_backend();`. Run session. Print hint: `to make permanent: ace config
+  set backend <pick>`.
 - **Non-TTY**: hard fail with the same hint inlined.
 
 No silent fallback — a wrong-backend run could route prompts to the wrong vendor (bailer →
@@ -304,8 +312,10 @@ tickets over multiple sessions.
 
 ## Tickets
 
-- **PROD9-146** — reframed as "the recovery UX symptom of the resolver redesign." Slice 4 above is its deliverable.
-- New tickets to file for slices 1–3 (lay the foundation), 5–9 (finish the redesign). One ticket per slice.
+- **PROD9-146** — reframed as "the recovery UX symptom of the resolver redesign."
+  Slice 4 above is its deliverable.
+- New tickets to file for slices 1–3 (lay the foundation), 5–9 (finish the redesign).
+  One ticket per slice.
 
 ## Why not alternatives
 
