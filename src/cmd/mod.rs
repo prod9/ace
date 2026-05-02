@@ -175,7 +175,11 @@ enum Command {
     /// Fetch latest school changes (force, ignoring cooldown)
     Pull,
     /// Start a fresh session (skip auto-resume)
-    New,
+    New {
+        /// Extra arguments passed through to the backend, after --
+        #[arg(last = true)]
+        backend_args: Vec<String>,
+    },
     /// Enable auto trust mode (AI decides which actions need approval)
     Auto,
     /// Enable yolo trust mode (skip all permission prompts)
@@ -273,7 +277,7 @@ pub fn run(ace: &mut Ace, cli: Cli) {
         Command::Skills { command, all, names } => skills::run(ace, command, all, names),
         Command::Explain { name } => explain::run(ace, &name),
         Command::Pull => pull::run(ace),
-        Command::New => main::run(ace, cli.backend_args, false),
+        Command::New { backend_args } => main::run(ace, backend_args, false),
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Command::Upgrade { silent, force, version } => upgrade::run(ace, silent, force, version),
@@ -386,5 +390,27 @@ fn exit_on_err(ace: &mut Ace, result: Result<(), CmdError>) {
     if let Err(e) = result {
         ace.error(&e.to_string());
         std::process::exit(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn root_dash_dash_passthrough() {
+        let cli = Cli::try_parse_from(["ace", "--", "-p", "hi"]).expect("parse");
+        assert_eq!(cli.backend_args, vec!["-p".to_string(), "hi".to_string()]);
+    }
+
+    #[test]
+    fn ace_new_dash_dash_passthrough() {
+        let cli = Cli::try_parse_from(["ace", "new", "--", "-p", "hi"]).expect("parse");
+        match cli.command {
+            Some(Command::New { backend_args }) => {
+                assert_eq!(backend_args, vec!["-p".to_string(), "hi".to_string()]);
+            }
+            _ => panic!("expected Command::New"),
+        }
     }
 }
