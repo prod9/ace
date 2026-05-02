@@ -102,11 +102,7 @@ fn get(ace: &mut Ace, key: &str) -> Result<(), CmdError> {
     let value = match config_key {
         ConfigKey::School => r.school_specifier.value.clone().unwrap_or_default(),
         ConfigKey::Backend => r.backend_name.value.clone(),
-        ConfigKey::Trust => match r.trust.value {
-            Trust::Default => "default".to_string(),
-            Trust::Auto => "auto".to_string(),
-            Trust::Yolo => "yolo".to_string(),
-        },
+        ConfigKey::Trust => r.trust.value.label().to_string(),
         ConfigKey::Resume => r.resume.value.to_string(),
         ConfigKey::SkipUpdate => r.skip_update.value.to_string(),
         ConfigKey::SessionPrompt => r.session_prompt.value.clone(),
@@ -188,10 +184,9 @@ fn explain(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
         })
         .transpose()?;
 
-    ace.require_resolved()?;
+    let resolved = ace.require_resolved()?.clone();
     let tree = ace.require_tree()?.clone();
     let overrides = ace.overrides().clone();
-    let resolved = ace.require_resolved()?.clone();
 
     let mut blocks: Vec<String> = Vec::new();
 
@@ -232,11 +227,11 @@ fn explain(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
 
     if want(&ConfigKey::Trust) {
         let layers = scalar_layers(&tree, &overrides, |c| {
-            if c.trust.is_default() && !c.yolo { None } else { Some(trust_label(effective_trust(c)).to_string()) }
+            if c.trust.is_default() && !c.yolo { None } else { Some(effective_trust(c).label().to_string()) }
         });
         blocks.push(format_block(
             "trust",
-            &quoted(trust_label(resolved.trust.value)),
+            &quoted(resolved.trust.value.label()),
             resolved.trust.from,
             &layers,
             None,
@@ -389,14 +384,6 @@ fn format_block(
 
 fn quoted(s: &str) -> String {
     format!("\"{s}\"")
-}
-
-fn trust_label(t: Trust) -> &'static str {
-    match t {
-        Trust::Default => "default",
-        Trust::Auto => "auto",
-        Trust::Yolo => "yolo",
-    }
 }
 
 /// Honour the deprecated `yolo = true` field as `Trust::Yolo` for display.

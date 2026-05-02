@@ -35,6 +35,14 @@ impl Trust {
     pub fn is_default(&self) -> bool {
         matches!(self, Trust::Default)
     }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Trust::Default => "default",
+            Trust::Auto => "auto",
+            Trust::Yolo => "yolo",
+        }
+    }
 }
 
 impl FromStr for Trust {
