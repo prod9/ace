@@ -216,7 +216,7 @@ fn report_statuses(ace: &mut Ace, statuses: &[McpStatus]) {
 }
 
 /// Load school MCP entries and backend from current state.
-fn load_school_mcp(ace: &mut Ace) -> Result<(crate::backend::Backend, Vec<McpDecl>), CmdError> {
+fn load_school_mcp(ace: &Ace) -> Result<(crate::backend::Backend, Vec<McpDecl>), CmdError> {
     let backend = ace.backend()?.clone();
     let entries = ace.school()?
         .map(|s| s.mcp.clone())

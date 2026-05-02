@@ -160,7 +160,7 @@ fn recover_backend(ace: &mut Ace, attempted: &str) -> Result<(), CmdError> {
     Ok(())
 }
 
-fn list_known_backend_names(ace: &mut Ace) -> Result<Vec<String>, CmdError> {
+fn list_known_backend_names(ace: &Ace) -> Result<Vec<String>, CmdError> {
     let tree = ace.require_tree()?;
     let mut names: Vec<String> = Kind::ALL
         .iter()

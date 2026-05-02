@@ -51,7 +51,7 @@ fn run_inner(ace: &mut Ace, command: Option<Command>) -> Result<(), CmdError> {
 /// Reads the merged `Resolved` only; does not bind the backend. A stale
 /// `backend = "..."` selector (one not in the registry) still prints the
 /// configured name without erroring — recovery is the bare `ace` command's job.
-fn show(ace: &mut Ace) -> Result<(), CmdError> {
+fn show(ace: &Ace) -> Result<(), CmdError> {
     let r = ace.require_resolved()?;
     let backend_name = r.backend_name.value.clone();
 
@@ -176,7 +176,7 @@ fn set(ace: &mut Ace, key: &str, value: &str) -> Result<(), CmdError> {
 /// Reads the raw `Tree` and overrides directly so users can see what each layer
 /// contributes — not just the merged winner. Output collapses to a single line
 /// when no layer contributes (winner is `Source::Default`).
-fn explain(ace: &mut Ace, key: Option<&str>) -> Result<(), CmdError> {
+fn explain(ace: &Ace, key: Option<&str>) -> Result<(), CmdError> {
     let parsed = key
         .map(|k| {
             ConfigKey::parse(k)

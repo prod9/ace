@@ -33,7 +33,7 @@ pub struct EditSkillsConfig {
 }
 
 impl EditSkillsConfig {
-    pub fn run(&self, ace: &mut Ace) -> Result<(), ConfigError> {
+    pub fn run(&self, ace: &Ace) -> Result<(), ConfigError> {
         let paths = ace.require_paths()?;
         let path: PathBuf = self.scope.path_in(&paths).to_path_buf();
         if let Some(parent) = path.parent() {
