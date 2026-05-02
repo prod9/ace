@@ -162,19 +162,21 @@ pub struct Ace {
     pub mode: TerminalMode,
     output: Sink,
 
-    tree:     OnceCell<Result<Tree, ConfigError>>,
-    resolved: OnceCell<Resolved>,
-    backend:  OnceCell<Result<Backend, BackendError>>,
-    school:   OnceCell<Result<Option<School>, SchoolError>>,
-    skills:   OnceCell<Result<SkillSet, SkillError>>,
+    tree:         OnceCell<Tree>,
+    resolved:     OnceCell<Resolved>,
+    backend:      OnceCell<Backend>,
+    school_paths: OnceCell<SchoolPaths>,
+    school:       OnceCell<Option<School>>,
+    skills:       OnceCell<SkillSet>,
 }
 
 impl Ace {
-    pub fn tree(&self)     -> Result<&Tree, ConfigError>;
-    pub fn resolved(&self) -> Result<&Resolved, ConfigError>;
-    pub fn backend(&self)  -> Result<&Backend, BackendError>;
-    pub fn school(&self)   -> Result<Option<&School>, SchoolError>;
-    pub fn skills(&self)   -> Result<&SkillSet, SkillError>;
+    pub fn tree(&self)           -> Result<&Tree, ConfigError>;
+    pub fn resolved(&self)       -> Result<&Resolved, ConfigError>;
+    pub fn backend(&self)        -> Result<&Backend, BackendError>;
+    pub fn require_school(&self) -> Result<&SchoolPaths, SchoolError>;
+    pub fn school(&self)         -> Result<Option<&School>, SchoolError>;
+    pub fn skills(&self)         -> Result<&SkillSet, SkillError>;
 
     pub fn invalidate_resolved(&mut self);
     pub fn invalidate_school(&mut self);
@@ -182,6 +184,16 @@ impl Ace {
     // tree invalidation is rarer — after writes it's the resolved cache that matters
 }
 ```
+
+The cells hold `T`, not `Result<T, E>`. `OnceCell::get_or_try_init` returns the
+error and leaves the cell empty on failure, so failed loads retry on the next call.
+Memoizing the error would force `Clone` on every error variant (notably the
+`std::io::Error` carriers in `ConfigError` / `SkillError`), and the recovery surface
+already expects retry-after-fix semantics.
+
+`SchoolPaths` is a sixth binding the redesign keeps — it resolves the dual
+project/school context (school.toml in cwd vs cached clone of the configured
+specifier) and is independent of the parsed `School` domain object.
 
 `State` is gone. It was the bag operational fields got swept into; once `Resolved` exists
 and bindings are independent, State adds no value.
@@ -227,12 +239,12 @@ Each command asks for exactly what it needs.
 | `ace config get` / `set`                  | `tree()`, `resolved()`                            | Set writes to a Tree layer; get reads merged Resolved. No bindings. |
 | `ace config show`                         | `resolved()`                                      | Print merged values. Stale backend selector doesn't block.          |
 | `ace config explain [key]`                | `resolved()`                                      | New. Prints `Sourced` provenance per field.                         |
-| `ace setup`                               | `school()`                                        | Backend irrelevant.                                                 |
+| `ace setup`                               | `resolved()`, `school()`, `backend()`             | Needs `backend()` for instructions-file path + per-backend dir.     |
 | `ace school pull` / `init` / `add-import` | `school()`, `tree()`                              | Backend irrelevant.                                                 |
 | `ace import`                              | `tree()`                                          | Writes to school skills/.                                           |
 | `ace doctor`                              | `resolved()`, `backend()`, `school()`, `skills()` | All bindings, but each failure is reported independently.           |
 | `ace upgrade`                             | `resolved()`                                      | Just needs `skip_update`.                                           |
-| `ace paths`                               | `paths` directly                                  | No tree/resolved needed.                                            |
+| `ace paths`                               | `paths` directly, `resolved()`                    | Needs `resolved()` for the school specifier when printing paths.    |
 | `ace` / `ace auto`                        | full pipeline                                     | On `BackendError::Unknown`, run recovery picker.                    |
 
 ## `ace config explain`
