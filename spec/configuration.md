@@ -21,7 +21,7 @@ Each layer can set:
   → school's `school.toml` → fallback `claude`). Built-ins: `"claude"`,
   `"codex"`, `"flaude"`. Custom names are valid when declared in `[[backends]]`
   (see [Custom backends](#custom-backends)). See [backend.md](backend.md).
-- `role` — selected role name (last non-empty wins). Must match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md).
+- `role` — *(planned, PROD9-19)* selected role name (last non-empty wins). Will match a `[[roles]]` entry in the school's `school.toml`. Typically set in `ace.local.toml` via interactive selection. See [roles.md](roles.md). Not yet implemented.
 - `session_prompt` — additional prompt text (last non-empty wins)
 - `env` — environment variables (additive merge, later keys override)
 - `skip_update` — disable automatic version check and background upgrade. Default: `false`.

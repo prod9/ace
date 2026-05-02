@@ -50,7 +50,7 @@ Each binding is independent and fallible. No shared trait — operations differ 
   `Unresolvable` / `KindMismatch`.
 - `src/school.rs` — `School` domain object built by `From<SchoolToml>`.
   `SchoolError::Missing` when no school is configured.
-- `src/skills/` — `Skills<Discovered>` / `Skills<Resolved>` typestate. `Skills::discover`
+- `src/skills/` — `Skills<Discovered>` / `Skills<Decided>` typestate. `Skills::discover`
   walks `<school>/skills/`; `.resolve(&Tree)` produces the resolved set with diagnostics.
   `SkillError` wraps discovery I/O plus upstream `ConfigError` / `SchoolError`.
 
@@ -72,9 +72,9 @@ Commands declare what they need by calling accessors on the existing instance:
 | `backend()`            | `Result<&Backend, BackendError>`        | Build the registry; look up the selected name.      |
 | `require_school()`     | `Result<&SchoolPaths, SchoolError>`     | Resolve school clone path (dual-context aware).     |
 | `school()`             | `Result<Option<&School>, SchoolError>`  | Build the `School` domain object from school.toml.  |
-| `skills()`             | `Result<&Skills<Resolved>, SkillError>` | Discover `<school>/skills/` and resolve.            |
-| `set_backend_override` | —                                       | Push a runtime override; invalidates resolved.      |
-| `reload_state`         | `Result<&Resolved, ConfigError>`        | Re-read school.toml + invalidate downstream caches. |
+| `skills()`             | `Result<&Skills<Decided>, SkillError>`  | Discover `<school>/skills/` and resolve.            |
+| `override_backend`     | —                                       | Push a runtime override; invalidates resolved.      |
+| `reload_tree`          | `Result<&Resolved, ConfigError>`        | Re-read school.toml + invalidate downstream caches. |
 
 Failures stay local. `ace config show` calling `resolved()` is unaffected by an unknown
 backend selector. `cmd::main` matches `BackendError::Unknown` directly to drive the

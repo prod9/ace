@@ -6,6 +6,29 @@ use crate::actions::project::PrepareError;
 use crate::ace::Ace;
 use crate::config;
 
+pub use crate::skills::{ChangeKind, SkillChange};
+
+const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
+
+/// Outcome of a school clone update — carries data for the caller to act on.
+#[derive(Debug)]
+pub enum PullOutcome {
+    /// Embedded school, no cache to update.
+    Embedded,
+    /// Cache is fresh (within cooldown), no fetch needed.
+    Fresh,
+    /// Was on a non-main branch (clean), switched back to main.
+    SwitchedBranch { from: String },
+    /// Fetched and fast-forwarded successfully.
+    Updated { changes: Vec<SkillChange> },
+    /// Working tree has uncommitted changes.
+    Dirty { on_main: bool, branch: String },
+    /// Local commits ahead of origin (can't fast-forward).
+    AheadOfOrigin { clone_path: String },
+    /// Local and remote have diverged (ff-only merge failed).
+    Diverged { error: String },
+}
+
 impl PullOutcome {
     pub fn emit(&self, ace: &mut Ace) {
         match self {
@@ -39,29 +62,6 @@ impl PullOutcome {
             }
         }
     }
-}
-
-const FETCH_COOLDOWN: Duration = Duration::from_secs(15 * 60);
-
-pub use crate::skills::{ChangeKind, SkillChange};
-
-/// Outcome of a school clone update — carries data for the caller to act on.
-#[derive(Debug)]
-pub enum PullOutcome {
-    /// Embedded school, no cache to update.
-    Embedded,
-    /// Cache is fresh (within cooldown), no fetch needed.
-    Fresh,
-    /// Was on a non-main branch (clean), switched back to main.
-    SwitchedBranch { from: String },
-    /// Fetched and fast-forwarded successfully.
-    Updated { changes: Vec<SkillChange> },
-    /// Working tree has uncommitted changes.
-    Dirty { on_main: bool, branch: String },
-    /// Local commits ahead of origin (can't fast-forward).
-    AheadOfOrigin { clone_path: String },
-    /// Local and remote have diverged (ff-only merge failed).
-    Diverged { error: String },
 }
 
 /// Git fetch + ff-only merge school clone to latest origin/main.
