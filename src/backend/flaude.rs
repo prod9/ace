@@ -19,6 +19,7 @@ pub(super) fn exec_session(launch: &[String], opts: SessionOpts) -> Result<(), s
         "session_prompt": opts.session_prompt,
         "project_dir": opts.project_dir.to_string_lossy(),
         "extra_args": opts.extra_args,
+        "one_shot_prompt": opts.one_shot_prompt,
         "cmd": launch,
     });
 

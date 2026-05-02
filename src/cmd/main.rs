@@ -7,12 +7,22 @@ use crate::templates::session::build_session_prompt;
 
 use super::CmdError;
 
-pub fn run(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) {
-    let result = run_inner(ace, backend_args, should_resume);
+pub fn run(
+    ace: &mut Ace,
+    backend_args: Vec<String>,
+    should_resume: bool,
+    one_shot_prompt: Option<String>,
+) {
+    let result = run_inner(ace, backend_args, should_resume, one_shot_prompt);
     super::exit_on_err(ace, result);
 }
 
-fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> Result<(), CmdError> {
+fn run_inner(
+    ace: &mut Ace,
+    backend_args: Vec<String>,
+    should_resume: bool,
+    one_shot_prompt: Option<String>,
+) -> Result<(), CmdError> {
     require_resolved_or_recover(ace)?;
 
     let specifier = {
@@ -72,6 +82,7 @@ fn run_inner(ace: &mut Ace, backend_args: Vec<String>, should_resume: bool) -> R
         env,
         extra_args: backend_args,
         resume,
+        one_shot_prompt,
     })?;
 
     Ok(())

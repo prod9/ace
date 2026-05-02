@@ -77,6 +77,12 @@ pub struct Cli {
     #[arg(long, global = true, value_name = "TEXT")]
     session_prompt: Option<String>,
 
+    /// One-shot prompt — run the backend non-interactively, answer this
+    /// prompt, and exit. Each backend translates to its native form
+    /// (e.g. `claude -p`, `codex exec`).
+    #[arg(short = 'p', long = "prompt", global = true, value_name = "TEXT")]
+    one_shot_prompt: Option<String>,
+
     /// Add or override an environment variable for this invocation.
     /// Repeatable: `--env KEY=VAL --env OTHER=VAL`.
     #[arg(long = "env", global = true, value_name = "KEY=VAL")]
@@ -261,7 +267,7 @@ pub fn run(ace: &mut Ace, cli: Cli) {
     }
 
     let Some(command) = cli.command else {
-        return main::run(ace, cli.backend_args, true);
+        return main::run(ace, cli.backend_args, true, cli.one_shot_prompt);
     };
 
     match command {
@@ -278,7 +284,7 @@ pub fn run(ace: &mut Ace, cli: Cli) {
         Command::Skills { command, all, names } => skills::run(ace, command, all, names),
         Command::Explain { name } => explain::run(ace, &name),
         Command::Pull => pull::run(ace),
-        Command::New { backend_args } => main::run(ace, backend_args, false),
+        Command::New { backend_args } => main::run(ace, backend_args, false, cli.one_shot_prompt),
         Command::Auto => yolo::run(ace, crate::config::ace_toml::Trust::Auto),
         Command::Yolo => yolo::run(ace, crate::config::ace_toml::Trust::Yolo),
         Command::Upgrade { silent, force, version } => upgrade::run(ace, silent, force, version),

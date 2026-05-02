@@ -15,6 +15,7 @@ pub struct FlaudeRecord {
     pub trust: String,
     pub session_prompt: String,
     pub cmd: Vec<String>,
+    pub one_shot_prompt: Option<String>,
 }
 
 fn parse_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
@@ -50,6 +51,7 @@ fn parse_flaude_records(path: &Path) -> Vec<FlaudeRecord> {
                             .collect()
                     })
                     .unwrap_or_default(),
+                one_shot_prompt: v["one_shot_prompt"].as_str().map(String::from),
             }
         })
         .collect()

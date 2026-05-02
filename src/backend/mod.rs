@@ -45,6 +45,10 @@ pub struct SessionOpts {
     pub env: HashMap<String, String>,
     pub extra_args: Vec<String>,
     pub resume: bool,
+    /// One-shot prompt: when set, the backend runs in non-interactive mode
+    /// answering this prompt and exits. Each backend translates the effect
+    /// to its native invocation (claude `-p`, codex `exec`, etc.).
+    pub one_shot_prompt: Option<String>,
 }
 
 /// Health check result for a single MCP server.

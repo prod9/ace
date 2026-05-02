@@ -16,6 +16,34 @@ fn exec_records_session() {
 }
 
 #[test]
+fn exec_records_one_shot_prompt() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"test-school\"\n");
+
+    env.ace().args(["-p", "what is rust"]).assert().success();
+
+    let records = env.read_flaude_exec_records();
+    assert_eq!(records.len(), 1, "should record one exec call");
+    assert_eq!(
+        records[0].one_shot_prompt.as_deref(),
+        Some("what is rust"),
+        "one_shot_prompt should reach the backend",
+    );
+}
+
+#[test]
+fn exec_records_no_one_shot_prompt_by_default() {
+    let env = TestEnv::new();
+    env.setup_flaude_school("name = \"test-school\"\n");
+
+    env.ace().assert().success();
+
+    let records = env.read_flaude_exec_records();
+    assert_eq!(records.len(), 1);
+    assert!(records[0].one_shot_prompt.is_none(), "no -p flag → None");
+}
+
+#[test]
 fn exec_yolo_records_trust() {
     let env = TestEnv::new();
     env.setup_flaude_school("name = \"test-school\"\n");

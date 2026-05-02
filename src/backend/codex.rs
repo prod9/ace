@@ -25,23 +25,42 @@ pub(super) fn exec_session(launch: &[String], opts: SessionOpts) -> Result<(), s
         cmd.env(key, val);
     }
 
-    if opts.resume {
-        cmd.args(["resume", "--last"]);
+    cmd.args(build_session_args(&opts));
+
+    Err(crate::platform::exec_replace(cmd))
+}
+
+/// Translate `SessionOpts` into codex's CLI argv (post-binary). Pure function.
+/// One-shot prompt mode (`-p`) maps to `codex exec '<prompt>'`, which is
+/// codex's non-interactive entry point. Resume is ignored when one-shot is
+/// active — the two modes don't compose.
+fn build_session_args(opts: &SessionOpts) -> Vec<String> {
+    if let Some(prompt) = &opts.one_shot_prompt {
+        let mut args = vec!["exec".to_string()];
+        args.extend(trust_args(opts.trust).iter().map(|s| (*s).to_string()));
+        args.extend(opts.extra_args.iter().cloned());
+        args.push(prompt.clone());
+        return args;
     }
 
-    cmd.args(trust_args(opts.trust));
+    let mut args = Vec::new();
+
+    if opts.resume {
+        args.extend(["resume", "--last"].map(String::from));
+    }
+
+    args.extend(trust_args(opts.trust).iter().map(|s| (*s).to_string()));
 
     if !opts.resume {
-        cmd.arg("-c");
-        cmd.arg(format!(
+        args.push("-c".to_string());
+        args.push(format!(
             "developer_instructions={}",
-            toml::Value::String(opts.session_prompt),
+            toml::Value::String(opts.session_prompt.clone()),
         ));
     }
 
-    cmd.args(&opts.extra_args);
-
-    Err(crate::platform::exec_replace(cmd))
+    args.extend(opts.extra_args.iter().cloned());
+    args
 }
 
 /// CLI flags for the given trust level.
@@ -411,6 +430,46 @@ fn parse_check_output(output: &str) -> Vec<McpStatus> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
+    fn opts() -> SessionOpts {
+        SessionOpts {
+            trust: Trust::Default,
+            session_prompt: "SP".to_string(),
+            project_dir: PathBuf::from("/tmp"),
+            env: HashMap::new(),
+            extra_args: Vec::new(),
+            resume: false,
+            one_shot_prompt: None,
+        }
+    }
+
+    #[test]
+    fn session_args_default_includes_developer_instructions() {
+        let args = build_session_args(&opts());
+        assert!(args.iter().any(|a| a == "-c"));
+        assert!(args.iter().any(|a| a.starts_with("developer_instructions=")));
+    }
+
+    #[test]
+    fn session_args_one_shot_uses_exec_subcommand() {
+        let mut o = opts();
+        o.one_shot_prompt = Some("hello".to_string());
+        let args = build_session_args(&o);
+        assert_eq!(args.first().map(String::as_str), Some("exec"));
+        assert_eq!(args.last().map(String::as_str), Some("hello"));
+        assert!(!args.iter().any(|a| a.starts_with("developer_instructions=")),
+            "one-shot mode should skip developer_instructions");
+    }
+
+    #[test]
+    fn session_args_one_shot_yolo_includes_bypass_flag() {
+        let mut o = opts();
+        o.one_shot_prompt = Some("hi".to_string());
+        o.trust = Trust::Yolo;
+        let args = build_session_args(&o);
+        assert!(args.iter().any(|a| a == "--dangerously-bypass-approvals-and-sandbox"));
+    }
 
     #[test]
     fn trust_default_passes_no_flags() {

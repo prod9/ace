@@ -23,21 +23,36 @@ pub(super) fn exec_session(launch: &[String], opts: SessionOpts) -> Result<(), s
         cmd.env(key, val);
     }
 
+    cmd.args(build_session_args(&opts));
+
+    Err(crate::platform::exec_replace(cmd))
+}
+
+/// Translate `SessionOpts` into Claude's CLI argv (post-binary). Pure
+/// function — no I/O, no `Command`. Tested below.
+fn build_session_args(opts: &SessionOpts) -> Vec<String> {
+    let mut args = Vec::new();
+
     if opts.resume {
-        cmd.arg("--continue");
+        args.push("--continue".to_string());
     } else {
-        cmd.args(["--system-prompt", &opts.session_prompt]);
+        args.push("--system-prompt".to_string());
+        args.push(opts.session_prompt.clone());
     }
 
     match opts.trust {
-        Trust::Auto => { cmd.args(["--permission-mode", "auto"]); }
-        Trust::Yolo => { cmd.args(["--permission-mode", "bypassPermissions"]); }
+        Trust::Auto => args.extend(["--permission-mode", "auto"].map(String::from)),
+        Trust::Yolo => args.extend(["--permission-mode", "bypassPermissions"].map(String::from)),
         Trust::Default => {}
     }
 
-    cmd.args(&opts.extra_args);
+    if let Some(prompt) = &opts.one_shot_prompt {
+        args.push("-p".to_string());
+        args.push(prompt.clone());
+    }
 
-    Err(crate::platform::exec_replace(cmd))
+    args.extend(opts.extra_args.iter().cloned());
+    args
 }
 
 pub(super) fn mcp_list() -> HashSet<String> {
@@ -192,6 +207,60 @@ fn parse_check_output(output: &str) -> Result<Vec<McpStatus>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+
+    fn opts() -> SessionOpts {
+        SessionOpts {
+            trust: Trust::Default,
+            session_prompt: "SP".to_string(),
+            project_dir: PathBuf::from("/tmp"),
+            env: HashMap::new(),
+            extra_args: Vec::new(),
+            resume: false,
+            one_shot_prompt: None,
+        }
+    }
+
+    #[test]
+    fn session_args_default() {
+        let args = build_session_args(&opts());
+        assert_eq!(args, vec!["--system-prompt".to_string(), "SP".to_string()]);
+    }
+
+    #[test]
+    fn session_args_resume_replaces_system_prompt() {
+        let mut o = opts();
+        o.resume = true;
+        let args = build_session_args(&o);
+        assert_eq!(args, vec!["--continue".to_string()]);
+    }
+
+    #[test]
+    fn session_args_one_shot_appends_dash_p() {
+        let mut o = opts();
+        o.one_shot_prompt = Some("hello".to_string());
+        let args = build_session_args(&o);
+        assert_eq!(
+            args,
+            vec![
+                "--system-prompt".to_string(),
+                "SP".to_string(),
+                "-p".to_string(),
+                "hello".to_string(),
+            ],
+        );
+    }
+
+    #[test]
+    fn session_args_extra_args_come_last() {
+        let mut o = opts();
+        o.one_shot_prompt = Some("hi".to_string());
+        o.extra_args = vec!["--model".to_string(), "opus".to_string()];
+        let args = build_session_args(&o);
+        let last_two = &args[args.len() - 2..];
+        assert_eq!(last_two, ["--model", "opus"]);
+    }
 
     #[test]
     fn parse_mcp_names_extracts_keys() {
