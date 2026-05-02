@@ -11,7 +11,7 @@ use crate::config::ConfigError;
 #[derive(Debug, thiserror::Error)]
 pub enum BackendError {
     #[error(transparent)]
-    Config(#[from] ConfigError),
+    TreeLoad(#[from] ConfigError),
     #[error("unknown backend: {0}")]
     Unknown(String),
     #[error("cannot resolve kind for custom backend `{0}`: set `kind = \"...\"` or use a `cmd` whose binary matches a built-in")]

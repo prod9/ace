@@ -9,7 +9,7 @@ use crate::config::ConfigError;
 #[derive(Debug, thiserror::Error)]
 pub enum SchoolError {
     #[error(transparent)]
-    Config(#[from] ConfigError),
+    TreeLoad(#[from] ConfigError),
     #[error("no school configured, run `ace setup`")]
     Missing,
 }

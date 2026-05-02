@@ -25,7 +25,7 @@ pub use crate::resolver::{Collision, Decision, Entry, Source, UnknownPattern};
 #[derive(Debug, thiserror::Error)]
 pub enum SkillError {
     #[error(transparent)]
-    Config(#[from] ConfigError),
+    TreeLoad(#[from] ConfigError),
     #[error(transparent)]
     School(#[from] SchoolError),
     #[error("skill discovery failed: {0}")]
