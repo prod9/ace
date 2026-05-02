@@ -13,6 +13,7 @@ dependencies = [
  "gif",
  "indicatif",
  "inquire",
+ "once_cell",
  "predicates",
  "semver",
  "serde",

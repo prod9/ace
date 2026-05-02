@@ -14,6 +14,7 @@ gif = { version = "0.14.1", default-features = false, features = ["std"] }
 ctrlc = "3"
 indicatif = { version = "0.18.4", default-features = false, features = ["unicode-width"] }
 inquire = { version = "0.9.3", default-features = false, features = ["console", "one-liners"] }
+once_cell = { version = "1", default-features = false, features = ["std"] }
 serde = { version = "1.0.228", features = ["derive"] }
 tempfile = "3.26.0"
 thiserror = "2.0.18"
