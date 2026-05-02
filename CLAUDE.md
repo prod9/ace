@@ -113,12 +113,3 @@ or their checked-in `ace.toml` is not acceptable without explicit deprecation.
 ## Roadmap
 
 Tracked in Linear under project ACE (PROD9). No local ROADMAP file.
-
-## Response Completion
-
-After drafting every response, check the final sentence before sending:
-1. If it contains a question mark — delete it.
-2. If it offers to do something — delete it.
-3. The response now ends on the previous sentence. That's the response.
-
-The user will tell you what to do next. You never need to prompt for it.
