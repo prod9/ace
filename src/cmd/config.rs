@@ -363,20 +363,21 @@ fn format_block(
     }
 
     let mut out = format!("{key} = {winner_value}  [{}]\n", winner_from.label());
-    let mut rows: Vec<(Source, Option<String>)> = vec![
-        layers[0].clone(),
-        layers[1].clone(),
-        layers[2].clone(),
-        (Source::School, school_contrib.map(str::to_string)),
-        layers[3].clone(),
+    let school_row = (Source::School, school_contrib.map(str::to_string));
+    let rows = [
+        &layers[0],
+        &layers[1],
+        &layers[2],
+        &school_row,
+        &layers[3],
     ];
-    for (src, val) in rows.drain(..) {
+    for (src, val) in rows {
         let label = format!("{}:", src.label());
         let value_str = match val {
-            Some(v) => quoted(&v),
+            Some(v) => quoted(v),
             None => "(unset)".to_string(),
         };
-        let marker = if src == winner_from { "  ← winner" } else { "" };
+        let marker = if *src == winner_from { "  ← winner" } else { "" };
         out.push_str(&format!("  {label:<10}{value_str}{marker}\n"));
     }
     out
