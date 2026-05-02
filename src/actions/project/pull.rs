@@ -15,19 +15,8 @@ impl PullOutcome {
                     "Switched school clone from branch {from} back to main"
                 ));
             }
-            PullOutcome::Updated { changes } if changes.is_empty() => {
-                ace.done("School updated (no skill changes)");
-            }
             PullOutcome::Updated { changes } => {
-                let summary: Vec<String> = changes.iter().map(|c| {
-                    let prefix = match c.kind {
-                        ChangeKind::Added => "+",
-                        ChangeKind::Modified => "~",
-                        ChangeKind::Removed => "-",
-                    };
-                    format!("{prefix}{}", c.name)
-                }).collect();
-                ace.done(&format!("School updated ({})", summary.join(", ")));
+                ace.done(&crate::skills::format_pull_summary(changes));
             }
             PullOutcome::Dirty { on_main: true, .. } => {
                 ace.warn("school has local changes — updates blocked");

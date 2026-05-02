@@ -39,10 +39,45 @@ pub enum ChangeKind {
     Removed,
 }
 
+impl ChangeKind {
+    /// Single-character prefix used in pull-summary output.
+    /// `+` added, `~` modified, `-` removed.
+    pub fn prefix(&self) -> char {
+        match self {
+            ChangeKind::Added => '+',
+            ChangeKind::Modified => '~',
+            ChangeKind::Removed => '-',
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct SkillChange {
     pub name: String,
     pub kind: ChangeKind,
+}
+
+/// Render a pull summary. Both `ace pull` and `ace school pull` emit through
+/// this helper so the user-visible shape stays identical:
+///
+/// ```text
+/// School updated
+///   +new-skill
+///   ~existing
+///   -old-skill
+/// ```
+///
+/// Empty input collapses to a single `School updated (no skill changes)`
+/// line. The caller passes the result to `ace.done()`.
+pub fn format_pull_summary(changes: &[SkillChange]) -> String {
+    if changes.is_empty() {
+        return "School updated (no skill changes)".to_string();
+    }
+    let mut msg = String::from("School updated");
+    for change in changes {
+        msg.push_str(&format!("\n  {}{}", change.kind.prefix(), change.name));
+    }
+    msg
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -213,6 +248,26 @@ impl Skills<Decided> {
 mod tests {
     use super::*;
     use crate::config::ace_toml::AceToml;
+
+    #[test]
+    fn pull_summary_empty() {
+        let summary = format_pull_summary(&[]);
+        assert_eq!(summary, "School updated (no skill changes)");
+    }
+
+    #[test]
+    fn pull_summary_with_changes() {
+        let changes = [
+            SkillChange { name: "added".to_string(), kind: ChangeKind::Added },
+            SkillChange { name: "edit".to_string(), kind: ChangeKind::Modified },
+            SkillChange { name: "gone".to_string(), kind: ChangeKind::Removed },
+        ];
+        let summary = format_pull_summary(&changes);
+        assert_eq!(
+            summary,
+            "School updated\n  +added\n  ~edit\n  -gone",
+        );
+    }
 
     fn ace(skills: &[&str], inc: &[&str], exc: &[&str]) -> AceToml {
         AceToml {

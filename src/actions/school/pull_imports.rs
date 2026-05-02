@@ -5,7 +5,7 @@ use crate::ace::Ace;
 use crate::config;
 use crate::glob;
 use crate::skills::discover::{Tier, discover_skills};
-use crate::skills::{ChangeKind, Discovered, Skills};
+use crate::skills::{Discovered, SkillChange, Skills};
 
 pub struct PullImports<'a> {
     pub school_root: &'a Path,
@@ -40,7 +40,7 @@ impl PullImports<'_> {
 
         let by_source = group_by_source(&school.imports);
         let skills_dir = self.school_root.join("skills");
-        let mut count = 0;
+        let mut all_changes: Vec<SkillChange> = Vec::new();
 
         for (source, decls) in &by_source {
             ace.progress(&format!("Fetching {source}"));
@@ -66,21 +66,12 @@ impl PullImports<'_> {
 
                 let name_refs: Vec<&str> = names.iter().map(String::as_str).collect();
                 let changes = source_set.copy_into(&skills_dir, &name_refs)?;
-
-                for change in &changes {
-                    let label = match change.kind {
-                        ChangeKind::Added => "new",
-                        ChangeKind::Modified => "updated",
-                        ChangeKind::Removed => "removed",
-                    };
-                    ace.done(&format!("{} ({label})", change.name));
-                }
-
-                count += changes.len();
+                all_changes.extend(changes);
             }
         }
 
-        ace.done(&format!("Updated {count} skill(s)"));
+        let count = all_changes.len();
+        ace.done(&crate::skills::format_pull_summary(&all_changes));
         Ok(PullImportsResult::Updated { count })
     }
 }
