@@ -164,7 +164,6 @@ fn list_known_backend_names(ace: &Ace) -> Result<Vec<String>, CmdError> {
     let tree = ace.require_tree()?;
     let mut names: Vec<String> = Kind::ALL
         .iter()
-        .filter(|k| **k != Kind::Flaude)
         .map(|k| k.name().to_string())
         .collect();
     if let Some(st) = &tree.school {

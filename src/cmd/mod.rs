@@ -39,7 +39,7 @@ pub struct Cli {
     command: Option<Command>,
 
     /// Override the configured backend for this command invocation.
-    /// Built-ins: claude, codex, flaude. Custom names from `[[backends]]`
+    /// Built-ins: claude, codex. Custom names from `[[backends]]`
     /// declarations are also accepted; resolved against the registry.
     #[arg(short = 'b', long, global = true)]
     backend: Option<String>,
@@ -52,8 +52,9 @@ pub struct Cli {
     #[arg(long, global = true)]
     codex: bool,
 
-    /// Shortcut for `--backend flaude`
-    #[arg(long, global = true)]
+    /// Shortcut for `--backend flaude` — test-only fixture backend, dev builds only.
+    #[cfg(debug_assertions)]
+    #[arg(long, global = true, hide = true)]
     flaude: bool,
 
     /// Trust mode for this invocation (default | auto | yolo).
@@ -331,6 +332,7 @@ fn resolve_backend_override(cli: &Cli) -> Result<Option<String>, CmdError> {
     if cli.codex {
         selected.push(crate::backend::Kind::Codex.into());
     }
+    #[cfg(debug_assertions)]
     if cli.flaude {
         selected.push(crate::backend::Kind::Flaude.into());
     }

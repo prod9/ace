@@ -75,7 +75,15 @@ macro_rules! dispatch {
 }
 
 impl Kind {
+    /// Built-in backends surfaced to users. `Flaude` is a test-only fixture
+    /// backend and is excluded from release builds — its variant remains in
+    /// the enum so internal code paths still compile, but it is unreachable
+    /// via name lookup or the registry in `cargo build --release`.
+    #[cfg(debug_assertions)]
     pub const ALL: &'static [Kind] = &[Kind::Claude, Kind::Codex, Kind::Flaude];
+
+    #[cfg(not(debug_assertions))]
+    pub const ALL: &'static [Kind] = &[Kind::Claude, Kind::Codex];
 
     /// Canonical name. Doubles as registry key for built-in entries and as the
     /// default `cmd[0]` (the binary name) when no override is provided.
