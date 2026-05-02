@@ -72,9 +72,6 @@ impl Ace {
     /// PROD9-146 recovery picker when an unknown backend selector is
     /// re-pointed mid-session.
     pub fn override_backend(&mut self, backend: String) {
-        if self.overrides.backend.as_deref() == Some(&backend) {
-            return;
-        }
         self.overrides.backend = Some(backend);
         self.invalidate_resolved();
     }
