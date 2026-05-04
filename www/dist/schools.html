@@ -50,8 +50,12 @@ for AI coding tools. Everyone on the same school shares the same skill set.
 └── <span class="dir">agents/</span>          <span class="comment"># optional agent configs</span></pre></div>
 
 <p>
-<span class="body-fg">school.toml</span> defines the school name, services
-(GitHub, Linear), MCP servers, imports, and project catalog entries.
+<span class="body-fg">school.toml</span> defines the school name, env vars,
+<span class="body-fg">[[mcp]]</span> servers, <span class="body-fg">[[backends]]</span>
+custom-backend entries, <span class="body-fg">[[roles]]</span>,
+<span class="body-fg">[[imports]]</span>, and the <span class="body-fg">[[projects]]</span>
+catalog. Every section is optional &mdash; a school can be skills-only or ship a full
+configuration surface.
 </p>
 
 <p>

@@ -88,6 +88,41 @@ subcommand.
   </tr>
 </table>
 
+<h2>// custom backends</h2>
+
+<p>
+Schools, users, or projects can register additional backend entries via
+<span class="hi">[[backends]]</span>. A custom backend aliases a built-in
+(<span class="body-fg">claude</span>, <span class="body-fg">codex</span>) and may
+override its launch <span class="body-fg">cmd</span> and <span class="body-fg">env</span>.
+The MCP, instructions file, and linked-folder behavior are inherited from the aliased kind.
+</p>
+
+<div class="code-block"><pre><span class="comment"># Override env on the built-in claude backend</span>
+[[backends]]
+name = "claude"
+env = { ANTHROPIC_BASE_URL = "https://proxy.example.com" }
+
+<span class="comment"># Custom name aliasing claude</span>
+[[backends]]
+name = "bailer"
+kind = "claude"
+env = { ANTHROPIC_BASE_URL = "https://bailer.example.com" }
+
+<span class="comment"># Wrap the claude binary through a process wrapper</span>
+[[backends]]
+name = "claude-wrapped"
+kind = "claude"
+cmd = ["wrapper", "claude"]</pre></div>
+
+<p>
+Selectable via <span class="body-fg">backend = "bailer"</span> in any config layer or
+<span class="body-fg">-b bailer</span> on the CLI. Layer order for merging
+<span class="body-fg">[[backends]]</span> decls is school → user → project → local; later
+layers may add new entries or partially override earlier ones. A custom backend cannot
+introduce new behavior beyond its aliased kind &mdash; that requires a source change.
+</p>
+
 <h2>// linked folders</h2>
 
 <p>
