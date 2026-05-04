@@ -88,3 +88,57 @@ per-backend specs for the exact delivery mechanism.
 Backends may expose an `is_ready()` heuristic so ACE can warn or gate execution when the backend
 is clearly not initialized. Whether ACE should enforce readiness before exec is a product
 decision and may vary by backend or evolve over time.
+
+## Custom Backends
+
+`[[backends]]` declarations let a school, user, or project register additional backend
+entries alongside the built-ins. A custom backend is **not** a new `Kind` — it's a named
+instance that aliases a built-in `Kind` and may override its launch `cmd` and `env`. The
+backend contract (MCP, readiness, instructions file, linked-folder layout) is inherited
+from the aliased `Kind`.
+
+### TOML Syntax
+
+```toml
+[[backends]]
+name = "bailer"            # required — selectable via `backend = "bailer"` or `-b bailer`
+kind = "claude"            # optional — see kind resolution below
+cmd  = ["claude"]          # optional — argv for launch; defaults to [kind.name()]
+env  = { ANTHROPIC_BASE_URL = "https://proxy.example.com" }  # optional
+```
+
+Valid in `school.toml` (`[[backends]]`), user, project, and local config.
+
+### Kind Resolution
+
+For a new name, `kind` is resolved in order:
+
+1. Explicit `kind = "..."` field (must be a built-in name).
+2. `name` matches a built-in name → that kind.
+3. `cmd[0]` basename matches a built-in name → that kind.
+4. Otherwise → `BackendError::Unresolvable`.
+
+For a name that already exists (built-in or earlier-layer custom), the decl partially
+overrides the existing entry: `env` merges per-key (last wins), `cmd` last-wins-non-empty,
+and a declared `kind` must match the existing kind (otherwise `BackendError::KindMismatch`).
+
+### Layer Merge
+
+Declarations are folded into a registry seeded with built-ins, in layer order:
+school → user → project → local. Later layers may add new entries or partially override
+earlier ones. The selected backend name (resolved per the [Resolution Order](#resolution-order)
+above) is then looked up in the final registry; an unknown name is `BackendError::Unknown`.
+
+### Use Cases
+
+- **Override env or cmd for a built-in** — e.g. point `claude` at a corporate proxy by
+  setting `[[backends]] name = "claude" env = { ANTHROPIC_BASE_URL = "..." }`.
+- **Multiple instances of the same kind** — register `bailer` and `bedrock-claude` as
+  separate names, each with its own env, both backed by `Kind::Claude`. Users select via
+  `backend = "..."`.
+- **Wrap a built-in binary** — set `cmd = ["wrapper", "claude"]` to launch the backend
+  through a process wrapper while keeping the rest of the contract (MCP, instructions file,
+  linked folders) intact.
+
+A custom backend cannot introduce new behavior beyond what its aliased `Kind` provides.
+Adding a genuinely new backend requires extending the `Kind` enum in source.

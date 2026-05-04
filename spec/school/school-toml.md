@@ -118,6 +118,39 @@ prompt = """You are a backend engineer. Focus on API design, database queries, \
 business logic, and service architecture."""
 ```
 
+### `[[backends]]`
+
+Array of backend declarations. Each entry registers a custom backend instance or partially
+overrides a built-in (`claude`, `codex`). See
+[backend.md § Custom Backends](../backend.md#custom-backends) for kind resolution and
+layer-merge semantics.
+
+- `name` — Identifier. Becomes selectable via `backend = "<name>"` or `-b <name>`.
+- `kind` — Optional. Built-in name (`claude`, `codex`) the backend aliases. When omitted,
+  ACE infers from `name` matching a built-in, then from `cmd[0]` basename.
+- `cmd` — Optional. Argv for launching the backend. Defaults to `[kind.name()]`.
+- `env` — Optional. Environment variables set in the launched process. Merged with the
+  top-level `[env]`; per-backend env wins on collision.
+
+```toml
+# Override env on the built-in claude backend
+[[backends]]
+name = "claude"
+env = { ANTHROPIC_BASE_URL = "https://proxy.example.com" }
+
+# Custom name aliasing claude, with its own env
+[[backends]]
+name = "bailer"
+kind = "claude"
+env = { ANTHROPIC_BASE_URL = "https://bailer.example.com" }
+
+# Wrap the claude binary through a process wrapper
+[[backends]]
+name = "claude-wrapped"
+kind = "claude"
+cmd = ["wrapper", "claude"]
+```
+
 ### `[[imports]]`
 
 Array of imported skill declarations. Each entry tracks a skill that was imported from an

@@ -48,6 +48,12 @@ agents/
 
 All four folders are optional. Only folders present in the school are linked into projects.
 
+Beyond on-disk folders, `school.toml` itself ships first-class declarations that ACE applies
+to subscriber projects: `[[mcp]]` server registrations, `[[backends]]` custom-backend
+entries, `[[roles]]` prompts, `[[projects]]` catalog, and `[[imports]]` skill provenance
+(including wholesale-imports of another school via `skill = "*"`). See
+[school-toml.md](school-toml.md) for the full reference.
+
 ## Relationship to Projects
 
 A school is independent of any single project. Multiple projects (e.g. frontend and backend
